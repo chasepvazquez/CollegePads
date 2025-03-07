@@ -33,7 +33,7 @@
 		475FB7F32D7AA15C00BE24D8 /* Exceptions for "CollegePads" folder in "CollegePads" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Info.plist,
+				"Supporting Files/Info.plist",
 			);
 			target = 475FB7CC2D7AA15A00BE24D8 /* CollegePads */;
 		};

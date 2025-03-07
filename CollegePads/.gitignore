@@ -1,0 +1,20 @@
+# Xcode build artifacts
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+*.xcworkspace
+*.xcuserdata
+
+# Swift Package Manager
+.build/
+Packages/
+
+# Cocoapods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/
+
+# Ignore app-specific keys or secrets
+GoogleService-Info.plist
