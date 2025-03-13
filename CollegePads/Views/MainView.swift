@@ -12,24 +12,42 @@ struct MainView: View {
     
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 20) {
                 Text("Welcome to CollegePads!")
                     .font(.largeTitle)
                     .padding()
                 
-                Text("This is where the swipe-based roommate matching UI will be implemented.")
-                    .padding()
+                NavigationLink(destination: MatchingView()) {
+                    Text("Find Roommates")
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
                 
-                // A simple sign-out button for testing purposes
+                NavigationLink(destination: ProfileSetupView()) {
+                    Text("Setup/Update Profile")
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.green)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+                
                 Button(action: {
                     authViewModel.signOut()
                 }) {
                     Text("Sign Out")
                         .foregroundColor(.white)
                         .padding()
+                        .frame(maxWidth: .infinity)
                         .background(Color.red)
                         .cornerRadius(8)
                 }
+                .padding(.horizontal)
             }
             .navigationTitle("Roommate Matches")
         }
