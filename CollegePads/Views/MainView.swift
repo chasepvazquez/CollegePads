@@ -17,6 +17,7 @@ struct MainView: View {
                     .font(.largeTitle)
                     .padding()
                 
+                // Existing "Find Roommates" button (swipe-based matching)
                 NavigationLink(destination: MatchingView()) {
                     Text("Find Roommates")
                         .foregroundColor(.white)
@@ -27,6 +28,7 @@ struct MainView: View {
                 }
                 .padding(.horizontal)
                 
+                // Existing "Setup/Update Profile" button
                 NavigationLink(destination: ProfileSetupView()) {
                     Text("Setup/Update Profile")
                         .foregroundColor(.white)
@@ -37,6 +39,29 @@ struct MainView: View {
                 }
                 .padding(.horizontal)
                 
+                // NEW: Advanced Filter link
+                NavigationLink(destination: AdvancedFilterView()) {
+                    Text("Advanced Search")
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.orange)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+                
+                // NEW: My Chats link
+                NavigationLink(destination: ChatsListView()) {
+                    Text("My Chats")
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.purple)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+                
+                // Existing sign-out button
                 Button(action: {
                     authViewModel.signOut()
                 }) {

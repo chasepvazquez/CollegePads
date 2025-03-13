@@ -33,12 +33,11 @@ class MatchingViewModel: ObservableObject {
             return
         }
         
-        // snapshotPublisher() returns a publisher of QuerySnapshot
         db.collection("users")
-            .snapshotPublisher()   // Provided by FirebaseFirestoreCombineSwift
+            .snapshotPublisher()
             .map { querySnapshot -> [UserModel] in
-                // Convert each document into a UserModel using FirestoreSwift's Codable
-                querySnapshot.documents.compactMap { doc -> UserModel? in
+                // Convert each document into a UserModel
+                querySnapshot.documents.compactMap { doc in
                     do {
                         return try doc.data(as: UserModel.self)
                     } catch {
@@ -98,6 +97,23 @@ class MatchingViewModel: ObservableObject {
         ]
         
         db.collection("swipes").addDocument(data: swipeData) { error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+    
+    /// Creates a chat document if you detect a mutual match (userA & userB).
+    /// Call this once you've confirmed both users liked each other.
+    func createChatIfNotExists(userA: String, userB: String) {
+        let chatRef = db.collection("chats").document()
+        let chatData: [String: Any] = [
+            "participants": [userA, userB],
+            "createdAt": FieldValue.serverTimestamp()
+        ]
+        chatRef.setData(chatData) { error in
             if let error = error {
                 DispatchQueue.main.async {
                     self.errorMessage = error.localizedDescription
