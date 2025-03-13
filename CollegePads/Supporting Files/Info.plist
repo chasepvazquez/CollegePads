@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need access to your microphone for audio messages or video tours.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need access to your camera for profile images and room photos.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to find nearby listings.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

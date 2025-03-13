@@ -7,9 +7,17 @@
 
 import SwiftUI
 import SwiftData
+import Firebase
 
 @main
 struct CollegePadsApp: App {
+    // Initialize Firebase in the app's init
+    init() {
+        FirebaseApp.configure()
+        // Any other one-time setup code can go here
+    }
+
+    // Your SwiftData container (if you plan to use SwiftData locally)
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
