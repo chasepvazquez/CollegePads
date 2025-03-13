@@ -41,10 +41,10 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		475FB7F32D7AA15C00BE24D8 /* Exceptions for "CollegePads" folder in "CollegePads" target */ = {
+		477640F92D8334AF00A21151 /* Exceptions for "CollegePads" folder in "CollegePads" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Supporting Files/Info.plist",
+				Info.plist,
 			);
 			target = 475FB7CC2D7AA15A00BE24D8 /* CollegePads */;
 		};
@@ -54,7 +54,7 @@
 		475FB7CF2D7AA15A00BE24D8 /* CollegePads */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				475FB7F32D7AA15C00BE24D8 /* Exceptions for "CollegePads" folder in "CollegePads" target */,
+				477640F92D8334AF00A21151 /* Exceptions for "CollegePads" folder in "CollegePads" target */,
 			);
 			path = CollegePads;
 			sourceTree = "<group>";
