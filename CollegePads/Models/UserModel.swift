@@ -7,20 +7,21 @@
 
 import Foundation
 import FirebaseFirestore
-import FirebaseFirestoreSwift
+import FirebaseFirestoreCombineSwift
 
+/// A codable user model that uses Firestore's Swift/Combine features.
 struct UserModel: Codable, Identifiable {
-    @DocumentID var id: String?    // Firestore document ID
+    /// The Firestore document ID, auto-populated via @DocumentID
+    @DocumentID var id: String?
+
     var email: String
-    var createdAt: Date           // Or a Firestore Timestamp, if you prefer
+    var createdAt: Date
     var isEmailVerified: Bool
-    
-    // Add more fields as needed (e.g., name, major, etc.)
-    
+
+    /// Basic initializer for new users
     init(email: String, isEmailVerified: Bool) {
         self.email = email
         self.isEmailVerified = isEmailVerified
         self.createdAt = Date()
     }
 }
-

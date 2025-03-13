@@ -14,6 +14,7 @@
 		477640582D83257500A21151 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = 477640572D83257500A21151 /* FirebaseInAppMessaging-Beta */; };
 		4776405A2D83257500A21151 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 477640592D83257500A21151 /* FirebaseMessaging */; };
 		4776405C2D83257500A21151 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 4776405B2D83257500A21151 /* FirebaseStorage */; };
+		477640F22D832E6B00A21151 /* FirebaseFirestoreCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = 477640F12D832E6B00A21151 /* FirebaseFirestoreCombine-Community */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -76,6 +77,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4776405A2D83257500A21151 /* FirebaseMessaging in Frameworks */,
+				477640F22D832E6B00A21151 /* FirebaseFirestoreCombine-Community in Frameworks */,
 				477640542D83257500A21151 /* FirebaseCrashlytics in Frameworks */,
 				477640562D83257500A21151 /* FirebaseFirestore in Frameworks */,
 				477640502D83257500A21151 /* FirebaseAnalytics in Frameworks */,
@@ -149,6 +151,7 @@
 				477640572D83257500A21151 /* FirebaseInAppMessaging-Beta */,
 				477640592D83257500A21151 /* FirebaseMessaging */,
 				4776405B2D83257500A21151 /* FirebaseStorage */,
+				477640F12D832E6B00A21151 /* FirebaseFirestoreCombine-Community */,
 			);
 			productName = CollegePads;
 			productReference = 475FB7CD2D7AA15A00BE24D8 /* CollegePads.app */;
@@ -680,6 +683,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4776404E2D83257500A21151 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		477640F12D832E6B00A21151 /* FirebaseFirestoreCombine-Community */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4776404E2D83257500A21151 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseFirestoreCombine-Community";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

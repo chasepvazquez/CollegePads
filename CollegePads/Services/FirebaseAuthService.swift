@@ -8,6 +8,7 @@
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseFirestoreCombineSwift // Enables setData(from:) and @DocumentID
 
 class FirebaseAuthService {
     
@@ -79,35 +80,29 @@ class FirebaseAuthService {
         return domain.hasSuffix(".edu")
     }
     
-    /// Creates a corresponding user document in Firestore with minimal fields.
+    /// Creates a corresponding user document in Firestore using Firestore's Swift/Combine features.
     /// - Parameter user: The `Auth.auth().currentUser`
     private func createUserDocument(for user: User, completion: @escaping (Result<Void, Error>) -> Void) {
+        // Construct a new UserModel
         let userModel = UserModel(
             email: user.email ?? "",
             isEmailVerified: user.isEmailVerified
         )
         
-        db.collection("users")
-            .document(user.uid)   // doc name = auth user's UID
-            .setData(userModel.dictionary) { error in
-                if let error = error {
-                    completion(.failure(error))
-                } else {
-                    completion(.success(()))
+        // Use Firestore's setData(from:) to automatically encode userModel
+        do {
+            try db.collection("users")
+                .document(user.uid) // doc name = auth user's UID
+                .setData(from: userModel) { error in
+                    if let error = error {
+                        completion(.failure(error))
+                    } else {
+                        completion(.success(()))
+                    }
                 }
-            }
+        } catch {
+            // setData(from:) can throw if encoding fails
+            completion(.failure(error))
+        }
     }
 }
-
-// MARK: - UserModel + Dictionary
-// A helper extension to convert UserModel into a dictionary for Firestore
-extension UserModel {
-    var dictionary: [String: Any] {
-        return [
-            "email": email,
-            "createdAt": createdAt,
-            "isEmailVerified": isEmailVerified
-        ]
-    }
-}
-
