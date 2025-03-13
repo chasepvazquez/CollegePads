@@ -11,30 +11,30 @@ import Firebase
 
 @main
 struct CollegePadsApp: App {
-    // Initialize Firebase in the app's init
+    // Initialize Firebase on app startup
     init() {
         FirebaseApp.configure()
-        // Any other one-time setup code can go here
     }
-
-    // Your SwiftData container (if you plan to use SwiftData locally)
+    
+    // SwiftData container (if you plan to use it locally)
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
+        
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
-
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            // RootView determines which UI to display based on auth state
+            RootView()
+                .modelContainer(sharedModelContainer)
         }
-        .modelContainer(sharedModelContainer)
     }
 }

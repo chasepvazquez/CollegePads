@@ -1,5 +1,5 @@
 //
-//  SignUpView.swift
+//  SignInView.swift
 //  CollegePads
 //
 //  Created by [Your Name] on [Date].
@@ -7,15 +7,15 @@
 
 import SwiftUI
 
-struct SignUpView: View {
+struct SignInView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Create a .edu Account")
+            Text("Sign In")
                 .font(.headline)
             
-            TextField("Enter .edu email", text: $authViewModel.email)
+            TextField("Enter your email", text: $authViewModel.email)
                 .autocapitalization(.none)
                 .keyboardType(.emailAddress)
                 .padding()
@@ -34,23 +34,23 @@ struct SignUpView: View {
             }
             
             Button(action: {
-                authViewModel.signUp()
+                authViewModel.signIn()
             }) {
                 if authViewModel.isLoading {
                     ProgressView()
                 } else {
-                    Text("Sign Up")
+                    Text("Sign In")
                         .foregroundColor(.white)
                         .padding()
-                        .background(Color.blue)
+                        .background(Color.green)
                         .cornerRadius(8)
                 }
             }
             
-            Text("Already have an account? Sign In")
+            Text("Don't have an account? Sign Up")
                 .foregroundColor(.blue)
                 .onTapGesture {
-                    // Reset fields to switch view in AuthenticationView
+                    // Reset fields for view switching
                     authViewModel.errorMessage = nil
                     authViewModel.email = ""
                     authViewModel.password = ""
@@ -58,14 +58,14 @@ struct SignUpView: View {
                 }
         }
         .padding()
-        .navigationTitle("Sign Up")
+        .navigationTitle("Sign In")
     }
 }
 
-struct SignUpView_Previews: PreviewProvider {
+struct SignInView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            SignUpView().environmentObject(AuthViewModel())
+            SignInView().environmentObject(AuthViewModel())
         }
     }
 }
