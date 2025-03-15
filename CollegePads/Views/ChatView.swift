@@ -36,15 +36,15 @@ struct ChatView: View {
             .padding()
         }
         .navigationTitle("Chat")
+        .onAppear {
+            // Mark messages as read when the chat view appears
+            viewModel.markMessagesAsRead()
+        }
         .alert(item: Binding(
-            get: { viewModel.errorMessage.map { ChatViewAlertError(message: $0) } },
+            get: { viewModel.errorMessage.map { ChatAlertError(message: $0) } },
             set: { _ in viewModel.errorMessage = nil }
         )) { alertError in
-            Alert(
-                title: Text("Error"),
-                message: Text(alertError.message),
-                dismissButton: .default(Text("OK"))
-            )
+            Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
         }
     }
 }
@@ -54,19 +54,27 @@ struct MessageBubble: View {
     let isCurrentUser: Bool
     
     var body: some View {
-        HStack {
-            if isCurrentUser { Spacer() }
-            Text(message.text)
-                .padding()
-                .foregroundColor(.white)
-                .background(isCurrentUser ? Color.blue : Color.gray)
-                .cornerRadius(8)
-            if !isCurrentUser { Spacer() }
+        VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 4) {
+            HStack {
+                if isCurrentUser { Spacer() }
+                Text(message.text)
+                    .padding()
+                    .foregroundColor(.white)
+                    .background(isCurrentUser ? Color.blue : Color.gray)
+                    .cornerRadius(8)
+                if !isCurrentUser { Spacer() }
+            }
+            if isCurrentUser, let isRead = message.isRead, isRead {
+                Text("Read")
+                    .font(.caption)
+                    .foregroundColor(.green)
+                    .padding(.trailing, 8)
+            }
         }
     }
 }
 
-struct ChatViewAlertError: Identifiable {
+struct ChatAlertError: Identifiable {
     let id = UUID()
     let message: String
 }

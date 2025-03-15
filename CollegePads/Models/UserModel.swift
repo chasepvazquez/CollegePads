@@ -11,30 +11,33 @@ import FirebaseFirestoreCombineSwift
 
 /// A codable user model that uses Firestore's Combine features.
 struct UserModel: Codable, Identifiable {
-    /// The Firestore document ID, auto-populated via @DocumentID
+    /// The Firestore document ID, auto-populated via @DocumentID.
     @DocumentID var id: String?
 
-    // Basic user info
+    // Basic info
     var email: String
     var createdAt: Date
     var isEmailVerified: Bool
 
-    // College/living info
-    var gradeLevel: String?        // e.g., "Freshman", "Sophomore", "Junior", "Senior", "Grad"
-    var major: String?            // e.g., "Computer Science", "Business"
-    var collegeName: String?      // e.g., "College of Engineering", "College of Arts & Sciences"
+    // College / Living Info
+    var gradeLevel: String?        // e.g., "Freshman", "Senior"
+    var major: String?
+    var collegeName: String?       // e.g., "College of Engineering"
 
-    // Preferences
-    var dormType: String?         // e.g., "On-Campus", "Off-Campus"
-    var preferredDorm: String?    // e.g., "Dorm A", "Dorm B"
-    var budgetRange: String?      // e.g., "$500 - $1000"
-    var cleanliness: Int?         // rating 1-5
-    var sleepSchedule: String?    // e.g., "Night Owl", "Early Bird", "Flexible"
+    // Roommate Preferences
+    var dormType: String?          // e.g., "On-Campus", "Off-Campus"
+    var preferredDorm: String?     // e.g., "Dorm A", "Dorm B"
+    var budgetRange: String?       // e.g., "$500 - $1000"
+    var cleanliness: Int?          // rating 1-5
+    var sleepSchedule: String?     // e.g., "Night Owl", "Early Bird", "Flexible"
     var smoker: Bool?
     var petFriendly: Bool?
-    var livingStyle: String?      // e.g., "Quiet", "Social", "Party-Friendly"
+    var livingStyle: String?       // e.g., "Quiet", "Social"
 
-    // Potential location data for future geofire or geospatial queries
+    // Profile Picture URL
+    var profileImageUrl: String?
+
+    // Location for matching (optional)
     var latitude: Double?
     var longitude: Double?
 
@@ -53,6 +56,7 @@ struct UserModel: Codable, Identifiable {
         smoker: Bool? = nil,
         petFriendly: Bool? = nil,
         livingStyle: String? = nil,
+        profileImageUrl: String? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil
     ) {
@@ -70,6 +74,7 @@ struct UserModel: Codable, Identifiable {
         self.smoker = smoker
         self.petFriendly = petFriendly
         self.livingStyle = livingStyle
+        self.profileImageUrl = profileImageUrl
         self.latitude = latitude
         self.longitude = longitude
     }

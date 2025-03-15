@@ -6,11 +6,18 @@
 //
 
 import Foundation
+import FirebaseFirestoreCombineSwift
 
-/// A simple message model without @DocumentID.
-struct MessageModel: Identifiable {
-    var id: String?        // doc.documentID
+struct MessageModel: Codable, Identifiable {
+    // Remove @DocumentID so we can satisfy Codable requirements.
+    // We'll assign the document ID manually in our view model.
+    var id: String?
     var senderID: String
     var text: String
     var timestamp: Date
+    var isRead: Bool?
+    
+    enum CodingKeys: String, CodingKey {
+        case senderID, text, timestamp, isRead
+    }
 }

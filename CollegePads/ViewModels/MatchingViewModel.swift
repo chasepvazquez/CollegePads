@@ -36,7 +36,6 @@ class MatchingViewModel: ObservableObject {
         db.collection("users")
             .snapshotPublisher()
             .map { querySnapshot -> [UserModel] in
-                // Convert each document into a UserModel
                 querySnapshot.documents.compactMap { doc in
                     do {
                         return try doc.data(as: UserModel.self)
@@ -56,7 +55,6 @@ class MatchingViewModel: ObservableObject {
                     break
                 }
             } receiveValue: { userModels in
-                // Filter out the current user
                 let filtered = userModels.filter { $0.id != currentUserID }
                 DispatchQueue.main.async {
                     self.potentialMatches = filtered
@@ -65,7 +63,7 @@ class MatchingViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    /// Records a right-swipe (like) in Firestore.
+    /// Records a right-swipe (like) in Firestore and checks for a mutual match.
     func swipeRight(on user: UserModel) {
         guard let currentUserID = currentUserID, let matchUserID = user.id else { return }
         
@@ -81,6 +79,29 @@ class MatchingViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     self.errorMessage = error.localizedDescription
                 }
+            } else {
+                // After recording the swipe, check for a mutual match.
+                self.checkForMutualMatch(with: matchUserID)
+            }
+        }
+    }
+    
+    /// Checks if the other user has already swiped right on the current user.
+    private func checkForMutualMatch(with otherUserID: String) {
+        guard let currentUserID = currentUserID else { return }
+        let query = db.collection("swipes")
+            .whereField("from", isEqualTo: otherUserID)
+            .whereField("to", isEqualTo: currentUserID)
+            .whereField("liked", isEqualTo: true)
+        
+        query.getDocuments { snapshot, error in
+            if let error = error {
+                print("Error checking mutual match: \(error.localizedDescription)")
+                return
+            }
+            if let snapshot = snapshot, !snapshot.documents.isEmpty {
+                // Mutual match found; create chat if it doesn't already exist.
+                self.createChatIfNotExists(userA: currentUserID, userB: otherUserID)
             }
         }
     }
@@ -105,15 +126,15 @@ class MatchingViewModel: ObservableObject {
         }
     }
     
-    /// Creates a chat document if you detect a mutual match (userA & userB).
-    /// Call this once you've confirmed both users liked each other.
+    /// Creates a chat document if a mutual match is detected.
     func createChatIfNotExists(userA: String, userB: String) {
-        let chatRef = db.collection("chats").document()
+        // Optionally, you can check if a chat between these users already exists.
+        // For simplicity, we'll directly create a new chat.
         let chatData: [String: Any] = [
             "participants": [userA, userB],
             "createdAt": FieldValue.serverTimestamp()
         ]
-        chatRef.setData(chatData) { error in
+        db.collection("chats").addDocument(data: chatData) { error in
             if let error = error {
                 DispatchQueue.main.async {
                     self.errorMessage = error.localizedDescription

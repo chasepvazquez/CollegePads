@@ -7,9 +7,9 @@
 
 import Foundation
 import FirebaseFirestore
-import FirebaseFirestoreCombineSwift // for snapshotPublisher()
-import FirebaseAuth
+import FirebaseFirestoreCombineSwift
 import Combine
+import FirebaseAuth
 
 class ChatViewModel: ObservableObject {
     @Published var messages: [MessageModel] = []
@@ -18,7 +18,7 @@ class ChatViewModel: ObservableObject {
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
     
-    let chatID: String
+    var chatID: String
     var currentUserID: String? {
         Auth.auth().currentUser?.uid
     }
@@ -28,7 +28,7 @@ class ChatViewModel: ObservableObject {
         observeMessages()
     }
     
-    /// Observes messages in real-time for this chat
+    /// Observes messages in real-time for this chat.
     func observeMessages() {
         db.collection("chats")
             .document(chatID)
@@ -36,17 +36,19 @@ class ChatViewModel: ObservableObject {
             .order(by: "timestamp", descending: false)
             .snapshotPublisher()
             .map { querySnapshot -> [MessageModel] in
-                querySnapshot.documents.compactMap { doc -> MessageModel? in
-                    let data = doc.data()
-                    let senderID = data["senderID"] as? String ?? ""
-                    let text = data["text"] as? String ?? ""
-                    let ts = data["timestamp"] as? Timestamp ?? Timestamp(date: Date())
-                    return MessageModel(
-                        id: doc.documentID,
-                        senderID: senderID,
-                        text: text,
-                        timestamp: ts.dateValue()
-                    )
+                querySnapshot.documents.compactMap { doc in
+                    do {
+                        // Decode document into MessageModel
+                        var message = try doc.data(as: MessageModel.self)
+                        // Manually assign document ID if not present
+                        if message.id == nil {
+                            message.id = doc.documentID
+                        }
+                        return message
+                    } catch {
+                        print("Error decoding message doc: \(error)")
+                        return nil
+                    }
                 }
             }
             .sink { completion in
@@ -58,32 +60,47 @@ class ChatViewModel: ObservableObject {
             } receiveValue: { fetchedMessages in
                 DispatchQueue.main.async {
                     self.messages = fetchedMessages
+                    self.markMessagesAsRead()
                 }
             }
             .store(in: &cancellables)
     }
     
-    /// Sends a new message
+    /// Sends a new message.
     func sendMessage(text: String) {
         guard let userID = currentUserID else {
             self.errorMessage = "User not authenticated."
             return
         }
-        let newMessage = [
-            "senderID": userID,
-            "text": text,
-            "timestamp": FieldValue.serverTimestamp()
-        ] as [String : Any]
-        
-        db.collection("chats")
-            .document(chatID)
-            .collection("messages")
-            .addDocument(data: newMessage) { error in
+        let newMessage = MessageModel(
+            id: nil,  // id will be set when read back from Firestore
+            senderID: userID,
+            text: text,
+            timestamp: Date(),
+            isRead: false
+        )
+        do {
+            try db.collection("chats")
+                .document(chatID)
+                .collection("messages")
+                .document()
+                .setData(from: newMessage)
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+    }
+    
+    /// Marks unread messages (not sent by the current user) as read.
+    func markMessagesAsRead() {
+        guard let currentUserID = currentUserID else { return }
+        for message in messages where message.senderID != currentUserID && (message.isRead == nil || message.isRead == false) {
+            guard let messageID = message.id else { continue }
+            let messageRef = db.collection("chats").document(chatID).collection("messages").document(messageID)
+            messageRef.updateData(["isRead": true]) { error in
                 if let error = error {
-                    DispatchQueue.main.async {
-                        self.errorMessage = error.localizedDescription
-                    }
+                    print("Error marking message as read: \(error.localizedDescription)")
                 }
             }
+        }
     }
 }
