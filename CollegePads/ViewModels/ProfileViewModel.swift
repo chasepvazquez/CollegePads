@@ -17,6 +17,9 @@ class ProfileViewModel: ObservableObject {
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
     
+    // Shared instance for global access
+    static let shared = ProfileViewModel()
+    
     var userID: String? {
         Auth.auth().currentUser?.uid
     }

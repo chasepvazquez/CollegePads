@@ -10,20 +10,57 @@ import SwiftUI
 struct SwipeCardView: View {
     let user: UserModel
     var onSwipe: (_ user: UserModel, _ direction: SwipeDirection) -> Void
-    
+
     @State private var offset: CGSize = .zero
     @State private var rotation: Double = 0
+
+    // Retrieve current user's profile from the shared ProfileViewModel
+    var currentUser: UserModel? {
+        ProfileViewModel.shared.userProfile
+    }
     
+    // Compute compatibility score if the current user's profile exists
+    var compatibilityScore: Double? {
+        if let current = currentUser {
+            return CompatibilityCalculator.calculateUserCompatibility(between: current, and: user)
+        }
+        return nil
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color.white)
                 .shadow(radius: 5)
             
-            VStack {
+            VStack(spacing: 10) {
+                // Profile Image
+                if let imageUrl = user.profileImageUrl, let url = URL(string: imageUrl) {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image.resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 120, height: 120)
+                                .clipShape(Circle())
+                        } else if phase.error != nil {
+                            Image(systemName: "person.crop.circle.badge.exclamationmark")
+                                .resizable()
+                                .frame(width: 120, height: 120)
+                        } else {
+                            Image(systemName: "person.crop.circle")
+                                .resizable()
+                                .frame(width: 120, height: 120)
+                        }
+                    }
+                } else {
+                    Image(systemName: "person.crop.circle")
+                        .resizable()
+                        .frame(width: 120, height: 120)
+                }
+                
+                // Basic info
                 Text(user.email)
                     .font(.headline)
-                    .padding(.bottom, 5)
                 if let dorm = user.dormType {
                     Text("Dorm: \(dorm)")
                 }
@@ -33,11 +70,17 @@ struct SwipeCardView: View {
                 if let schedule = user.sleepSchedule {
                     Text("Sleep: \(schedule)")
                 }
-                // Add additional fields as desired.
+                
+                // Compatibility Score
+                if let score = compatibilityScore {
+                    Text("Compatibility: \(Int(score))%")
+                        .font(.subheadline)
+                        .foregroundColor(score > 70 ? .green : .orange)
+                }
             }
             .padding()
         }
-        .frame(height: 400)
+        .frame(height: 450)
         .offset(x: offset.width, y: offset.height)
         .rotationEffect(Angle(degrees: rotation))
         .gesture(
@@ -46,7 +89,7 @@ struct SwipeCardView: View {
                     offset = gesture.translation
                     rotation = Double(gesture.translation.width / 20)
                 }
-                .onEnded { gesture in
+                .onEnded { _ in
                     if offset.width > 100 {
                         onSwipe(user, .right)
                     } else if offset.width < -100 {
@@ -64,7 +107,25 @@ struct SwipeCardView: View {
 
 struct SwipeCardView_Previews: PreviewProvider {
     static var previews: some View {
-        SwipeCardView(user: UserModel(email: "test@edu", isEmailVerified: true, dormType: "On-Campus", budgetRange: "$500-$1000", sleepSchedule: "Flexible"), onSwipe: { _, _ in })
-            .padding()
+        SwipeCardView(
+            user: UserModel(
+                email: "test@edu",
+                isEmailVerified: true,
+                gradeLevel: "Freshman",
+                major: "Computer Science",
+                collegeName: "Engineering",
+                dormType: "On-Campus",
+                preferredDorm: nil,
+                budgetRange: "$500-$1000",
+                cleanliness: 4,
+                sleepSchedule: "Flexible",
+                smoker: false,
+                petFriendly: false,
+                livingStyle: "Social",
+                profileImageUrl: nil
+            ),
+            onSwipe: { _, _ in }
+        )
+        .padding()
     }
 }

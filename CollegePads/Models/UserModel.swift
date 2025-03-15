@@ -9,9 +9,9 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
 
-/// A codable user model that uses Firestore's Combine features.
+/// A codable user model with advanced profile fields.
 struct UserModel: Codable, Identifiable {
-    /// The Firestore document ID, auto-populated via @DocumentID.
+    /// Auto-populated Firestore document ID.
     @DocumentID var id: String?
 
     // Basic info
