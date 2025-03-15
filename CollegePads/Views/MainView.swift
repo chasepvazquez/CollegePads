@@ -9,15 +9,15 @@ import SwiftUI
 
 struct MainView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
                 Text("Welcome to CollegePads!")
                     .font(.largeTitle)
                     .padding()
-                
-                // Existing "Find Roommates" button (swipe-based matching)
+
+                // "Find Roommates" button (swipe-based matching)
                 NavigationLink(destination: MatchingView()) {
                     Text("Find Roommates")
                         .foregroundColor(.white)
@@ -27,8 +27,8 @@ struct MainView: View {
                         .cornerRadius(8)
                 }
                 .padding(.horizontal)
-                
-                // Existing "Setup/Update Profile" button
+
+                // "Setup/Update Profile" button
                 NavigationLink(destination: ProfileSetupView()) {
                     Text("Setup/Update Profile")
                         .foregroundColor(.white)
@@ -38,8 +38,8 @@ struct MainView: View {
                         .cornerRadius(8)
                 }
                 .padding(.horizontal)
-                
-                // NEW: Advanced Filter link
+
+                // "Advanced Search" button
                 NavigationLink(destination: AdvancedFilterView()) {
                     Text("Advanced Search")
                         .foregroundColor(.white)
@@ -49,8 +49,8 @@ struct MainView: View {
                         .cornerRadius(8)
                 }
                 .padding(.horizontal)
-                
-                // NEW: My Chats link
+
+                // "My Chats" button
                 NavigationLink(destination: ChatsListView()) {
                     Text("My Chats")
                         .foregroundColor(.white)
@@ -61,7 +61,29 @@ struct MainView: View {
                 }
                 .padding(.horizontal)
                 
-                // Existing sign-out button
+                // "Matches Dashboard" button (new)
+                NavigationLink(destination: MatchesDashboardView()) {
+                    Text("My Matches")
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.teal)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+                
+                // "Settings" button (dummy for now)
+                NavigationLink(destination: SettingsView()) {
+                    Text("Settings")
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.gray)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+                
+                // Sign-out button
                 Button(action: {
                     authViewModel.signOut()
                 }) {

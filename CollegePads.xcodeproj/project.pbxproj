@@ -327,8 +327,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CollegePads/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera for profile images and room photos.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We use your location to find nearby listings.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need access to your microphone for audio messages or video tours.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We use your location to find nearby housing options and potential roommates.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need camera access for profile images and room photos.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -370,8 +370,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CollegePads/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera for profile images and room photos.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We use your location to find nearby listings.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need access to your microphone for audio messages or video tours.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We use your location to find nearby housing options and potential roommates.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need camera access for profile images and room photos.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
