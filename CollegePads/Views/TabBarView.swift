@@ -10,39 +10,17 @@ import SwiftUI
 struct TabBarView: View {
     var body: some View {
         TabView {
-            // Home Tab: shows the swipe-based matching interface
             MainView()
                 .tabItem {
-                    Image(systemName: "house.fill")
-                    Text("Home")
+                    Label("Home", systemImage: "house")
                 }
-            
-            // Matches Tab: shows the chats/matches (using ChatsListView)
-            ChatsListView()
+            MatchesDashboardView()
                 .tabItem {
-                    Image(systemName: "heart.circle.fill")
-                    Text("Matches")
+                    Label("Matches", systemImage: "heart")
                 }
-            
-            // Search Tab: Advanced filter view for searching candidates
-            AdvancedFilterView()
-                .tabItem {
-                    Image(systemName: "magnifyingglass")
-                    Text("Search")
-                }
-            
-            // Profile Tab: Profile setup/update view
-            ProfileSetupView()
-                .tabItem {
-                    Image(systemName: "person.crop.circle")
-                    Text("Profile")
-                }
-            
-            // Settings Tab: Global settings for the app
             SettingsView()
                 .tabItem {
-                    Image(systemName: "gearshape.fill")
-                    Text("Settings")
+                    Label("Settings", systemImage: "gearshape")
                 }
         }
     }

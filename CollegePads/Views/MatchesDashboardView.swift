@@ -64,20 +64,19 @@ class MatchesDashboardViewModel: ObservableObject {
 struct MatchesDashboardView: View {
     @StateObject private var viewModel = MatchesDashboardViewModel()
     
-    // Pre-compute the string of other participants for a match.
-    func otherParticipantsString(for match: MatchItem) -> String {
-        let others = match.participants.filter { $0 != viewModel.currentUserID }
-        return others.joined(separator: ", ")
+    // Compute candidateID: choose the first participant that's not the current user.
+    func candidateID(for match: MatchItem) -> String {
+        guard let currentUID = viewModel.currentUserID else { return "" }
+        return match.participants.first(where: { $0 != currentUID }) ?? ""
     }
     
     var body: some View {
         NavigationView {
             List(viewModel.matches) { match in
-                // Break the expression into a separate variable
-                let otherParticipants = otherParticipantsString(for: match)
-                NavigationLink(destination: CandidateProfileView(candidateID: otherParticipants.isEmpty ? "" : otherParticipants.components(separatedBy: ", ").first!)) {
+                let candidateIDValue = candidateID(for: match)
+                NavigationLink(destination: CandidateProfileView(candidateID: candidateIDValue)) {
                     VStack(alignment: .leading) {
-                        Text("Match with: \(otherParticipants)")
+                        Text("Match with: \(match.participants.filter { $0 != viewModel.currentUserID }.joined(separator: ", "))")
                             .font(.headline)
                         Text("Matched on: \(match.createdAt, formatter: dateFormatter)")
                             .font(.caption)
@@ -109,11 +108,6 @@ struct MatchesDashboardView: View {
         formatter.timeStyle = .short
         return formatter
     }
-}
-
-struct GenericAlertError: Identifiable {
-    let id = UUID()
-    let message: String
 }
 
 struct MatchesDashboardView_Previews: PreviewProvider {

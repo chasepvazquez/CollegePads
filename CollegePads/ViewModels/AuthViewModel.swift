@@ -20,11 +20,8 @@ class AuthViewModel: ObservableObject {
     
     init() {
         self.userSession = Auth.auth().currentUser
-    }
-    
-    /// Listens for changes in the authentication state.
-    func listenToAuthState() {
-        Auth.auth().addStateDidChangeListener { [weak self] _, user in
+        // Store or ignore the listener result.
+        _ = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             self?.userSession = user
         }
     }
