@@ -80,7 +80,6 @@ class MatchingViewModel: ObservableObject {
                     self.errorMessage = error.localizedDescription
                 }
             } else {
-                // After recording the swipe, check for a mutual match.
                 self.checkForMutualMatch(with: matchUserID)
             }
         }
@@ -100,10 +99,45 @@ class MatchingViewModel: ObservableObject {
                 return
             }
             if let snapshot = snapshot, !snapshot.documents.isEmpty {
-                // Mutual match found; create chat if it doesn't already exist.
                 self.createChatIfNotExists(userA: currentUserID, userB: otherUserID)
             }
         }
+    }
+    
+    /// Checks if a chat between userA and userB already exists; if not, creates one.
+    func createChatIfNotExists(userA: String, userB: String) {
+        let chatsRef = db.collection("chats")
+        chatsRef
+            .whereField("participants", arrayContains: userA)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("Error searching for chat: \(error.localizedDescription)")
+                    return
+                }
+                // Check if any existing chat includes both userA and userB
+                if let snapshot = snapshot {
+                    for doc in snapshot.documents {
+                        let participants = doc.data()["participants"] as? [String] ?? []
+                        if participants.contains(userB) {
+                            // Chat already exists – do nothing.
+                            return
+                        }
+                    }
+                }
+                // No chat exists, create a new one.
+                let chatData: [String: Any] = [
+                    "participants": [userA, userB],
+                    "createdAt": FieldValue.serverTimestamp(),
+                    "isTyping": false // initial typing status
+                ]
+                chatsRef.addDocument(data: chatData) { error in
+                    if let error = error {
+                        DispatchQueue.main.async {
+                            self.errorMessage = error.localizedDescription
+                        }
+                    }
+                }
+            }
     }
     
     /// Records a left-swipe (dislike) in Firestore.
@@ -118,23 +152,6 @@ class MatchingViewModel: ObservableObject {
         ]
         
         db.collection("swipes").addDocument(data: swipeData) { error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-    
-    /// Creates a chat document if a mutual match is detected.
-    func createChatIfNotExists(userA: String, userB: String) {
-        // Optionally, you can check if a chat between these users already exists.
-        // For simplicity, we'll directly create a new chat.
-        let chatData: [String: Any] = [
-            "participants": [userA, userB],
-            "createdAt": FieldValue.serverTimestamp()
-        ]
-        db.collection("chats").addDocument(data: chatData) { error in
             if let error = error {
                 DispatchQueue.main.async {
                     self.errorMessage = error.localizedDescription

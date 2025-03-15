@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AdvancedFilterView: View {
     @StateObject private var viewModel = AdvancedFilterViewModel()
+    @StateObject private var locationManager = LocationManager()
 
     var body: some View {
         NavigationView {
@@ -19,18 +20,22 @@ struct AdvancedFilterView: View {
                         TextField("College Name (e.g., Engineering)", text: $viewModel.filterCollegeName)
                         TextField("Budget Range (exact match)", text: $viewModel.filterBudgetRange)
                         TextField("Grade Level (e.g., Freshman)", text: $viewModel.filterGradeLevel)
+                        VStack {
+                            Text("Max Distance: \(Int(viewModel.maxDistance)) km")
+                            Slider(value: $viewModel.maxDistance, in: 1...50, step: 1)
+                        }
                     }
-
+                    
                     Button("Apply Filters") {
-                        viewModel.applyFilters()
+                        viewModel.applyFilters(currentLocation: locationManager.currentLocation)
                     }
                 }
-
+                
                 if let error = viewModel.errorMessage {
                     Text(error)
                         .foregroundColor(.red)
                 }
-
+                
                 List(viewModel.filteredUsers) { user in
                     VStack(alignment: .leading) {
                         Text(user.email)

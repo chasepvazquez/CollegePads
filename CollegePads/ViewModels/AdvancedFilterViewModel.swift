@@ -10,12 +10,14 @@ import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
 import FirebaseAuth
 import Combine
+import CoreLocation
 
 class AdvancedFilterViewModel: ObservableObject {
     @Published var filterDormType: String = ""
     @Published var filterCollegeName: String = ""
     @Published var filterBudgetRange: String = ""
     @Published var filterGradeLevel: String = ""
+    @Published var maxDistance: Double = 10.0  // in kilometers; default value
 
     @Published var filteredUsers: [UserModel] = []
     @Published var errorMessage: String?
@@ -23,27 +25,23 @@ class AdvancedFilterViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let db = Firestore.firestore()
 
-    func applyFilters() {
+    func applyFilters(currentLocation: CLLocation?) {
         var query: Query = db.collection("users")
 
-        // Example: filter by dormType if user set one
+        // Apply Firestore filters first
         if !filterDormType.isEmpty {
             query = query.whereField("dormType", isEqualTo: filterDormType)
         }
-        // Example: filter by collegeName
         if !filterCollegeName.isEmpty {
             query = query.whereField("collegeName", isEqualTo: filterCollegeName)
         }
-        // Example: filter by budgetRange (exact match, or you could do partial parse)
         if !filterBudgetRange.isEmpty {
             query = query.whereField("budgetRange", isEqualTo: filterBudgetRange)
         }
-        // Example: filter by gradeLevel
         if !filterGradeLevel.isEmpty {
             query = query.whereField("gradeLevel", isEqualTo: filterGradeLevel)
         }
-
-        // Now run the query with snapshotPublisher
+        
         query
             .snapshotPublisher()
             .map { snapshot -> [UserModel] in
@@ -56,6 +54,20 @@ class AdvancedFilterViewModel: ObservableObject {
                     }
                 }
             }
+            .map { users in
+                // Optionally filter by distance if currentLocation is provided
+                if let currentLocation = currentLocation {
+                    return users.filter { user in
+                        if let lat = user.latitude, let lon = user.longitude {
+                            let userLocation = CLLocation(latitude: lat, longitude: lon)
+                            let distance = currentLocation.distance(from: userLocation) / 1000.0 // km
+                            return distance <= self.maxDistance
+                        }
+                        return true
+                    }
+                }
+                return users
+            }
             .sink { completion in
                 switch completion {
                 case .failure(let error):
@@ -66,7 +78,7 @@ class AdvancedFilterViewModel: ObservableObject {
                     break
                 }
             } receiveValue: { users in
-                // Optionally exclude the current user
+                // Exclude current user
                 let currentUID = Auth.auth().currentUser?.uid
                 let filtered = users.filter { $0.id != currentUID }
                 DispatchQueue.main.async {

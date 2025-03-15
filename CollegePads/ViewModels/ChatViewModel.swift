@@ -14,6 +14,7 @@ import FirebaseAuth
 class ChatViewModel: ObservableObject {
     @Published var messages: [MessageModel] = []
     @Published var errorMessage: String?
+    @Published var isTyping: Bool = false  // Local indicator for other user's typing status
     
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
@@ -26,6 +27,7 @@ class ChatViewModel: ObservableObject {
     init(chatID: String) {
         self.chatID = chatID
         observeMessages()
+        observeTypingStatus()
     }
     
     /// Observes messages in real-time for this chat.
@@ -38,9 +40,7 @@ class ChatViewModel: ObservableObject {
             .map { querySnapshot -> [MessageModel] in
                 querySnapshot.documents.compactMap { doc in
                     do {
-                        // Decode document into MessageModel
                         var message = try doc.data(as: MessageModel.self)
-                        // Manually assign document ID if not present
                         if message.id == nil {
                             message.id = doc.documentID
                         }
@@ -66,6 +66,23 @@ class ChatViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
+    /// Observes the typing status from the chat document.
+    func observeTypingStatus() {
+        db.collection("chats")
+            .document(chatID)
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    print("Error observing typing status: \(error.localizedDescription)")
+                    return
+                }
+                if let data = snapshot?.data(), let typing = data["isTyping"] as? Bool {
+                    DispatchQueue.main.async {
+                        self.isTyping = typing
+                    }
+                }
+            }
+    }
+    
     /// Sends a new message.
     func sendMessage(text: String) {
         guard let userID = currentUserID else {
@@ -73,7 +90,7 @@ class ChatViewModel: ObservableObject {
             return
         }
         let newMessage = MessageModel(
-            id: nil,  // id will be set when read back from Firestore
+            id: nil,
             senderID: userID,
             text: text,
             timestamp: Date(),
@@ -84,10 +101,20 @@ class ChatViewModel: ObservableObject {
                 .document(chatID)
                 .collection("messages")
                 .document()
-                .setData(from: newMessage)
+                .setData(from: newMessage) { error in
+                    if let error = error {
+                        DispatchQueue.main.async {
+                            self.errorMessage = error.localizedDescription
+                        }
+                    }
+                }
         } catch {
-            self.errorMessage = error.localizedDescription
+            DispatchQueue.main.async {
+                self.errorMessage = error.localizedDescription
+            }
         }
+        // Reset typing status after sending message
+        setTypingStatus(isTyping: false)
     }
     
     /// Marks unread messages (not sent by the current user) as read.
@@ -100,6 +127,15 @@ class ChatViewModel: ObservableObject {
                 if let error = error {
                     print("Error marking message as read: \(error.localizedDescription)")
                 }
+            }
+        }
+    }
+    
+    /// Updates the typing status in the chat document.
+    func setTypingStatus(isTyping: Bool) {
+        db.collection("chats").document(chatID).updateData(["isTyping": isTyping]) { error in
+            if let error = error {
+                print("Error updating typing status: \(error.localizedDescription)")
             }
         }
     }

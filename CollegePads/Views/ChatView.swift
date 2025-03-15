@@ -10,6 +10,7 @@ import SwiftUI
 struct ChatView: View {
     @StateObject var viewModel: ChatViewModel
     @State private var newMessageText: String = ""
+    @State private var isEditing: Bool = false
 
     var body: some View {
         VStack {
@@ -22,9 +23,27 @@ struct ChatView: View {
                 .padding()
             }
             
+            if viewModel.isTyping {
+                HStack {
+                    Text("User is typing...")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    Spacer()
+                }
+                .padding(.horizontal)
+            }
+            
             HStack {
-                TextField("Type a message...", text: $newMessageText)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                TextField("Type a message...", text: $newMessageText, onEditingChanged: { editing in
+                    isEditing = editing
+                    // When editing begins, update typing status
+                    if editing {
+                        viewModel.setTypingStatus(isTyping: true)
+                    } else {
+                        viewModel.setTypingStatus(isTyping: false)
+                    }
+                })
+                .textFieldStyle(RoundedBorderTextFieldStyle())
                 
                 Button("Send") {
                     guard !newMessageText.isEmpty else { return }
@@ -37,7 +56,6 @@ struct ChatView: View {
         }
         .navigationTitle("Chat")
         .onAppear {
-            // Mark messages as read when the chat view appears
             viewModel.markMessagesAsRead()
         }
         .alert(item: Binding(

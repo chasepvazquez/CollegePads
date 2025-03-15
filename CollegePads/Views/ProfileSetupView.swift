@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
-import FirebaseAuth  // Needed for current user checks
+import FirebaseAuth
 
 struct ProfileSetupView: View {
-    @StateObject private var viewModel = ProfileViewModel()
-    
+    @StateObject private var viewModel = ProfileViewModel.shared
+
     // Local form fields
     @State private var dormType: String = ""
     @State private var budgetRange: String = ""
@@ -18,13 +18,63 @@ struct ProfileSetupView: View {
     @State private var sleepSchedule: String = "Flexible"
     @State private var smoker: Bool = false
     @State private var petFriendly: Bool = false
+    @State private var gradeLevel: String = ""
+    @State private var major: String = ""
+    @State private var collegeName: String = ""
+
+    // For profile image selection
+    @State private var showingImagePicker = false
+    @State private var selectedImage: UIImage?
     
     // Options for the sleep schedule picker
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
-    
+
     var body: some View {
         NavigationView {
             Form {
+                Section(header: Text("Profile Picture")) {
+                    HStack {
+                        Spacer()
+                        if let image = selectedImage {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 120, height: 120)
+                                .clipShape(Circle())
+                                .onTapGesture { showingImagePicker = true }
+                        } else if let urlStr = viewModel.userProfile?.profileImageUrl, let url = URL(string: urlStr) {
+                            AsyncImage(url: url) { phase in
+                                if let image = phase.image {
+                                    image.resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 120, height: 120)
+                                        .clipShape(Circle())
+                                        .onTapGesture { showingImagePicker = true }
+                                } else {
+                                    Image(systemName: "person.crop.circle")
+                                        .resizable()
+                                        .frame(width: 120, height: 120)
+                                        .onTapGesture { showingImagePicker = true }
+                                }
+                            }
+                        } else {
+                            Image(systemName: "person.crop.circle")
+                                .resizable()
+                                .frame(width: 120, height: 120)
+                                .onTapGesture { showingImagePicker = true }
+                        }
+                        Spacer()
+                    }
+                }
+                
+                Section(header: Text("Basic Info")) {
+                    TextField("Grade Level (e.g., Freshman)", text: $gradeLevel)
+                    TextField("Major (e.g., Computer Science)", text: $major)
+                    TextField("College Name (e.g., Engineering)", text: $collegeName)
+                    TextField("Email", text: .constant(viewModel.userProfile?.email ?? ""))
+                        .disabled(true)
+                }
+                
                 Section(header: Text("Roommate Preferences")) {
                     TextField("Dorm Type (e.g., On-Campus, Off-Campus)", text: $dormType)
                     TextField("Budget Range (e.g., $500 - $1000)", text: $budgetRange)
@@ -53,10 +103,7 @@ struct ProfileSetupView: View {
                 }
             }
             .navigationTitle("Profile Setup")
-            .onAppear {
-                viewModel.loadUserProfile()
-            }
-            // When userProfile changes, populate local fields
+            .onAppear { viewModel.loadUserProfile() }
             .onReceive(viewModel.$userProfile) { profile in
                 guard let profile = profile else { return }
                 dormType = profile.dormType ?? ""
@@ -65,8 +112,28 @@ struct ProfileSetupView: View {
                 sleepSchedule = profile.sleepSchedule ?? "Flexible"
                 smoker = profile.smoker ?? false
                 petFriendly = profile.petFriendly ?? false
+                gradeLevel = profile.gradeLevel ?? ""
+                major = profile.major ?? ""
+                collegeName = profile.collegeName ?? ""
             }
-            // Show an alert if there's an error
+            .sheet(isPresented: $showingImagePicker) {
+                ImagePicker(image: $selectedImage)
+            }
+            // Updated onChange to new two-parameter closure
+            .onChange(of: selectedImage) { newImage, _ in
+                guard let image = newImage else { return }
+                FirebaseStorageService.shared.uploadProfileImage(image: image) { result in
+                    switch result {
+                    case .success(let urlString):
+                        if var existingProfile = viewModel.userProfile {
+                            existingProfile.profileImageUrl = urlString
+                            viewModel.updateUserProfile(updatedProfile: existingProfile) { _ in }
+                        }
+                    case .failure(let error):
+                        print("Failed to upload image: \(error.localizedDescription)")
+                    }
+                }
+            }
             .alert(item: Binding(
                 get: {
                     if let errorMessage = viewModel.errorMessage {
@@ -76,54 +143,50 @@ struct ProfileSetupView: View {
                 },
                 set: { _ in viewModel.errorMessage = nil }
             )) { alertError in
-                Alert(
-                    title: Text("Error"),
-                    message: Text(alertError.message),
-                    dismissButton: .default(Text("OK"))
-                )
+                Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
             }
         }
     }
     
-    /// Saves the updated profile to Firestore.
     private func saveProfile() {
-        // If we already have a user profile, update it;
-        // otherwise, create a new one.
         if var existingProfile = viewModel.userProfile {
-            // Update existing profile fields
             existingProfile.dormType = dormType
             existingProfile.budgetRange = budgetRange
             existingProfile.cleanliness = cleanliness
             existingProfile.sleepSchedule = sleepSchedule
             existingProfile.smoker = smoker
             existingProfile.petFriendly = petFriendly
+            existingProfile.gradeLevel = gradeLevel
+            existingProfile.major = major
+            existingProfile.collegeName = collegeName
             
             viewModel.updateUserProfile(updatedProfile: existingProfile) { result in
                 switch result {
                 case .success:
-                    // Successfully saved
                     break
                 case .failure(let error):
                     viewModel.errorMessage = error.localizedDescription
                 }
             }
         } else {
-            // Create a new profile if none exists yet
             let newProfile = UserModel(
                 email: Auth.auth().currentUser?.email ?? "",
                 isEmailVerified: Auth.auth().currentUser?.isEmailVerified ?? false,
+                gradeLevel: gradeLevel,
+                major: major,
+                collegeName: collegeName,
                 dormType: dormType,
+                preferredDorm: nil,
                 budgetRange: budgetRange,
                 cleanliness: cleanliness,
                 sleepSchedule: sleepSchedule,
                 smoker: smoker,
-                petFriendly: petFriendly
+                petFriendly: petFriendly,
+                livingStyle: nil
             )
-            
             viewModel.updateUserProfile(updatedProfile: newProfile) { result in
                 switch result {
                 case .success:
-                    // Successfully saved
                     break
                 case .failure(let error):
                     viewModel.errorMessage = error.localizedDescription
@@ -133,7 +196,6 @@ struct ProfileSetupView: View {
     }
 }
 
-/// A unique alert struct to avoid naming conflicts with `AlertError` in other files.
 struct ProfileAlertError: Identifiable {
     let id = UUID()
     let message: String

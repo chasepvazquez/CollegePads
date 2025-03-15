@@ -9,7 +9,7 @@ import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
-import Combine
+import Combine  // Added for AnyCancellable
 
 struct ChatListItem: Identifiable {
     let id: String
@@ -26,14 +26,18 @@ struct ChatsListView: View {
         Auth.auth().currentUser?.uid
     }
     
-    // Store local cancellables
     @State private var cancellables = Set<AnyCancellable>()
     
     var body: some View {
         NavigationView {
             List(chats) { chat in
                 NavigationLink(destination: ChatView(viewModel: ChatViewModel(chatID: chat.id))) {
-                    Text("Chat: \(chat.id)")
+                    VStack(alignment: .leading) {
+                        Text("Chat with: \(chat.participants.filter { $0 != currentUserID }.joined(separator: ", "))")
+                        Text("Created at: \(chat.createdAt, formatter: dateFormatter)")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
                 }
             }
             .navigationTitle("My Chats")
@@ -42,18 +46,15 @@ struct ChatsListView: View {
             }
             .alert(item: Binding(
                 get: {
+                    // Assuming ChatAlertError is defined in ChatView.swift
                     if let errorMessage = errorMessage {
-                        return ChatsListAlertError(message: errorMessage)
+                        return ChatAlertError(message: errorMessage)
                     }
                     return nil
                 },
                 set: { _ in errorMessage = nil }
             )) { alertError in
-                Alert(
-                    title: Text("Error"),
-                    message: Text(alertError.message),
-                    dismissButton: .default(Text("OK"))
-                )
+                Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
             }
         }
     }
@@ -66,37 +67,29 @@ struct ChatsListView: View {
         
         db.collection("chats")
             .whereField("participants", arrayContains: uid)
-            .snapshotPublisher()
-            .map { querySnapshot -> [ChatListItem] in
-                querySnapshot.documents.compactMap { doc in
-                    let data = doc.data()
-                    let participants = data["participants"] as? [String] ?? []
-                    let timestamp = data["createdAt"] as? Timestamp ?? Timestamp(date: Date())
-                    return ChatListItem(
-                        id: doc.documentID,
-                        participants: participants,
-                        createdAt: timestamp.dateValue()
-                    )
-                }
-            }
-            .sink { completion in
-                if case let .failure(error) = completion {
+            .addSnapshotListener { snapshot, error in
+                if let error = error {
                     self.errorMessage = error.localizedDescription
+                    return
                 }
-            } receiveValue: { chatItems in
-                self.chats = chatItems
+                if let snapshot = snapshot {
+                    self.chats = snapshot.documents.compactMap { doc in
+                        let data = doc.data()
+                        let id = doc.documentID
+                        let participants = data["participants"] as? [String] ?? []
+                        let timestamp = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+                        return ChatListItem(id: id, participants: participants, createdAt: timestamp)
+                    }
+                }
             }
-            .store(in: &cancellables)
+    }
+    
+    var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
     }
 }
 
-struct ChatsListAlertError: Identifiable {
-    let id = UUID()
-    let message: String
-}
-
-struct ChatsListView_Previews: PreviewProvider {
-    static var previews: some View {
-        ChatsListView()
-    }
-}
+// Remove duplicate ChatAlertError if already defined elsewhere.
