@@ -97,26 +97,13 @@ struct CandidateProfileView: View {
         .alert(item: Binding(
             get: {
                 if let errorMessage = viewModel.errorMessage {
-                    return GenericAlertError(message: errorMessage)
+                    return GenericAlertError(message: errorMessage)  // global
                 }
                 return nil
             },
             set: { _ in viewModel.errorMessage = nil }
         )) { alertError in
             Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
-        }
-    }
-}
-
-struct GenericAlertError: Identifiable {
-    let id = UUID()
-    let message: String
-}
-
-struct CandidateProfileView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            CandidateProfileView(candidateID: "dummyCandidateID")
         }
     }
 }

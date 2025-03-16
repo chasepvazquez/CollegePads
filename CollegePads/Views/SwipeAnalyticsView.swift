@@ -50,7 +50,7 @@ struct SwipeAnalyticsView: View {
             .alert(item: Binding(
                 get: {
                     if let errorMessage = viewModel.errorMessage {
-                        return GenericAlertError(message: errorMessage)
+                        return GenericAlertError(message: errorMessage)  // global
                     }
                     return nil
                 },

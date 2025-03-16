@@ -91,7 +91,7 @@ struct MatchesDashboardView: View {
             .alert(item: Binding(
                 get: {
                     if let errorMessage = viewModel.errorMessage {
-                        return GenericAlertError(message: errorMessage)
+                        return GenericAlertError(message: errorMessage)  // global
                     }
                     return nil
                 },
@@ -107,11 +107,5 @@ struct MatchesDashboardView: View {
         formatter.dateStyle = .short
         formatter.timeStyle = .short
         return formatter
-    }
-}
-
-struct MatchesDashboardView_Previews: PreviewProvider {
-    static var previews: some View {
-        MatchesDashboardView()
     }
 }

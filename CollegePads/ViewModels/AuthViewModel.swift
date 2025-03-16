@@ -19,14 +19,17 @@ class AuthViewModel: ObservableObject {
     private let authService = FirebaseAuthService()
     
     init() {
+        // Just set the current user; don't do the listener here.
         self.userSession = Auth.auth().currentUser
-        // Store or ignore the listener result.
+    }
+    
+    /// Call this in RootView’s onAppear to start listening for auth changes.
+    func listenToAuthState() {
         _ = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             self?.userSession = user
         }
     }
     
-    /// Signs up using the FirebaseAuthService.
     func signUp() {
         errorMessage = nil
         isLoading = true
@@ -44,7 +47,6 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    /// Signs in with email and password.
     func signIn() {
         errorMessage = nil
         isLoading = true
@@ -61,7 +63,6 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    /// Signs out the current user.
     func signOut() {
         do {
             try Auth.auth().signOut()
