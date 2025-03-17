@@ -25,6 +25,7 @@ struct ChatInputBar: View {
             
             Button(action: {
                 onSend()
+                HapticFeedbackManager.shared.generateImpact(style: .medium)
             }) {
                 Image(systemName: "paperplane.fill")
                     .foregroundColor(messageText.isEmpty ? Color.gray : Color.blue)

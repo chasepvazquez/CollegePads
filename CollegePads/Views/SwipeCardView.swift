@@ -61,7 +61,7 @@ struct SwipeCardView: View {
                             .frame(width: 150, height: 150)
                     }
                     
-                    // Heart icon for favorite
+                    // Heart icon for favorite (unchanged)
                     Button(action: toggleFavorite) {
                         Image(systemName: isFavorite ? "heart.fill" : "heart")
                             .font(.system(size: 24))
@@ -94,7 +94,7 @@ struct SwipeCardView: View {
             }
             .cornerRadius(15)
             
-            // Like/Nope overlays
+            // Like / Nope overlays
             if showLikeOverlay {
                 Text("LIKE")
                     .font(.system(size: 48, weight: .heavy))
@@ -144,8 +144,10 @@ struct SwipeCardView: View {
                 }
                 .onEnded { _ in
                     if offset.width > 100 {
+                        HapticFeedbackManager.shared.generateImpact(style: .heavy)
                         onSwipe(user, .right)
                     } else if offset.width < -100 {
+                        HapticFeedbackManager.shared.generateImpact(style: .heavy)
                         onSwipe(user, .left)
                     }
                     withAnimation {
@@ -170,6 +172,7 @@ struct SwipeCardView: View {
             FavoriteService().removeFavorite(candidate: user) { result in
                 switch result {
                 case .success:
+                    HapticFeedbackManager.shared.generateNotification(.warning)
                     self.isFavorite = false
                 case .failure(let error):
                     print("Error removing favorite: \(error.localizedDescription)")
@@ -179,6 +182,7 @@ struct SwipeCardView: View {
             FavoriteService().addFavorite(candidate: user) { result in
                 switch result {
                 case .success:
+                    HapticFeedbackManager.shared.generateNotification(.success)
                     self.isFavorite = true
                 case .failure(let error):
                     print("Error adding favorite: \(error.localizedDescription)")
