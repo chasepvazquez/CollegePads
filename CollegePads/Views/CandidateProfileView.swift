@@ -11,10 +11,10 @@ struct CandidateProfileView: View {
     let candidateID: String
     
     @StateObject private var viewModel = CandidateProfileViewModel()
+    @State private var showCompatibilityBreakdown = false
     
     var body: some View {
         ZStack {
-            // Gradient background covering the whole view
             LinearGradient(gradient: Gradient(colors: [.white, Color(UIColor.systemGray6)]),
                            startPoint: .top, endPoint: .bottom)
                 .edgesIgnoringSafeArea(.all)
@@ -23,7 +23,7 @@ struct CandidateProfileView: View {
                 if let candidate = viewModel.candidate {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // Profile image with circular border
+                            // Profile image
                             if let imageUrl = candidate.profileImageUrl, let url = URL(string: imageUrl) {
                                 AsyncImage(url: url) { phase in
                                     if let image = phase.image {
@@ -44,7 +44,7 @@ struct CandidateProfileView: View {
                                     .frame(width: 150, height: 150)
                             }
                             
-                            // Card-style container for candidate info
+                            // Candidate details in a card-style container
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(candidate.email)
                                     .font(.headline)
@@ -57,9 +57,15 @@ struct CandidateProfileView: View {
                                 if let college = candidate.collegeName {
                                     Text("College: \(college)")
                                 }
-                                
-                                Divider()
-                                
+                            }
+                            .padding()
+                            .background(Color.white)
+                            .cornerRadius(15)
+                            .shadow(radius: 5)
+                            
+                            Divider()
+                            
+                            VStack(alignment: .leading, spacing: 8) {
                                 if let dorm = candidate.dormType {
                                     Text("Dorm Type: \(dorm)")
                                 }
@@ -83,14 +89,20 @@ struct CandidateProfileView: View {
                                 }
                             }
                             .padding()
-                            .background(Color.white)
-                            .cornerRadius(15)
-                            .shadow(radius: 5)
                             
-                            // Compatibility Score (placeholder)
-                            Text("Compatibility: N/A")
-                                .font(.title2)
-                                .foregroundColor(.secondary)
+                            Divider()
+                            
+                            // Compatibility Breakdown button
+                            Button(action: {
+                                showCompatibilityBreakdown = true
+                            }) {
+                                Text("View Compatibility Breakdown")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.indigo)
+                                    .cornerRadius(8)
+                            }
                         }
                         .padding()
                     }
@@ -103,6 +115,11 @@ struct CandidateProfileView: View {
             }
         }
         .navigationTitle("Candidate Profile")
+        .sheet(isPresented: $showCompatibilityBreakdown) {
+            if let candidate = viewModel.candidate {
+                CompatibilityBreakdownView(candidate: candidate)
+            }
+        }
         .alert(item: Binding(
             get: {
                 if let errorMessage = viewModel.errorMessage {
