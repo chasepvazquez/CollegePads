@@ -9,7 +9,6 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 import FirebaseFirestoreCombineSwift
-import FirebaseFirestoreSwift
 import Combine
 
 enum SwipeDirection {
@@ -19,8 +18,6 @@ enum SwipeDirection {
 class MatchingViewModel: ObservableObject {
     @Published var potentialMatches: [UserModel] = []
     @Published var errorMessage: String?
-    
-    // Keep track of the last swiped candidate for potential rewind
     @Published var lastSwipedCandidate: UserModel?
     
     private var cancellables = Set<AnyCancellable>()
@@ -35,7 +32,6 @@ class MatchingViewModel: ObservableObject {
             self.errorMessage = "User not authenticated"
             return
         }
-        
         db.collection("users")
             .snapshotPublisher()
             .map { querySnapshot -> [UserModel] in
@@ -48,14 +44,24 @@ class MatchingViewModel: ObservableObject {
                     }
                 }
             }
-            .sink { completion in
+            .sink { [weak self] completion in
                 if case let .failure(error) = completion {
                     DispatchQueue.main.async {
-                        self.errorMessage = error.localizedDescription
+                        self?.errorMessage = error.localizedDescription
                     }
                 }
-            } receiveValue: { userModels in
-                let filtered = userModels.filter { $0.id != currentUserID }
+            } receiveValue: { [weak self] userModels in
+                guard let self = self else { return }
+                // Filter out the current user.
+                var filtered = userModels.filter { $0.id != currentUserID }
+                // If current user's profile is loaded, sort by compatibility descending.
+                if let currentUser = ProfileViewModel.shared.userProfile {
+                    filtered.sort { candidate1, candidate2 in
+                        let comp1 = CompatibilityCalculator.calculateUserCompatibility(between: currentUser, and: candidate1)
+                        let comp2 = CompatibilityCalculator.calculateUserCompatibility(between: currentUser, and: candidate2)
+                        return comp1 > comp2
+                    }
+                }
                 DispatchQueue.main.async {
                     self.potentialMatches = filtered
                 }
@@ -65,14 +71,12 @@ class MatchingViewModel: ObservableObject {
     
     func swipeRight(on user: UserModel) {
         guard let currentUserID = currentUserID, let matchUserID = user.id else { return }
-        
         let swipeData: [String: Any] = [
             "from": currentUserID,
             "to": matchUserID,
             "liked": true,
             "timestamp": FieldValue.serverTimestamp()
         ]
-        
         db.collection("swipes").addDocument(data: swipeData) { error in
             if let error = error {
                 DispatchQueue.main.async {
@@ -87,14 +91,12 @@ class MatchingViewModel: ObservableObject {
     
     func swipeLeft(on user: UserModel) {
         guard let currentUserID = currentUserID, let matchUserID = user.id else { return }
-        
         let swipeData: [String: Any] = [
             "from": currentUserID,
             "to": matchUserID,
             "liked": false,
             "timestamp": FieldValue.serverTimestamp()
         ]
-        
         db.collection("swipes").addDocument(data: swipeData) { error in
             if let error = error {
                 DispatchQueue.main.async {
