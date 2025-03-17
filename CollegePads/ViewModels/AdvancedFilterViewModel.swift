@@ -17,18 +17,19 @@ class AdvancedFilterViewModel: ObservableObject {
     @Published var filterCollegeName: String = ""
     @Published var filterBudgetRange: String = ""
     @Published var filterGradeLevel: String = ""
-    @Published var maxDistance: Double = 10.0  // in kilometers; default value
-
+    @Published var filterInterests: String = ""
+    @Published var maxDistance: Double = 10.0  // in kilometers
+    
     @Published var filteredUsers: [UserModel] = []
     @Published var errorMessage: String?
-
+    
     private var cancellables = Set<AnyCancellable>()
     private let db = Firestore.firestore()
-
+    
     func applyFilters(currentLocation: CLLocation?) {
         var query: Query = db.collection("users")
-
-        // Apply Firestore filters first
+        
+        // Firestore-based filtering:
         if !filterDormType.isEmpty {
             query = query.whereField("dormType", isEqualTo: filterDormType)
         }
@@ -41,26 +42,39 @@ class AdvancedFilterViewModel: ObservableObject {
         if !filterGradeLevel.isEmpty {
             query = query.whereField("gradeLevel", isEqualTo: filterGradeLevel)
         }
+        // Interests filtering will be done post-query
         
         query
             .snapshotPublisher()
             .map { snapshot -> [UserModel] in
                 snapshot.documents.compactMap { doc in
-                    do {
-                        return try doc.data(as: UserModel.self)
-                    } catch {
-                        print("Error decoding user doc: \(error)")
-                        return nil
-                    }
+                    try? doc.data(as: UserModel.self)
                 }
             }
             .map { users in
-                // Optionally filter by distance if currentLocation is provided
+                // Filter by interests if provided.
+                if !self.filterInterests.isEmpty {
+                    let interestsToFilter = self.filterInterests
+                        .split(separator: ",")
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                    return users.filter { user in
+                        if let userInterests = user.interests {
+                            let lowerUserInterests = userInterests.map { $0.lowercased() }
+                            return !Set(interestsToFilter).intersection(lowerUserInterests).isEmpty
+                        }
+                        return false
+                    }
+                } else {
+                    return users
+                }
+            }
+            .map { users in
+                // Filter by location if available.
                 if let currentLocation = currentLocation {
                     return users.filter { user in
                         if let lat = user.latitude, let lon = user.longitude {
                             let userLocation = CLLocation(latitude: lat, longitude: lon)
-                            let distance = currentLocation.distance(from: userLocation) / 1000.0 // km
+                            let distance = currentLocation.distance(from: userLocation) / 1000.0
                             return distance <= self.maxDistance
                         }
                         return true
@@ -69,20 +83,14 @@ class AdvancedFilterViewModel: ObservableObject {
                 return users
             }
             .sink { completion in
-                switch completion {
-                case .failure(let error):
+                if case let .failure(error) = completion {
                     DispatchQueue.main.async {
                         self.errorMessage = error.localizedDescription
                     }
-                case .finished:
-                    break
                 }
             } receiveValue: { users in
-                // Exclude current user
-                let currentUID = Auth.auth().currentUser?.uid
-                let filtered = users.filter { $0.id != currentUID }
                 DispatchQueue.main.async {
-                    self.filteredUsers = filtered
+                    self.filteredUsers = users
                 }
             }
             .store(in: &cancellables)

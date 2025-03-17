@@ -12,7 +12,7 @@ struct CompatibilityBreakdownView: View {
     @State private var breakdown: [String: Double] = [:]
     @State private var overallScore: Double = 0.0
     
-    // Retrieve current user's profile from shared instance
+    // Retrieve current user's profile from the shared ProfileViewModel.
     var currentUser: UserModel? {
         ProfileViewModel.shared.userProfile
     }
@@ -22,29 +22,29 @@ struct CompatibilityBreakdownView: View {
             VStack(spacing: 20) {
                 Text("Compatibility Breakdown")
                     .font(.largeTitle)
+                    .bold()
                     .padding(.top)
                 
-                if currentUser == nil {
-                    Text("Current user profile not loaded.")
-                } else {
-                    // Display overall score
+                if let current = currentUser {
                     Text("Overall Compatibility: \(Int(overallScore))%")
                         .font(.title)
                         .foregroundColor(overallScore > 70 ? .green : .orange)
                     
-                    Divider()
-                    
-                    // Display breakdown list
-                    List {
-                        ForEach(breakdown.keys.sorted(), id: \.self) { key in
-                            HStack {
-                                Text(key)
-                                Spacer()
-                                Text("\(Int(breakdown[key] ?? 0)) pts")
-                                    .foregroundColor(.secondary)
-                            }
+                    // For each factor, show a progress bar out of 10 pts.
+                    ForEach(breakdown.keys.sorted(), id: \.self) { key in
+                        HStack {
+                            Text(key)
+                                .fontWeight(.semibold)
+                                .frame(width: 100, alignment: .leading)
+                            ProgressView(value: breakdown[key]!, total: 10)
+                                .progressViewStyle(LinearProgressViewStyle(tint: .blue))
+                            Text("\(Int(breakdown[key]!)) pts")
+                                .frame(width: 50, alignment: .trailing)
                         }
+                        .padding(.vertical, 4)
                     }
+                } else {
+                    Text("Your profile is not loaded.")
                 }
                 
                 Spacer()
@@ -54,8 +54,7 @@ struct CompatibilityBreakdownView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Close") {
-                        // Dismiss the view if presented modally
-                        // (The parent view will dismiss it)
+                        // Dismiss the view (the parent view should handle dismissal)
                     }
                 }
             }
@@ -75,7 +74,7 @@ struct CompatibilityBreakdownView: View {
 
 struct CompatibilityBreakdownView_Previews: PreviewProvider {
     static var previews: some View {
-        // Create dummy candidate profile for preview purposes
+        // Dummy candidate for preview
         let candidate = UserModel(
             email: "candidate@edu",
             isEmailVerified: true,
@@ -83,18 +82,18 @@ struct CompatibilityBreakdownView_Previews: PreviewProvider {
             major: "Computer Science",
             collegeName: "Engineering",
             dormType: "On-Campus",
-            preferredDorm: "Dorm A",
+            preferredDorm: nil,
             budgetRange: "$500-$1000",
             cleanliness: 4,
             sleepSchedule: "Flexible",
             smoker: false,
             petFriendly: true,
             livingStyle: "Social",
-            profileImageUrl: nil,
+            interests: ["music", "coding"],
             latitude: 37.7749,
             longitude: -122.4194
         )
-        // For preview, assume current user's profile is similar.
+        // For preview, set a dummy current user.
         ProfileViewModel.shared.userProfile = UserModel(
             email: "current@edu",
             isEmailVerified: true,
@@ -102,16 +101,25 @@ struct CompatibilityBreakdownView_Previews: PreviewProvider {
             major: "Computer Science",
             collegeName: "Engineering",
             dormType: "On-Campus",
+            preferredDorm: nil,
             budgetRange: "$500-$1000",
             cleanliness: 5,
             sleepSchedule: "Flexible",
             smoker: false,
             petFriendly: true,
             livingStyle: "Social",
-            profileImageUrl: nil,
+            interests: ["coding", "sports"],
             latitude: 37.7749,
             longitude: -122.4194
         )
-        return CompatibilityBreakdownView(candidate: candidate)
+        return ProfileComparisonPreview(candidate: candidate)
+    }
+    
+    // A simple wrapper to display CompatibilityBreakdownView
+    struct ProfileComparisonPreview: View {
+        let candidate: UserModel
+        var body: some View {
+            CompatibilityBreakdownView(candidate: candidate)
+        }
     }
 }
