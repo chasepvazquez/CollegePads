@@ -15,75 +15,74 @@ struct SwipeCardView: View {
     @State private var rotation: Double = 0
     @State private var showLikeOverlay: Bool = false
     @State private var showNopeOverlay: Bool = false
-
-    // Retrieve current user's profile from the shared ProfileViewModel
+    @State private var isFavorite: Bool = false
+    
+    // Retrieve current user's profile from shared ProfileViewModel
     var currentUser: UserModel? {
         ProfileViewModel.shared.userProfile
     }
     
-    // Compute compatibility score if the current user's profile exists (optional).
+    // Compute compatibility score (optional)
     var compatibilityScore: Double? {
         if let current = currentUser {
             return CompatibilityCalculator.calculateUserCompatibility(between: current, and: user)
         }
         return nil
     }
-
+    
     var body: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(
-                gradient: Gradient(colors: [.white, Color(UIColor.systemGray6)]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .cornerRadius(15)
-            .shadow(radius: 5)
-
-            // Main content
+            // Background card with gradient
+            LinearGradient(gradient: Gradient(colors: [.white, Color(UIColor.systemGray6)]),
+                           startPoint: .top, endPoint: .bottom)
+                .cornerRadius(15)
+                .shadow(radius: 5)
+            
             VStack(spacing: 10) {
-                // Profile image with gradient overlay
-                ZStack {
+                // Profile image with favorite heart overlay
+                ZStack(alignment: .topTrailing) {
                     if let imageUrl = user.profileImageUrl, let url = URL(string: imageUrl) {
                         AsyncImage(url: url) { phase in
                             if let image = phase.image {
-                                image
-                                    .resizable()
+                                image.resizable()
                                     .aspectRatio(contentMode: .fill)
+                                    .frame(width: 150, height: 150)
+                                    .clipShape(Circle())
+                                    .overlay(Circle().stroke(Color.blue, lineWidth: 4))
                             } else {
-                                Color.gray.opacity(0.4)
+                                Image(systemName: "person.crop.circle")
+                                    .resizable()
+                                    .frame(width: 150, height: 150)
                             }
                         }
                     } else {
-                        Color.gray.opacity(0.4)
+                        Image(systemName: "person.crop.circle")
+                            .resizable()
+                            .frame(width: 150, height: 150)
+                    }
+                    
+                    // Heart icon for favorite
+                    Button(action: toggleFavorite) {
+                        Image(systemName: isFavorite ? "heart.fill" : "heart")
+                            .font(.system(size: 24))
+                            .foregroundColor(isFavorite ? .red : .gray)
+                            .padding(8)
                     }
                 }
-                .frame(height: 300)
-                .clipped()
-                .overlay(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.black.opacity(0.0), Color.black.opacity(0.5)]),
-                        startPoint: .center,
-                        endPoint: .bottom
-                    )
-                )
-                .cornerRadius(15)
                 
-                // Info section
+                // Information Section
                 VStack(spacing: 4) {
                     Text(user.email)
                         .font(.headline)
                     if let dorm = user.dormType {
                         Text("Dorm: \(dorm)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
                     }
                     if let budget = user.budgetRange {
                         Text("Budget: \(budget)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
                     }
-                    // Optional: show compatibility if you want
+                    if let schedule = user.sleepSchedule {
+                        Text("Sleep: \(schedule)")
+                    }
                     if let score = compatibilityScore {
                         Text("Compatibility: \(Int(score))%")
                             .font(.subheadline)
@@ -95,8 +94,7 @@ struct SwipeCardView: View {
             }
             .cornerRadius(15)
             
-            // Like / Nope overlays
-            // We'll place them in the corners with a small animation.
+            // Like/Nope overlays
             if showLikeOverlay {
                 Text("LIKE")
                     .font(.system(size: 48, weight: .heavy))
@@ -127,7 +125,6 @@ struct SwipeCardView: View {
                     offset = gesture.translation
                     rotation = Double(gesture.translation.width / 20)
                     
-                    // Show overlays if swiping far enough
                     if offset.width > 50 {
                         withAnimation {
                             showLikeOverlay = true
@@ -159,6 +156,41 @@ struct SwipeCardView: View {
                     }
                 }
         )
+        .onAppear {
+            // Check if candidate is a favorite when the card appears
+            FavoriteService().isFavorite(candidate: user) { fav in
+                self.isFavorite = fav
+            }
+        }
         .animation(.easeInOut, value: offset)
+    }
+    
+    private func toggleFavorite() {
+        if isFavorite {
+            FavoriteService().removeFavorite(candidate: user) { result in
+                switch result {
+                case .success:
+                    self.isFavorite = false
+                case .failure(let error):
+                    print("Error removing favorite: \(error.localizedDescription)")
+                }
+            }
+        } else {
+            FavoriteService().addFavorite(candidate: user) { result in
+                switch result {
+                case .success:
+                    self.isFavorite = true
+                case .failure(let error):
+                    print("Error adding favorite: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+}
+
+struct SwipeCardView_Previews: PreviewProvider {
+    static var previews: some View {
+        SwipeCardView(user: UserModel(email: "test@edu", isEmailVerified: true, gradeLevel: "Freshman", major: "Computer Science", collegeName: "Engineering", dormType: "On-Campus", budgetRange: "$500-$1000", cleanliness: 4, sleepSchedule: "Flexible", smoker: false, petFriendly: true, livingStyle: "Social", profileImageUrl: nil), onSwipe: { _, _ in })
+            .padding()
     }
 }

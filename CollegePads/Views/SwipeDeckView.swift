@@ -31,6 +31,26 @@ struct SwipeDeckView: View {
                     }
                 }
             }
+            
+            // Bottom control buttons: Rewind and Super Like
+            VStack {
+                Spacer()
+                HStack(spacing: 40) {
+                    Button(action: rewindSwipe) {
+                        Image(systemName: "gobackward")
+                            .font(.system(size: 32))
+                            .foregroundColor(currentIndex > 0 ? .blue : .gray)
+                    }
+                    .disabled(currentIndex == 0)
+                    
+                    Button(action: superLike) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.yellow)
+                    }
+                }
+                .padding(.bottom, 30)
+            }
         }
         .onAppear {
             viewModel.fetchPotentialMatches()
@@ -48,15 +68,29 @@ struct SwipeDeckView: View {
         }
     }
     
+    private func rewindSwipe() {
+        guard currentIndex > 0 else { return }
+        withAnimation {
+            currentIndex -= 1
+        }
+    }
+    
+    private func superLike() {
+        if currentIndex < viewModel.potentialMatches.count {
+            let user = viewModel.potentialMatches[currentIndex]
+            viewModel.superLike(on: user)
+            withAnimation {
+                currentIndex += 1
+            }
+        }
+    }
+    
     private func scale(for index: Int) -> CGFloat {
-        // Top card is 100%; subsequent cards slightly scaled.
         return index == currentIndex ? 1.0 : 0.95
     }
     
     private func offset(for index: Int) -> CGFloat {
-        // Cards behind the top card are offset downwards.
-        let offset = CGFloat(index - currentIndex) * 10
-        return offset
+        return CGFloat(index - currentIndex) * 10
     }
 }
 

@@ -9,6 +9,7 @@ import Foundation
 import FirebaseFirestore
 import FirebaseAuth
 import FirebaseFirestoreCombineSwift
+import FirebaseFirestoreSwift
 import Combine
 
 enum SwipeDirection {
@@ -19,6 +20,9 @@ class MatchingViewModel: ObservableObject {
     @Published var potentialMatches: [UserModel] = []
     @Published var errorMessage: String?
     
+    // Keep track of the last swiped candidate for potential rewind
+    @Published var lastSwipedCandidate: UserModel?
+    
     private var cancellables = Set<AnyCancellable>()
     private let db = Firestore.firestore()
     
@@ -26,7 +30,6 @@ class MatchingViewModel: ObservableObject {
         Auth.auth().currentUser?.uid
     }
     
-    /// Fetches all user profiles from Firestore, excluding the current user.
     func fetchPotentialMatches() {
         guard let currentUserID = currentUserID else {
             self.errorMessage = "User not authenticated"
@@ -46,13 +49,10 @@ class MatchingViewModel: ObservableObject {
                 }
             }
             .sink { completion in
-                switch completion {
-                case .failure(let error):
+                if case let .failure(error) = completion {
                     DispatchQueue.main.async {
                         self.errorMessage = error.localizedDescription
                     }
-                case .finished:
-                    break
                 }
             } receiveValue: { userModels in
                 let filtered = userModels.filter { $0.id != currentUserID }
@@ -63,7 +63,6 @@ class MatchingViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    /// Records a right-swipe (like) in Firestore and checks for a mutual match.
     func swipeRight(on user: UserModel) {
         guard let currentUserID = currentUserID, let matchUserID = user.id else { return }
         
@@ -80,12 +79,33 @@ class MatchingViewModel: ObservableObject {
                     self.errorMessage = error.localizedDescription
                 }
             } else {
+                self.lastSwipedCandidate = user
                 self.checkForMutualMatch(with: matchUserID)
             }
         }
     }
     
-    /// Checks if the other user has already swiped right on the current user.
+    func swipeLeft(on user: UserModel) {
+        guard let currentUserID = currentUserID, let matchUserID = user.id else { return }
+        
+        let swipeData: [String: Any] = [
+            "from": currentUserID,
+            "to": matchUserID,
+            "liked": false,
+            "timestamp": FieldValue.serverTimestamp()
+        ]
+        
+        db.collection("swipes").addDocument(data: swipeData) { error in
+            if let error = error {
+                DispatchQueue.main.async {
+                    self.errorMessage = error.localizedDescription
+                }
+            } else {
+                self.lastSwipedCandidate = user
+            }
+        }
+    }
+    
     private func checkForMutualMatch(with otherUserID: String) {
         guard let currentUserID = currentUserID else { return }
         let query = db.collection("swipes")
@@ -104,7 +124,6 @@ class MatchingViewModel: ObservableObject {
         }
     }
     
-    /// Checks if a chat between userA and userB already exists; if not, creates one.
     func createChatIfNotExists(userA: String, userB: String) {
         let chatsRef = db.collection("chats")
         chatsRef
@@ -114,21 +133,18 @@ class MatchingViewModel: ObservableObject {
                     print("Error searching for chat: \(error.localizedDescription)")
                     return
                 }
-                // Check if any existing chat includes both userA and userB
                 if let snapshot = snapshot {
                     for doc in snapshot.documents {
                         let participants = doc.data()["participants"] as? [String] ?? []
                         if participants.contains(userB) {
-                            // Chat already exists – do nothing.
                             return
                         }
                     }
                 }
-                // No chat exists, create a new one.
                 let chatData: [String: Any] = [
                     "participants": [userA, userB],
                     "createdAt": FieldValue.serverTimestamp(),
-                    "isTyping": false // initial typing status
+                    "isTyping": false
                 ]
                 chatsRef.addDocument(data: chatData) { error in
                     if let error = error {
@@ -140,23 +156,8 @@ class MatchingViewModel: ObservableObject {
             }
     }
     
-    /// Records a left-swipe (dislike) in Firestore.
-    func swipeLeft(on user: UserModel) {
-        guard let currentUserID = currentUserID, let matchUserID = user.id else { return }
-        
-        let swipeData: [String: Any] = [
-            "from": currentUserID,
-            "to": matchUserID,
-            "liked": false,
-            "timestamp": FieldValue.serverTimestamp()
-        ]
-        
-        db.collection("swipes").addDocument(data: swipeData) { error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
-                }
-            }
-        }
+    func superLike(on user: UserModel) {
+        print("Super liked user: \(user.email)")
+        swipeRight(on: user)
     }
 }

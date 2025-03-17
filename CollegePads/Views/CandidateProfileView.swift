@@ -12,6 +12,7 @@ struct CandidateProfileView: View {
     
     @StateObject private var viewModel = CandidateProfileViewModel()
     @State private var showCompatibilityBreakdown = false
+    @State private var showQuiz = false
     
     var body: some View {
         ZStack {
@@ -23,7 +24,7 @@ struct CandidateProfileView: View {
                 if let candidate = viewModel.candidate {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // Profile image
+                            // Profile image (same as before)
                             if let imageUrl = candidate.profileImageUrl, let url = URL(string: imageUrl) {
                                 AsyncImage(url: url) { phase in
                                     if let image = phase.image {
@@ -44,7 +45,7 @@ struct CandidateProfileView: View {
                                     .frame(width: 150, height: 150)
                             }
                             
-                            // Candidate details in a card-style container
+                            // Candidate details in card-style container
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(candidate.email)
                                     .font(.headline)
@@ -92,16 +93,29 @@ struct CandidateProfileView: View {
                             
                             Divider()
                             
-                            // Compatibility Breakdown button
-                            Button(action: {
-                                showCompatibilityBreakdown = true
-                            }) {
-                                Text("View Compatibility Breakdown")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.indigo)
-                                    .cornerRadius(8)
+                            // Buttons for compatibility breakdown and quiz
+                            HStack(spacing: 16) {
+                                Button(action: {
+                                    showCompatibilityBreakdown = true
+                                }) {
+                                    Text("View Compatibility Breakdown")
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.indigo)
+                                        .cornerRadius(8)
+                                }
+                                
+                                Button(action: {
+                                    showQuiz = true
+                                }) {
+                                    Text("Take Compatibility Quiz")
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.pink)
+                                        .cornerRadius(8)
+                                }
                             }
                         }
                         .padding()
@@ -119,6 +133,9 @@ struct CandidateProfileView: View {
             if let candidate = viewModel.candidate {
                 CompatibilityBreakdownView(candidate: candidate)
             }
+        }
+        .sheet(isPresented: $showQuiz) {
+            QuizView()  // Present the quiz modally
         }
         .alert(item: Binding(
             get: {
