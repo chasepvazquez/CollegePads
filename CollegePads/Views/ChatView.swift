@@ -23,7 +23,7 @@ struct ChatView: View {
                     }
                     .padding()
                 }
-                .onChange(of: viewModel.messages.count) { _ in
+                .onChange(of: viewModel.messages.count) { oldValue, newValue in
                     if let lastMessage = viewModel.messages.last, let id = lastMessage.id {
                         withAnimation {
                             scrollView.scrollTo(id, anchor: .bottom)

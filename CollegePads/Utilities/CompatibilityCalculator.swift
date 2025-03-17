@@ -22,34 +22,23 @@ struct CompatibilityCalculator {
         var totalWeight = 0.0
         var score = 0.0
         
-        // Define weights for each factor.
-        let factors: [(key: String, weight: Double)] = [
-            ("Grade", 10.0),
-            ("Dorm", 15.0),
-            ("Cleanliness", 15.0),
-            ("Sleep", 10.0),
-            ("Budget", 10.0),
-            ("LivingStyle", 10.0),
-            ("College", 10.0),
-            ("Major", 10.0),
-            ("Distance", 10.0),
-            ("Social", 10.0),       // New quiz field: social level
-            ("Study", 10.0)         // New quiz field: study habits
-        ]
-        
         // Grade Level
         totalWeight += 10.0
         if let grade1 = user1.gradeLevel, let grade2 = user2.gradeLevel, grade1 == grade2 {
             breakdown["Grade"] = 10.0
             score += 10.0
-        } else { breakdown["Grade"] = 0 }
+        } else {
+            breakdown["Grade"] = 0
+        }
         
         // Dorm Type
         totalWeight += 15.0
         if let dorm1 = user1.dormType, let dorm2 = user2.dormType, dorm1 == dorm2 {
             breakdown["Dorm"] = 15.0
             score += 15.0
-        } else { breakdown["Dorm"] = 0 }
+        } else {
+            breakdown["Dorm"] = 0
+        }
         
         // Cleanliness
         totalWeight += 15.0
@@ -58,42 +47,54 @@ struct CompatibilityCalculator {
             let cleanlinessScore = max(0, (5 - diff) / 5 * 15.0)
             breakdown["Cleanliness"] = cleanlinessScore
             score += cleanlinessScore
-        } else { breakdown["Cleanliness"] = 0 }
+        } else {
+            breakdown["Cleanliness"] = 0
+        }
         
         // Sleep Schedule
         totalWeight += 10.0
         if let sleep1 = user1.sleepSchedule, let sleep2 = user2.sleepSchedule, sleep1 == sleep2 {
             breakdown["Sleep"] = 10.0
             score += 10.0
-        } else { breakdown["Sleep"] = 0 }
+        } else {
+            breakdown["Sleep"] = 0
+        }
         
         // Budget Range
         totalWeight += 10.0
         if let budget1 = user1.budgetRange, let budget2 = user2.budgetRange, budget1 == budget2 {
             breakdown["Budget"] = 10.0
             score += 10.0
-        } else { breakdown["Budget"] = 0 }
+        } else {
+            breakdown["Budget"] = 0
+        }
         
         // Living Style
         totalWeight += 10.0
         if let style1 = user1.livingStyle, let style2 = user2.livingStyle, style1 == style2 {
             breakdown["LivingStyle"] = 10.0
             score += 10.0
-        } else { breakdown["LivingStyle"] = 0 }
+        } else {
+            breakdown["LivingStyle"] = 0
+        }
         
         // College Name
         totalWeight += 10.0
         if let college1 = user1.collegeName, let college2 = user2.collegeName, college1 == college2 {
             breakdown["College"] = 10.0
             score += 10.0
-        } else { breakdown["College"] = 0 }
+        } else {
+            breakdown["College"] = 0
+        }
         
         // Major
         totalWeight += 10.0
         if let major1 = user1.major, let major2 = user2.major, major1 == major2 {
             breakdown["Major"] = 10.0
             score += 10.0
-        } else { breakdown["Major"] = 0 }
+        } else {
+            breakdown["Major"] = 0
+        }
         
         // Distance factor
         totalWeight += 10.0
@@ -119,20 +120,37 @@ struct CompatibilityCalculator {
         if let social1 = user1.socialLevel, let social2 = user2.socialLevel {
             breakdown["Social"] = (social1 == social2 ? 10.0 : 0)
             score += (social1 == social2 ? 10.0 : 0)
-        } else { breakdown["Social"] = 0 }
+        } else {
+            breakdown["Social"] = 0
+        }
         
         // Study Habits (Quiz)
         totalWeight += 10.0
         if let study1 = user1.studyHabits, let study2 = user2.studyHabits {
             breakdown["Study"] = (study1 == study2 ? 10.0 : 0)
             score += (study1 == study2 ? 10.0 : 0)
-        } else { breakdown["Study"] = 0 }
+        } else {
+            breakdown["Study"] = 0
+        }
+        
+        // Common Interests – New Factor
+        totalWeight += 10.0
+        if let interests1 = user1.interests, let interests2 = user2.interests {
+            // Convert all interests to lowercase for case-insensitive comparison.
+            let lowerInterests1 = interests1.map { $0.lowercased() }
+            let lowerInterests2 = interests2.map { $0.lowercased() }
+            let common = lowerInterests1.filter { lowerInterests2.contains($0) }
+            let commonScore = common.isEmpty ? 0.0 : 10.0
+            breakdown["Interests"] = commonScore
+            score += commonScore
+        } else {
+            breakdown["Interests"] = 0
+        }
         
         let overall = (score / totalWeight) * 100
         return (overall, breakdown)
     }
     
-    // Haversine distance function remains unchanged.
     private static func haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double) -> Double {
         let earthRadiusKm = 6371.0
         let dLat = degreesToRadians(lat2 - lat1)

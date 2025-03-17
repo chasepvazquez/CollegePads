@@ -13,6 +13,7 @@ struct CandidateProfileView: View {
     @StateObject private var viewModel = CandidateProfileViewModel()
     @State private var showCompatibilityBreakdown = false
     @State private var showQuiz = false
+    @State private var showComparison = false  // New state for profile comparison
     
     var body: some View {
         ZStack {
@@ -24,7 +25,7 @@ struct CandidateProfileView: View {
                 if let candidate = viewModel.candidate {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // Profile image (same as before)
+                            // Profile image
                             if let imageUrl = candidate.profileImageUrl, let url = URL(string: imageUrl) {
                                 AsyncImage(url: url) { phase in
                                     if let image = phase.image {
@@ -45,7 +46,7 @@ struct CandidateProfileView: View {
                                     .frame(width: 150, height: 150)
                             }
                             
-                            // Candidate details in card-style container
+                            // Candidate details in a card-style container
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(candidate.email)
                                     .font(.headline)
@@ -91,9 +92,29 @@ struct CandidateProfileView: View {
                             }
                             .padding()
                             
+                            // Common Interests Section
+                            if let currentUser = ProfileViewModel.shared.userProfile,
+                               let candidateInterests = candidate.interests,
+                               let currentInterests = currentUser.interests {
+                                let common = candidateInterests.filter { currentInterests.contains($0.lowercased()) }
+                                if !common.isEmpty {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Common Interests:")
+                                            .font(.headline)
+                                        Text(common.joined(separator: ", "))
+                                            .font(.body)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding()
+                                    .background(Color.white.opacity(0.8))
+                                    .cornerRadius(8)
+                                    .shadow(radius: 3)
+                                }
+                            }
+                            
                             Divider()
                             
-                            // Buttons for compatibility breakdown and quiz
+                            // Buttons for compatibility breakdown, quiz, and profile comparison
                             HStack(spacing: 16) {
                                 Button(action: {
                                     showCompatibilityBreakdown = true
@@ -117,6 +138,17 @@ struct CandidateProfileView: View {
                                         .cornerRadius(8)
                                 }
                             }
+                            
+                            Button(action: {
+                                showComparison = true
+                            }) {
+                                Text("Compare with My Profile")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.blue)
+                                    .cornerRadius(8)
+                            }
                         }
                         .padding()
                     }
@@ -135,7 +167,12 @@ struct CandidateProfileView: View {
             }
         }
         .sheet(isPresented: $showQuiz) {
-            QuizView()  // Present the quiz modally
+            QuizView()
+        }
+        .sheet(isPresented: $showComparison) {
+            if let candidate = viewModel.candidate {
+                ProfileComparisonView(candidate: candidate)
+            }
         }
         .alert(item: Binding(
             get: {

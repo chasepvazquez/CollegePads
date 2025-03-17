@@ -9,9 +9,8 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
 
-/// A codable user model that uses Firestore's Combine features.
+/// A codable user model for CollegePads.
 struct UserModel: Codable, Identifiable {
-    /// The Firestore document ID, auto-populated via @DocumentID.
     @DocumentID var id: String?
 
     // Basic Info
@@ -20,23 +19,26 @@ struct UserModel: Codable, Identifiable {
     var isEmailVerified: Bool
 
     // College / Living Info
-    var gradeLevel: String?        // e.g., "Freshman", "Senior"
+    var gradeLevel: String?
     var major: String?
-    var collegeName: String?       // e.g., "Engineering"
+    var collegeName: String?
 
     // Roommate Preferences
-    var dormType: String?          // e.g., "On-Campus", "Off-Campus"
-    var preferredDorm: String?     // e.g., "Dorm A", "Dorm B"
-    var budgetRange: String?       // e.g., "$500-$1000"
-    var cleanliness: Int?          // rating 1-5
-    var sleepSchedule: String?     // e.g., "Flexible", "Early Bird", etc.
+    var dormType: String?
+    var preferredDorm: String?
+    var budgetRange: String?
+    var cleanliness: Int?
+    var sleepSchedule: String?
     var smoker: Bool?
     var petFriendly: Bool?
-    var livingStyle: String?       // e.g., "Social", "Quiet"
+    var livingStyle: String?
 
     // New Quiz Fields
-    var socialLevel: Int?          // 1 (very introverted) to 5 (extremely social)
-    var studyHabits: Int?          // 1 (rarely study) to 5 (studies intensively)
+    var socialLevel: Int?
+    var studyHabits: Int?
+
+    // New: Common Interests – an array of interests as strings
+    var interests: [String]?
 
     // Profile Picture & Location
     var profileImageUrl: String?
@@ -60,6 +62,7 @@ struct UserModel: Codable, Identifiable {
         livingStyle: String? = nil,
         socialLevel: Int? = nil,
         studyHabits: Int? = nil,
+        interests: [String]? = nil,
         profileImageUrl: String? = nil,
         latitude: Double? = nil,
         longitude: Double? = nil
@@ -80,6 +83,7 @@ struct UserModel: Codable, Identifiable {
         self.livingStyle = livingStyle
         self.socialLevel = socialLevel
         self.studyHabits = studyHabits
+        self.interests = interests
         self.profileImageUrl = profileImageUrl
         self.latitude = latitude
         self.longitude = longitude

@@ -9,7 +9,7 @@ import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
-import Combine  // Added for AnyCancellable
+import Combine  // For AnyCancellable
 
 struct ChatListItem: Identifiable {
     let id: String
@@ -46,9 +46,8 @@ struct ChatsListView: View {
             }
             .alert(item: Binding(
                 get: {
-                    // Assuming ChatAlertError is defined in ChatView.swift
                     if let errorMessage = errorMessage {
-                        return ChatAlertError(message: errorMessage)
+                        return GenericAlertError(message: errorMessage)
                     }
                     return nil
                 },
@@ -92,4 +91,10 @@ struct ChatsListView: View {
     }
 }
 
-// Remove duplicate ChatAlertError if already defined elsewhere.
+struct ChatsListView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            ChatsListView()
+        }
+    }
+}

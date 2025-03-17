@@ -21,12 +21,12 @@ struct ProfileSetupView: View {
     @State private var gradeLevel: String = ""
     @State private var major: String = ""
     @State private var collegeName: String = ""
+    @State private var interestsText: String = ""  // New: User interests
 
     // For profile image selection
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
     
-    // Options for the sleep schedule picker
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
 
     var body: some View {
@@ -95,6 +95,12 @@ struct ProfileSetupView: View {
                     Toggle("Pet Friendly", isOn: $petFriendly)
                 }
                 
+                // New Interests Section
+                Section(header: Text("Interests")) {
+                    TextField("Enter interests separated by commas", text: $interestsText)
+                        .autocapitalization(.none)
+                }
+                
                 Section {
                     Button(action: saveProfile) {
                         Text("Save Profile")
@@ -115,11 +121,11 @@ struct ProfileSetupView: View {
                 gradeLevel = profile.gradeLevel ?? ""
                 major = profile.major ?? ""
                 collegeName = profile.collegeName ?? ""
+                interestsText = profile.interests?.joined(separator: ", ") ?? ""
             }
             .sheet(isPresented: $showingImagePicker) {
                 ImagePicker(image: $selectedImage)
             }
-            // Updated onChange to new two-parameter closure
             .onChange(of: selectedImage) { newImage, _ in
                 guard let image = newImage else { return }
                 FirebaseStorageService.shared.uploadProfileImage(image: image) { result in
@@ -137,7 +143,7 @@ struct ProfileSetupView: View {
             .alert(item: Binding(
                 get: {
                     if let errorMessage = viewModel.errorMessage {
-                        return ProfileAlertError(message: errorMessage)
+                        return GenericAlertError(message: errorMessage)
                     }
                     return nil
                 },
@@ -149,6 +155,10 @@ struct ProfileSetupView: View {
     }
     
     private func saveProfile() {
+        let interestsArray = interestsText
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        
         if var existingProfile = viewModel.userProfile {
             existingProfile.dormType = dormType
             existingProfile.budgetRange = budgetRange
@@ -159,7 +169,7 @@ struct ProfileSetupView: View {
             existingProfile.gradeLevel = gradeLevel
             existingProfile.major = major
             existingProfile.collegeName = collegeName
-            
+            existingProfile.interests = interestsArray
             viewModel.updateUserProfile(updatedProfile: existingProfile) { result in
                 switch result {
                 case .success:
@@ -182,7 +192,8 @@ struct ProfileSetupView: View {
                 sleepSchedule: sleepSchedule,
                 smoker: smoker,
                 petFriendly: petFriendly,
-                livingStyle: nil
+                livingStyle: nil,
+                interests: interestsArray
             )
             viewModel.updateUserProfile(updatedProfile: newProfile) { result in
                 switch result {
@@ -196,7 +207,8 @@ struct ProfileSetupView: View {
     }
 }
 
-struct ProfileAlertError: Identifiable {
-    let id = UUID()
-    let message: String
+struct ProfileSetupView_Previews: PreviewProvider {
+    static var previews: some View {
+        ProfileSetupView()
+    }
 }
