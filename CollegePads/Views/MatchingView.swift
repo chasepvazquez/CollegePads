@@ -9,27 +9,39 @@ import SwiftUI
 
 struct MatchingView: View {
     @StateObject private var viewModel = MatchingViewModel()
+    @State private var currentIndex = 0
     
     var body: some View {
         ZStack {
-            if viewModel.potentialMatches.isEmpty {
-                Text("No more matches")
-                    .font(.title)
-            } else {
-                ForEach(viewModel.potentialMatches) { user in
-                    SwipeCardView(user: user) { swipedUser, direction in
-                        handleSwipe(user: swipedUser, direction: direction)
-                    }
+            ForEach(viewModel.potentialMatches.indices.reversed(), id: \.self) { index in
+                let user = viewModel.potentialMatches[index]
+                SwipeCardView(user: user) { swipedUser, direction in
+                    handleSwipe(user: swipedUser, direction: direction, index: index)
                 }
+                .padding(8)
+                .offset(y: CGFloat(index - currentIndex) * 5)
+                .allowsHitTesting(index == currentIndex)
             }
         }
         .onAppear {
             viewModel.fetchPotentialMatches()
         }
+        .navigationTitle("Swipe to Match")
+        .toolbar {
+            // optional refresh or filter button
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    viewModel.fetchPotentialMatches()
+                    currentIndex = 0
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                }
+            }
+        }
         .alert(item: Binding(
             get: {
                 if let errorMessage = viewModel.errorMessage {
-                    return AlertError(message: errorMessage)
+                    return GenericAlertError(message: errorMessage)
                 }
                 return nil
             },
@@ -39,26 +51,15 @@ struct MatchingView: View {
         }
     }
     
-    private func handleSwipe(user: UserModel, direction: SwipeDirection) {
-        switch direction {
-        case .right:
+    func handleSwipe(user: UserModel, direction: SwipeDirection, index: Int) {
+        if direction == .right {
             viewModel.swipeRight(on: user)
-        case .left:
+        } else {
             viewModel.swipeLeft(on: user)
         }
-        if let index = viewModel.potentialMatches.firstIndex(where: { $0.id == user.id }) {
-            viewModel.potentialMatches.remove(at: index)
+        // Move to the next card
+        withAnimation {
+            currentIndex += 1
         }
-    }
-}
-
-struct AlertError: Identifiable {
-    let id = UUID()
-    let message: String
-}
-
-struct MatchingView_Previews: PreviewProvider {
-    static var previews: some View {
-        MatchingView()
     }
 }
