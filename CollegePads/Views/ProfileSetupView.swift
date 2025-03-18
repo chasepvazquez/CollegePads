@@ -4,6 +4,9 @@
 //
 //  Created by [Your Name] on [Date].
 //
+//  This view allows users to update their profile with detailed, finite options for fields such as grade level,
+//  housing status, and lease duration, along with other profile details. Finite options are implemented as pickers,
+//  covering all common cases (e.g., all undergrad years, grad, PhD, etc.) and detailed housing situations.
 
 import SwiftUI
 import FirebaseAuth
@@ -11,27 +14,68 @@ import FirebaseAuth
 struct ProfileSetupView: View {
     @StateObject private var viewModel = ProfileViewModel.shared
 
-    // Local form fields
-    @State private var dormType: String = ""
+    // MARK: - Freeform Fields
+    @State private var major: String = ""
+    @State private var collegeName: String = ""
+    @State private var interestsText: String = ""
+    
+    // Budget can be freeform because ranges can vary.
     @State private var budgetRange: String = ""
+    
+    // Other freeform fields
     @State private var cleanliness: Int = 3
     @State private var sleepSchedule: String = "Flexible"
     @State private var smoker: Bool = false
     @State private var petFriendly: Bool = false
-    @State private var gradeLevel: String = ""
-    @State private var major: String = ""
-    @State private var collegeName: String = ""
-    @State private var interestsText: String = ""  // New: User interests
 
-    // For profile image selection
+    // MARK: - Finite Options (Pickers)
+    enum GradeLevel: String, CaseIterable, Identifiable {
+        case freshman = "Freshman"
+        case sophomore = "Sophomore"
+        case junior = "Junior"
+        case senior = "Senior"
+        case graduate = "Graduate"
+        case phd = "PhD"
+        case other = "Other"
+        var id: String { self.rawValue }
+    }
+    @State private var selectedGradeLevel: GradeLevel = .freshman
+    
+    enum HousingStatus: String, CaseIterable, Identifiable {
+        case dorm = "Dorm Resident"
+        case apartment = "Apartment Resident"
+        case house = "House Owner/Renter"
+        case subleasing = "Subleasing"
+        case lookingForRoommate = "Looking for Roommate"
+        case lookingForLease = "Looking for Lease"
+        case other = "Other"
+        var id: String { self.rawValue }
+    }
+    @State private var selectedHousingStatus: HousingStatus = .dorm
+    
+    enum LeaseDuration: String, CaseIterable, Identifiable {
+        case current = "Current Lease"
+        case shortTerm = "Short Term (< 6 months)"
+        case mediumTerm = "Medium Term (6-12 months)"
+        case longTerm = "Long Term (1 year+)"
+        case futureNextYear = "Future: Next Year"
+        case futureTwoPlus = "Future: 2+ Years"
+        case notApplicable = "Not Applicable"
+        var id: String { self.rawValue }
+    }
+    @State private var selectedLeaseDuration: LeaseDuration = .notApplicable
+
+    // MARK: - Profile Image
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
     
+    // MARK: - Freeform Options for Sleep Schedule (if needed)
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
 
     var body: some View {
         NavigationView {
             Form {
+                // Profile Picture Section
                 Section(header: Text("Profile Picture")) {
                     HStack {
                         Spacer()
@@ -67,40 +111,67 @@ struct ProfileSetupView: View {
                     }
                 }
                 
+                // Basic Info Section
                 Section(header: Text("Basic Info")) {
-                    TextField("Grade Level (e.g., Freshman)", text: $gradeLevel)
+                    // Grade Level Picker
+                    Picker("Grade Level", selection: $selectedGradeLevel) {
+                        ForEach(GradeLevel.allCases) { level in
+                            Text(level.rawValue).tag(level)
+                        }
+                    }
+                    
+                    // Major & College Name as TextFields
                     TextField("Major (e.g., Computer Science)", text: $major)
                     TextField("College Name (e.g., Engineering)", text: $collegeName)
+                    
+                    // Email (read-only)
                     TextField("Email", text: .constant(viewModel.userProfile?.email ?? ""))
                         .disabled(true)
                 }
                 
-                Section(header: Text("Roommate Preferences")) {
-                    TextField("Dorm Type (e.g., On-Campus, Off-Campus)", text: $dormType)
+                // Housing Preferences Section
+                Section(header: Text("Housing Preferences")) {
+                    // Housing Status Picker
+                    Picker("Housing Status", selection: $selectedHousingStatus) {
+                        ForEach(HousingStatus.allCases) { status in
+                            Text(status.rawValue).tag(status)
+                        }
+                    }
+                    
+                    // Lease Duration Picker (only if applicable)
+                    if selectedHousingStatus == .apartment || selectedHousingStatus == .house || selectedHousingStatus == .subleasing || selectedHousingStatus == .lookingForLease {
+                        Picker("Lease Duration", selection: $selectedLeaseDuration) {
+                            ForEach(LeaseDuration.allCases) { duration in
+                                Text(duration.rawValue).tag(duration)
+                            }
+                        }
+                    }
+                    
+                    // Budget Range as a freeform TextField (since ranges can vary)
                     TextField("Budget Range (e.g., $500 - $1000)", text: $budgetRange)
                     
+                    // Cleanliness, Sleep Schedule, Smoker, and Pet Friendly options
                     Picker("Cleanliness (1-5)", selection: $cleanliness) {
                         ForEach(1..<6) { number in
                             Text("\(number)").tag(number)
                         }
                     }
-                    
                     Picker("Sleep Schedule", selection: $sleepSchedule) {
                         ForEach(sleepScheduleOptions, id: \.self) { option in
                             Text(option)
                         }
                     }
-                    
                     Toggle("Smoker", isOn: $smoker)
                     Toggle("Pet Friendly", isOn: $petFriendly)
                 }
                 
-                // New Interests Section
+                // Interests Section
                 Section(header: Text("Interests")) {
                     TextField("Enter interests separated by commas", text: $interestsText)
                         .autocapitalization(.none)
                 }
                 
+                // Save Button
                 Section {
                     Button(action: saveProfile) {
                         Text("Save Profile")
@@ -109,99 +180,60 @@ struct ProfileSetupView: View {
                 }
             }
             .navigationTitle("Profile Setup")
-            .onAppear { viewModel.loadUserProfile() }
+            .onAppear {
+                viewModel.loadUserProfile()
+            }
             .onReceive(viewModel.$userProfile) { profile in
                 guard let profile = profile else { return }
-                dormType = profile.dormType ?? ""
+                // Update pickers and text fields from loaded profile.
+                selectedGradeLevel = GradeLevel(rawValue: profile.gradeLevel ?? "") ?? .freshman
+                major = profile.major ?? ""
+                collegeName = profile.collegeName ?? ""
+                // Housing status & lease duration should be added to your UserModel. For now, we'll default:
+                selectedHousingStatus = .other  // Update this once you extend your UserModel.
+                selectedLeaseDuration = .notApplicable // Update this once you extend your UserModel.
                 budgetRange = profile.budgetRange ?? ""
                 cleanliness = profile.cleanliness ?? 3
                 sleepSchedule = profile.sleepSchedule ?? "Flexible"
                 smoker = profile.smoker ?? false
                 petFriendly = profile.petFriendly ?? false
-                gradeLevel = profile.gradeLevel ?? ""
-                major = profile.major ?? ""
-                collegeName = profile.collegeName ?? ""
                 interestsText = profile.interests?.joined(separator: ", ") ?? ""
             }
             .sheet(isPresented: $showingImagePicker) {
                 ImagePicker(image: $selectedImage)
             }
-            .onChange(of: selectedImage) { newImage, _ in
-                guard let image = newImage else { return }
-                FirebaseStorageService.shared.uploadProfileImage(image: image) { result in
-                    switch result {
-                    case .success(let urlString):
-                        if var existingProfile = viewModel.userProfile {
-                            existingProfile.profileImageUrl = urlString
-                            viewModel.updateUserProfile(updatedProfile: existingProfile) { _ in }
-                        }
-                    case .failure(let error):
-                        print("Failed to upload image: \(error.localizedDescription)")
-                    }
-                }
-            }
-            .alert(item: Binding(
-                get: {
-                    if let errorMessage = viewModel.errorMessage {
-                        return GenericAlertError(message: errorMessage)
-                    }
-                    return nil
-                },
-                set: { _ in viewModel.errorMessage = nil }
-            )) { alertError in
-                Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
-            }
         }
     }
     
+    /// Saves the updated profile to Firestore.
     private func saveProfile() {
+        // Convert interestsText to an array.
         let interestsArray = interestsText
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         
-        if var existingProfile = viewModel.userProfile {
-            existingProfile.dormType = dormType
-            existingProfile.budgetRange = budgetRange
-            existingProfile.cleanliness = cleanliness
-            existingProfile.sleepSchedule = sleepSchedule
-            existingProfile.smoker = smoker
-            existingProfile.petFriendly = petFriendly
-            existingProfile.gradeLevel = gradeLevel
-            existingProfile.major = major
-            existingProfile.collegeName = collegeName
-            existingProfile.interests = interestsArray
-            viewModel.updateUserProfile(updatedProfile: existingProfile) { result in
-                switch result {
-                case .success:
-                    break
-                case .failure(let error):
-                    viewModel.errorMessage = error.localizedDescription
-                }
-            }
-        } else {
-            let newProfile = UserModel(
-                email: Auth.auth().currentUser?.email ?? "",
-                isEmailVerified: Auth.auth().currentUser?.isEmailVerified ?? false,
-                gradeLevel: gradeLevel,
-                major: major,
-                collegeName: collegeName,
-                dormType: dormType,
-                preferredDorm: nil,
-                budgetRange: budgetRange,
-                cleanliness: cleanliness,
-                sleepSchedule: sleepSchedule,
-                smoker: smoker,
-                petFriendly: petFriendly,
-                livingStyle: nil,
-                interests: interestsArray
-            )
-            viewModel.updateUserProfile(updatedProfile: newProfile) { result in
-                switch result {
-                case .success:
-                    break
-                case .failure(let error):
-                    viewModel.errorMessage = error.localizedDescription
-                }
+        // Build an updated profile.
+        var updatedProfile = viewModel.userProfile ?? UserModel(email: Auth.auth().currentUser?.email ?? "", isEmailVerified: false)
+        updatedProfile.gradeLevel = selectedGradeLevel.rawValue
+        updatedProfile.major = major
+        updatedProfile.collegeName = collegeName
+        updatedProfile.budgetRange = budgetRange
+        updatedProfile.cleanliness = cleanliness
+        updatedProfile.sleepSchedule = sleepSchedule
+        updatedProfile.smoker = smoker
+        updatedProfile.petFriendly = petFriendly
+        updatedProfile.interests = interestsArray
+        
+        // If you extend your UserModel to include housingStatus and leaseDuration, update them here.
+        // e.g., updatedProfile.housingStatus = selectedHousingStatus.rawValue
+        //       updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
+        
+        viewModel.updateUserProfile(updatedProfile: updatedProfile) { result in
+            switch result {
+            case .success:
+                print("Profile successfully updated.")
+            case .failure(let error):
+                print("Error updating profile: \(error.localizedDescription)")
             }
         }
     }

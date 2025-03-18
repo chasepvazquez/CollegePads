@@ -4,6 +4,10 @@
 //
 //  Created by [Your Name] on [Date].
 //
+//  This model represents a user profile for CollegePads. It includes all necessary
+//  fields for basic user information, college/living details, roommate preferences,
+//  quiz responses, interests, location data, verification status, blocked users,
+//  and new housing-related fields: housingStatus and leaseDuration.
 
 import Foundation
 import FirebaseFirestore
@@ -11,19 +15,20 @@ import FirebaseFirestoreCombineSwift
 
 /// A codable user model for CollegePads.
 struct UserModel: Codable, Identifiable {
+    /// The unique Firestore document ID.
     @DocumentID var id: String?
 
-    // Basic Info
+    // MARK: - Basic Info
     var email: String
     var createdAt: Date
     var isEmailVerified: Bool
 
-    // College & Living Info
+    // MARK: - College & Living Info
     var gradeLevel: String?
     var major: String?
     var collegeName: String?
 
-    // Roommate Preferences
+    // MARK: - Roommate Preferences
     var dormType: String?
     var preferredDorm: String?
     var budgetRange: String?
@@ -33,24 +38,32 @@ struct UserModel: Codable, Identifiable {
     var petFriendly: Bool?
     var livingStyle: String?
 
-    // Quiz & Interests
+    // MARK: - Quiz & Interests
     var socialLevel: Int?
     var studyHabits: Int?
     var interests: [String]?
 
-    // Profile Picture & Location
+    // MARK: - Profile Picture & Location
     var profileImageUrl: String?
     var latitude: Double?
     var longitude: Double?
     
-    // Verification Fields
-    var isVerified: Bool?         // true if user has been verified
+    // MARK: - Verification Fields
+    var isVerified: Bool?         // true if the user has been verified
     var verificationImageUrl: String? // URL of the uploaded verification image
     
-    // New: Blocked User IDs
+    // MARK: - Blocked Users
     var blockedUserIDs: [String]?   // UIDs of users blocked by this user
+    
+    // MARK: - Housing Details (New)
+    /// Indicates the user's current living situation.
+    /// Examples: "Dorm Resident", "Apartment Resident", "House Owner/Renter", "Subleasing", "Looking for Roommate", "Looking for Lease", "Other".
+    var housingStatus: String?
+    /// Specifies the lease duration or timing.
+    /// Examples: "Current Lease", "Short Term (<6 months)", "Medium Term (6-12 months)", "Long Term (1 year+)", "Future: Next Year", "Future: 2+ Years", "Not Applicable".
+    var leaseDuration: String?
 
-    // Initializer
+    // MARK: - Initializer
     init(
         email: String,
         isEmailVerified: Bool,
@@ -73,11 +86,13 @@ struct UserModel: Codable, Identifiable {
         longitude: Double? = nil,
         isVerified: Bool? = false,
         verificationImageUrl: String? = nil,
-        blockedUserIDs: [String]? = nil
+        blockedUserIDs: [String]? = nil,
+        housingStatus: String? = nil,
+        leaseDuration: String? = nil
     ) {
         self.email = email
         self.isEmailVerified = isEmailVerified
-        self.createdAt = Date()
+        self.createdAt = Date()  // Set to current time on initialization.
         self.gradeLevel = gradeLevel
         self.major = major
         self.collegeName = collegeName
@@ -98,5 +113,7 @@ struct UserModel: Codable, Identifiable {
         self.isVerified = isVerified
         self.verificationImageUrl = verificationImageUrl
         self.blockedUserIDs = blockedUserIDs
+        self.housingStatus = housingStatus
+        self.leaseDuration = leaseDuration
     }
 }
