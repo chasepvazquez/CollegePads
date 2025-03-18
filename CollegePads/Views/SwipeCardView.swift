@@ -39,7 +39,7 @@ struct SwipeCardView: View {
                 .shadow(radius: 5)
             
             VStack(spacing: 10) {
-                // Profile image with favorite heart overlay
+                // Profile image with favorite heart overlay and Verified badge
                 ZStack(alignment: .topTrailing) {
                     if let imageUrl = user.profileImageUrl, let url = URL(string: imageUrl) {
                         AsyncImage(url: url) { phase in
@@ -61,7 +61,18 @@ struct SwipeCardView: View {
                             .frame(width: 150, height: 150)
                     }
                     
-                    // Heart icon for favorite (unchanged)
+                    // Verified badge overlay:
+                    if let verified = user.isVerified, verified {
+                        Text("✓ Verified")
+                            .font(.caption2)
+                            .foregroundColor(.white)
+                            .padding(4)
+                            .background(Color.blue.opacity(0.8))
+                            .clipShape(Capsule())
+                            .offset(x: -10, y: 10)
+                    }
+                    
+                    // Heart icon for favorite
                     Button(action: toggleFavorite) {
                         Image(systemName: isFavorite ? "heart.fill" : "heart")
                             .font(.system(size: 24))
@@ -194,7 +205,7 @@ struct SwipeCardView: View {
 
 struct SwipeCardView_Previews: PreviewProvider {
     static var previews: some View {
-        SwipeCardView(user: UserModel(email: "test@edu", isEmailVerified: true, gradeLevel: "Freshman", major: "Computer Science", collegeName: "Engineering", dormType: "On-Campus", budgetRange: "$500-$1000", cleanliness: 4, sleepSchedule: "Flexible", smoker: false, petFriendly: true, livingStyle: "Social", profileImageUrl: nil), onSwipe: { _, _ in })
+        SwipeCardView(user: UserModel(email: "test@edu", isEmailVerified: true, gradeLevel: "Freshman", major: "Computer Science", collegeName: "Engineering", dormType: "On-Campus", budgetRange: "$500-$1000", cleanliness: 4, sleepSchedule: "Flexible", smoker: false, petFriendly: true, livingStyle: "Social", profileImageUrl: nil, isVerified: true), onSwipe: { _, _ in })
             .padding()
     }
 }

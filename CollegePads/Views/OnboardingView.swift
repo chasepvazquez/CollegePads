@@ -42,41 +42,30 @@ struct OnboardingView: View {
                 
                 HStack {
                     if currentPage > 0 {
-                        Button(action: {
-                            withAnimation {
-                                currentPage -= 1
-                            }
-                        }) {
-                            Text("Back")
-                                .padding()
+                        Button("Back") {
+                            withAnimation { currentPage -= 1 }
                         }
+                        .padding()
                     }
                     
                     Spacer()
                     
                     if currentPage < pages.count - 1 {
-                        Button(action: {
-                            withAnimation {
-                                currentPage += 1
-                            }
-                        }) {
-                            Text("Next")
-                                .padding()
+                        Button("Next") {
+                            withAnimation { currentPage += 1 }
                         }
+                        .padding()
                     } else {
-                        Button(action: {
-                            // Mark onboarding as completed.
+                        Button("Get Started") {
                             UserDefaults.standard.set(true, forKey: "onboardingCompleted")
                             presentationMode.wrappedValue.dismiss()
-                        }) {
-                            Text("Get Started")
-                                .bold()
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
                         }
+                        .bold()
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
                     }
                 }
                 .padding(.horizontal)

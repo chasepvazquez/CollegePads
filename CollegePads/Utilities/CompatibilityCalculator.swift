@@ -96,7 +96,7 @@ struct CompatibilityCalculator {
             breakdown["Major"] = 0
         }
         
-        // Distance factor
+        // Distance Factor
         totalWeight += 10.0
         if let lat1 = user1.latitude, let lon1 = user1.longitude,
            let lat2 = user2.latitude, let lon2 = user2.longitude {
@@ -136,7 +136,6 @@ struct CompatibilityCalculator {
         // Common Interests – New Factor
         totalWeight += 10.0
         if let interests1 = user1.interests, let interests2 = user2.interests {
-            // Convert all interests to lowercase for case-insensitive comparison.
             let lowerInterests1 = interests1.map { $0.lowercased() }
             let lowerInterests2 = interests2.map { $0.lowercased() }
             let common = lowerInterests1.filter { lowerInterests2.contains($0) }

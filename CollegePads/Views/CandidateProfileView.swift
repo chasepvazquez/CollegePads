@@ -13,7 +13,11 @@ struct CandidateProfileView: View {
     @StateObject private var viewModel = CandidateProfileViewModel()
     @State private var showCompatibilityBreakdown = false
     @State private var showQuiz = false
-    @State private var showComparison = false  // New state for profile comparison
+    @State private var showComparison = false  // For profile comparison
+    @State private var showReportSheet = false   // For reporting user
+    @State private var showBlockAlert = false      // For blocking confirmation
+    
+    @StateObject private var blockUserVM = BlockUserViewModel()
     
     var body: some View {
         ZStack {
@@ -25,25 +29,38 @@ struct CandidateProfileView: View {
                 if let candidate = viewModel.candidate {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // Profile image
-                            if let imageUrl = candidate.profileImageUrl, let url = URL(string: imageUrl) {
-                                AsyncImage(url: url) { phase in
-                                    if let image = phase.image {
-                                        image.resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                            .frame(width: 150, height: 150)
-                                            .clipShape(Circle())
-                                            .overlay(Circle().stroke(Color.blue, lineWidth: 4))
-                                    } else {
-                                        Image(systemName: "person.crop.circle")
-                                            .resizable()
-                                            .frame(width: 150, height: 150)
+                            // Profile image with Verified badge
+                            ZStack(alignment: .topTrailing) {
+                                if let imageUrl = candidate.profileImageUrl, let url = URL(string: imageUrl) {
+                                    AsyncImage(url: url) { phase in
+                                        if let image = phase.image {
+                                            image.resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 150, height: 150)
+                                                .clipShape(Circle())
+                                                .overlay(Circle().stroke(Color.blue, lineWidth: 4))
+                                        } else {
+                                            Image(systemName: "person.crop.circle")
+                                                .resizable()
+                                                .frame(width: 150, height: 150)
+                                        }
                                     }
+                                } else {
+                                    Image(systemName: "person.crop.circle")
+                                        .resizable()
+                                        .frame(width: 150, height: 150)
                                 }
-                            } else {
-                                Image(systemName: "person.crop.circle")
-                                    .resizable()
-                                    .frame(width: 150, height: 150)
+                                
+                                // Verified badge overlay:
+                                if let verified = candidate.isVerified, verified {
+                                    Text("✓ Verified")
+                                        .font(.caption2)
+                                        .foregroundColor(.white)
+                                        .padding(4)
+                                        .background(Color.blue.opacity(0.8))
+                                        .clipShape(Capsule())
+                                        .offset(x: -10, y: 10)
+                                }
                             }
                             
                             // Candidate details in a card-style container
@@ -114,7 +131,7 @@ struct CandidateProfileView: View {
                             
                             Divider()
                             
-                            // Buttons for compatibility breakdown, quiz, and profile comparison
+                            // Action Buttons
                             HStack(spacing: 16) {
                                 Button(action: {
                                     showCompatibilityBreakdown = true
@@ -149,6 +166,31 @@ struct CandidateProfileView: View {
                                     .background(Color.blue)
                                     .cornerRadius(8)
                             }
+                            
+                            HStack(spacing: 16) {
+                                Button(action: {
+                                    showReportSheet = true
+                                }) {
+                                    Text("Report User")
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.red)
+                                        .cornerRadius(8)
+                                }
+                                
+                                Button(action: {
+                                    // Show a confirmation alert before blocking
+                                    showBlockAlert = true
+                                }) {
+                                    Text("Block User")
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color.gray)
+                                        .cornerRadius(8)
+                                }
+                            }
                         }
                         .padding()
                     }
@@ -174,6 +216,23 @@ struct CandidateProfileView: View {
                 ProfileComparisonView(candidate: candidate)
             }
         }
+        .sheet(isPresented: $showReportSheet) {
+            if let candidate = viewModel.candidate {
+                ReportUserView(reportedUserID: candidate.id ?? "unknown")
+            }
+        }
+        .alert(isPresented: $showBlockAlert) {
+            Alert(
+                title: Text("Block User"),
+                message: Text("Are you sure you want to block this user? They will no longer appear in your matches."),
+                primaryButton: .destructive(Text("Block")) {
+                    if let candidate = viewModel.candidate, let candidateID = candidate.id {
+                        blockUser(candidateID: candidateID)
+                    }
+                },
+                secondaryButton: .cancel()
+            )
+        }
         .alert(item: Binding(
             get: {
                 if let errorMessage = viewModel.errorMessage {
@@ -184,6 +243,18 @@ struct CandidateProfileView: View {
             set: { _ in viewModel.errorMessage = nil }
         )) { alertError in
             Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
+        }
+    }
+    
+    private func blockUser(candidateID: String) {
+        BlockUserViewModel().blockUser(candidateID: candidateID) { result in
+            switch result {
+            case .success:
+                print("User successfully blocked.")
+                // Optionally, remove the candidate from view or update UI accordingly.
+            case .failure(let error):
+                print("Error blocking user: \(error.localizedDescription)")
+            }
         }
     }
 }

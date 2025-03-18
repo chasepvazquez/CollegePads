@@ -16,7 +16,7 @@ class AdvancedFilterViewModel: ObservableObject {
     @Published var filterDormType: String = ""
     @Published var filterCollegeName: String = ""
     @Published var filterBudgetRange: String = ""
-    @Published var filterGradeLevel: String = ""
+    @Published var filterGradeGroup: String = ""  // New: "", "Freshman", "Upperclassmen", "Graduate"
     @Published var filterInterests: String = ""
     @Published var maxDistance: Double = 10.0  // in kilometers
     
@@ -29,7 +29,7 @@ class AdvancedFilterViewModel: ObservableObject {
     func applyFilters(currentLocation: CLLocation?) {
         var query: Query = db.collection("users")
         
-        // Firestore-based filtering:
+        // Basic Firestore filtering
         if !filterDormType.isEmpty {
             query = query.whereField("dormType", isEqualTo: filterDormType)
         }
@@ -39,10 +39,6 @@ class AdvancedFilterViewModel: ObservableObject {
         if !filterBudgetRange.isEmpty {
             query = query.whereField("budgetRange", isEqualTo: filterBudgetRange)
         }
-        if !filterGradeLevel.isEmpty {
-            query = query.whereField("gradeLevel", isEqualTo: filterGradeLevel)
-        }
-        // Interests filtering will be done post-query
         
         query
             .snapshotPublisher()
@@ -52,12 +48,34 @@ class AdvancedFilterViewModel: ObservableObject {
                 }
             }
             .map { users in
-                // Filter by interests if provided.
+                // Post-query filtering: Grade Group & Interests
+                let gradeFiltered: [UserModel]
+                if !self.filterGradeGroup.isEmpty {
+                    gradeFiltered = users.filter { user in
+                        if let grade = user.gradeLevel?.lowercased() {
+                            switch self.filterGradeGroup.lowercased() {
+                            case "freshman":
+                                return grade == "freshman"
+                            case "upperclassmen":
+                                return grade == "sophomore" || grade == "junior" || grade == "senior"
+                            case "graduate":
+                                return grade == "graduate"
+                            default:
+                                return true
+                            }
+                        }
+                        return false
+                    }
+                } else {
+                    gradeFiltered = users
+                }
+                
+                let interestsFiltered: [UserModel]
                 if !self.filterInterests.isEmpty {
                     let interestsToFilter = self.filterInterests
                         .split(separator: ",")
                         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-                    return users.filter { user in
+                    interestsFiltered = gradeFiltered.filter { user in
                         if let userInterests = user.interests {
                             let lowerUserInterests = userInterests.map { $0.lowercased() }
                             return !Set(interestsToFilter).intersection(lowerUserInterests).isEmpty
@@ -65,8 +83,10 @@ class AdvancedFilterViewModel: ObservableObject {
                         return false
                     }
                 } else {
-                    return users
+                    interestsFiltered = gradeFiltered
                 }
+                
+                return interestsFiltered
             }
             .map { users in
                 // Filter by location if available.

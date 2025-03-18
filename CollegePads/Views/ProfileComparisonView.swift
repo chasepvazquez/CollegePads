@@ -10,7 +10,6 @@ import SwiftUI
 struct ProfileComparisonView: View {
     let candidate: UserModel
     
-    // Get the current user's profile from the shared ProfileViewModel.
     var currentUser: UserModel? {
         ProfileViewModel.shared.userProfile
     }
@@ -34,7 +33,7 @@ struct ProfileComparisonView: View {
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Done") {
-                            // Dismiss if needed.
+                            // The parent view should handle dismissal
                         }
                     }
                 }
@@ -73,7 +72,7 @@ struct ComparisonRow: View {
 
 struct ProfileComparisonView_Previews: PreviewProvider {
     static var previews: some View {
-        // Dummy profiles for preview.
+        // Dummy profiles for preview
         let candidate = UserModel(
             email: "candidate@edu",
             isEmailVerified: true,

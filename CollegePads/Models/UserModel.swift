@@ -18,7 +18,7 @@ struct UserModel: Codable, Identifiable {
     var createdAt: Date
     var isEmailVerified: Bool
 
-    // College / Living Info
+    // College & Living Info
     var gradeLevel: String?
     var major: String?
     var collegeName: String?
@@ -33,11 +33,9 @@ struct UserModel: Codable, Identifiable {
     var petFriendly: Bool?
     var livingStyle: String?
 
-    // New Quiz Fields
+    // Quiz & Interests
     var socialLevel: Int?
     var studyHabits: Int?
-
-    // New: Common Interests – an array of interests as strings
     var interests: [String]?
 
     // Profile Picture & Location
@@ -45,7 +43,14 @@ struct UserModel: Codable, Identifiable {
     var latitude: Double?
     var longitude: Double?
     
-    // Basic initializer
+    // Verification Fields
+    var isVerified: Bool?         // true if user has been verified
+    var verificationImageUrl: String? // URL of the uploaded verification image
+    
+    // New: Blocked User IDs
+    var blockedUserIDs: [String]?   // UIDs of users blocked by this user
+
+    // Initializer
     init(
         email: String,
         isEmailVerified: Bool,
@@ -65,7 +70,10 @@ struct UserModel: Codable, Identifiable {
         interests: [String]? = nil,
         profileImageUrl: String? = nil,
         latitude: Double? = nil,
-        longitude: Double? = nil
+        longitude: Double? = nil,
+        isVerified: Bool? = false,
+        verificationImageUrl: String? = nil,
+        blockedUserIDs: [String]? = nil
     ) {
         self.email = email
         self.isEmailVerified = isEmailVerified
@@ -87,5 +95,8 @@ struct UserModel: Codable, Identifiable {
         self.profileImageUrl = profileImageUrl
         self.latitude = latitude
         self.longitude = longitude
+        self.isVerified = isVerified
+        self.verificationImageUrl = verificationImageUrl
+        self.blockedUserIDs = blockedUserIDs
     }
 }

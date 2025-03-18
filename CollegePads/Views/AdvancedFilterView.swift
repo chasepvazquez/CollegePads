@@ -10,8 +10,8 @@ import CoreLocation
 
 struct AdvancedFilterView: View {
     @StateObject private var viewModel = AdvancedFilterViewModel()
-    @StateObject private var locationManager = LocationManager() // Ensure you have a LocationManager implemented
-
+    @StateObject private var locationManager = LocationManager() // Ensure you have a LocationManager
+    
     var body: some View {
         NavigationView {
             Form {
@@ -19,8 +19,18 @@ struct AdvancedFilterView: View {
                     TextField("Dorm Type (On-Campus, Off-Campus)", text: $viewModel.filterDormType)
                     TextField("College Name", text: $viewModel.filterCollegeName)
                     TextField("Budget Range", text: $viewModel.filterBudgetRange)
-                    TextField("Grade Level", text: $viewModel.filterGradeLevel)
+                    
+                    // New Grade Group Filter
+                    Picker("Grade Group", selection: $viewModel.filterGradeGroup) {
+                        Text("All").tag("")
+                        Text("Freshman").tag("Freshman")
+                        Text("Underclassmen").tag("Underclassmen")
+                        Text("Upperclassmen").tag("Upperclassmen")
+                        Text("Graduate").tag("Graduate")
+                    }
+                    
                     TextField("Interests (comma-separated)", text: $viewModel.filterInterests)
+                        .autocapitalization(.none)
                     
                     VStack {
                         Text("Max Distance: \(Int(viewModel.maxDistance)) km")

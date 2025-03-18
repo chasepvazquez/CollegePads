@@ -15,16 +15,18 @@ struct RootView: View {
     var body: some View {
         Group {
             if authViewModel.userSession == nil {
+                // Show authentication flow if not signed in
                 AuthenticationView()
                     .environmentObject(authViewModel)
             } else {
-                MainView()
+                // Main app interface with custom tab bar
+                TabBarView()
                     .environmentObject(authViewModel)
             }
         }
         .onAppear {
             authViewModel.listenToAuthState()
-            // Check if onboarding has been completed.
+            // Show onboarding if not completed yet
             let completed = UserDefaults.standard.bool(forKey: "onboardingCompleted")
             if !completed {
                 showOnboarding = true

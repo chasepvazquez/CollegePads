@@ -32,7 +32,7 @@ struct SwipeDeckView: View {
                 }
             }
             
-            // Bottom control buttons: Rewind and Super Like
+            // Bottom control buttons: Rewind & Super Like
             VStack {
                 Spacer()
                 HStack(spacing: 40) {

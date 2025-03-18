@@ -10,19 +10,31 @@ import SwiftUI
 struct TabBarView: View {
     var body: some View {
         TabView {
-            MainView()
+            MatchingView()
                 .tabItem {
-                    Label("Home", systemImage: "house")
+                    Image(systemName: "flame.fill")
+                    Text("Swipe")
                 }
+            
             MatchesDashboardView()
                 .tabItem {
-                    Label("Matches", systemImage: "heart")
+                    Image(systemName: "heart.fill")
+                    Text("Matches")
                 }
-            SettingsView()
+            
+            ChatsListView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape")
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                    Text("Chats")
+                }
+            
+            ProfileSetupView()
+                .tabItem {
+                    Image(systemName: "person.crop.circle")
+                    Text("Profile")
                 }
         }
+        .accentColor(.red)
     }
 }
 

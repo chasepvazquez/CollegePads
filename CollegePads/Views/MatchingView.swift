@@ -14,7 +14,7 @@ struct MatchingView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        // Optional: refresh action can be implemented if needed.
+                        // Optional refresh action
                     }) {
                         Image(systemName: "arrow.clockwise")
                     }
