@@ -4,11 +4,14 @@
 //
 //  Created by [Your Name] on [Date].
 //
+//  This ViewModel fetches potential matches from Firestore and sorts them using the SmartMatchingEngine,
+//  which combines the base compatibility score with bonus factors (e.g., verification, housing status, lease duration, and average ratings).
+//  It also handles swipe actions (right, left, and super like) and mutual match checking to create chat documents.
 
 import Foundation
 import FirebaseFirestore
-import FirebaseAuth
 import FirebaseFirestoreCombineSwift
+import FirebaseAuth
 import Combine
 
 enum SwipeDirection {
@@ -23,114 +26,127 @@ class MatchingViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let db = Firestore.firestore()
     
-    var currentUserID: String? {
-        Auth.auth().currentUser?.uid
+    /// Returns the current user profile from the shared ProfileViewModel.
+    var currentUser: UserModel? {
+        ProfileViewModel.shared.userProfile
     }
     
+    /// Fetches potential matches from Firestore, filters out the current user and any blocked users,
+    /// then sorts them using the SmartMatchingEngine.
     func fetchPotentialMatches() {
-        guard let currentUserID = currentUserID else {
+        guard let currentUID = Auth.auth().currentUser?.uid else {
             self.errorMessage = "User not authenticated"
             return
         }
-        db.collection("users")
-            .snapshotPublisher()
-            .map { querySnapshot -> [UserModel] in
-                querySnapshot.documents.compactMap { doc in
-                    do {
-                        return try doc.data(as: UserModel.self)
-                    } catch {
-                        print("Error decoding user doc: \(error)")
-                        return nil
-                    }
-                }
+        
+        // Fetch all users from Firestore.
+        db.collection("users").getDocuments { [weak self] snapshot, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                DispatchQueue.main.async { self.errorMessage = error.localizedDescription }
+                return
             }
-            .sink { [weak self] completion in
-                if case let .failure(error) = completion {
-                    DispatchQueue.main.async {
-                        self?.errorMessage = error.localizedDescription
-                    }
-                }
-            } receiveValue: { [weak self] userModels in
-                guard let self = self else { return }
+            
+            if let documents = snapshot?.documents {
+                // Decode documents into UserModel instances.
+                var users = documents.compactMap { try? $0.data(as: UserModel.self) }
+                
                 // Filter out the current user.
-                var filtered = userModels.filter { $0.id != currentUserID }
-                // If current user's profile is loaded, sort by compatibility descending.
-                if let currentUser = ProfileViewModel.shared.userProfile {
-                    filtered.sort { candidate1, candidate2 in
-                        let comp1 = CompatibilityCalculator.calculateUserCompatibility(between: currentUser, and: candidate1)
-                        let comp2 = CompatibilityCalculator.calculateUserCompatibility(between: currentUser, and: candidate2)
-                        return comp1 > comp2
-                    }
+                users.removeAll { $0.id == currentUID }
+                
+                // Filter out blocked users if the current user's profile is loaded.
+                if let current = self.currentUser, let blocked = current.blockedUserIDs {
+                    users.removeAll { blocked.contains($0.id ?? "") }
                 }
+                
+                // Sort the users using the SmartMatchingEngine.
+                // For demonstration, we use a dummy average rating (3.0). Replace with real data if available.
+                let sortedUsers = users.sorted { userA, userB in
+                    let scoreA = SmartMatchingEngine.calculateSmartMatchScore(between: self.currentUser ?? userA, and: userA, averageRating: 3.0)
+                    let scoreB = SmartMatchingEngine.calculateSmartMatchScore(between: self.currentUser ?? userB, and: userB, averageRating: 3.0)
+                    return scoreA > scoreB
+                }
+                
                 DispatchQueue.main.async {
-                    self.potentialMatches = filtered
+                    self.potentialMatches = sortedUsers
                 }
             }
-            .store(in: &cancellables)
+        }
     }
     
+    /// Handles a right swipe on a candidate.
     func swipeRight(on user: UserModel) {
-        guard let currentUserID = currentUserID, let matchUserID = user.id else { return }
+        guard let currentUserID = Auth.auth().currentUser?.uid, let matchUserID = user.id else { return }
         let swipeData: [String: Any] = [
             "from": currentUserID,
             "to": matchUserID,
             "liked": true,
             "timestamp": FieldValue.serverTimestamp()
         ]
-        db.collection("swipes").addDocument(data: swipeData) { error in
+        db.collection("swipes").addDocument(data: swipeData) { [weak self] error in
             if let error = error {
                 DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
+                    self?.errorMessage = error.localizedDescription
                 }
             } else {
-                self.lastSwipedCandidate = user
-                self.checkForMutualMatch(with: matchUserID)
+                self?.lastSwipedCandidate = user
+                self?.checkForMutualMatch(with: matchUserID)
             }
         }
     }
     
+    /// Handles a left swipe on a candidate.
     func swipeLeft(on user: UserModel) {
-        guard let currentUserID = currentUserID, let matchUserID = user.id else { return }
+        guard let currentUserID = Auth.auth().currentUser?.uid, let matchUserID = user.id else { return }
         let swipeData: [String: Any] = [
             "from": currentUserID,
             "to": matchUserID,
             "liked": false,
             "timestamp": FieldValue.serverTimestamp()
         ]
-        db.collection("swipes").addDocument(data: swipeData) { error in
+        db.collection("swipes").addDocument(data: swipeData) { [weak self] error in
             if let error = error {
                 DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
+                    self?.errorMessage = error.localizedDescription
                 }
             } else {
-                self.lastSwipedCandidate = user
+                self?.lastSwipedCandidate = user
             }
         }
     }
     
+    /// Initiates a super like action (treated as a right swipe).
+    func superLike(on user: UserModel) {
+        print("Super liked user: \(user.email)")
+        swipeRight(on: user)
+    }
+    
+    /// Checks if the swiped user has already liked the current user.
     private func checkForMutualMatch(with otherUserID: String) {
-        guard let currentUserID = currentUserID else { return }
+        guard let currentUserID = Auth.auth().currentUser?.uid else { return }
         let query = db.collection("swipes")
             .whereField("from", isEqualTo: otherUserID)
             .whereField("to", isEqualTo: currentUserID)
             .whereField("liked", isEqualTo: true)
         
-        query.getDocuments { snapshot, error in
+        query.getDocuments { [weak self] snapshot, error in
             if let error = error {
                 print("Error checking mutual match: \(error.localizedDescription)")
                 return
             }
             if let snapshot = snapshot, !snapshot.documents.isEmpty {
-                self.createChatIfNotExists(userA: currentUserID, userB: otherUserID)
+                self?.createChatIfNotExists(userA: currentUserID, userB: otherUserID)
             }
         }
     }
     
+    /// Creates a chat document if a mutual match is found.
     func createChatIfNotExists(userA: String, userB: String) {
         let chatsRef = db.collection("chats")
         chatsRef
             .whereField("participants", arrayContains: userA)
-            .getDocuments { snapshot, error in
+            .getDocuments { [weak self] snapshot, error in
                 if let error = error {
                     print("Error searching for chat: \(error.localizedDescription)")
                     return
@@ -139,7 +155,7 @@ class MatchingViewModel: ObservableObject {
                     for doc in snapshot.documents {
                         let participants = doc.data()["participants"] as? [String] ?? []
                         if participants.contains(userB) {
-                            return
+                            return  // Chat already exists.
                         }
                     }
                 }
@@ -151,15 +167,10 @@ class MatchingViewModel: ObservableObject {
                 chatsRef.addDocument(data: chatData) { error in
                     if let error = error {
                         DispatchQueue.main.async {
-                            self.errorMessage = error.localizedDescription
+                            self?.errorMessage = error.localizedDescription
                         }
                     }
                 }
             }
-    }
-    
-    func superLike(on user: UserModel) {
-        print("Super liked user: \(user.email)")
-        swipeRight(on: user)
     }
 }

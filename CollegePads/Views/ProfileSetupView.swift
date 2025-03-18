@@ -4,9 +4,11 @@
 //
 //  Created by [Your Name] on [Date].
 //
-//  This view allows users to update their profile with detailed, finite options for fields such as grade level,
-//  housing status, and lease duration, along with other profile details. Finite options are implemented as pickers,
-//  covering all common cases (e.g., all undergrad years, grad, PhD, etc.) and detailed housing situations.
+//  This view allows users to update their profile with comprehensive options for
+//  academic and housing details. Finite options are implemented as pickers to cover all
+//  common cases (e.g., undergrad, grad, PhD, etc.) as well as detailed housing situations
+//  (e.g., dorm, apartment, house, subleasing, etc.). A Profile Completion Meter at the top
+//  provides visual feedback on profile completeness.
 
 import SwiftUI
 import FirebaseAuth
@@ -18,8 +20,6 @@ struct ProfileSetupView: View {
     @State private var major: String = ""
     @State private var collegeName: String = ""
     @State private var interestsText: String = ""
-    
-    // Budget can be freeform because ranges can vary.
     @State private var budgetRange: String = ""
     
     // Other freeform fields
@@ -55,7 +55,7 @@ struct ProfileSetupView: View {
     
     enum LeaseDuration: String, CaseIterable, Identifiable {
         case current = "Current Lease"
-        case shortTerm = "Short Term (< 6 months)"
+        case shortTerm = "Short Term (<6 months)"
         case mediumTerm = "Medium Term (6-12 months)"
         case longTerm = "Long Term (1 year+)"
         case futureNextYear = "Future: Next Year"
@@ -69,12 +69,24 @@ struct ProfileSetupView: View {
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
     
-    // MARK: - Freeform Options for Sleep Schedule (if needed)
+    // MARK: - Freeform Options for Sleep Schedule
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
 
     var body: some View {
         NavigationView {
             Form {
+                // Profile Completion Meter Section
+                if let profile = viewModel.userProfile {
+                    let completion = ProfileCompletionCalculator.calculateCompletion(for: profile)
+                    VStack(alignment: .leading) {
+                        Text("Profile Completion: \(Int(completion))%")
+                            .font(.caption)
+                        ProgressView(value: completion, total: 100)
+                            .accentColor(.green)
+                    }
+                    .padding(.vertical, 8)
+                }
+                
                 // Profile Picture Section
                 Section(header: Text("Profile Picture")) {
                     HStack {
@@ -113,32 +125,25 @@ struct ProfileSetupView: View {
                 
                 // Basic Info Section
                 Section(header: Text("Basic Info")) {
-                    // Grade Level Picker
                     Picker("Grade Level", selection: $selectedGradeLevel) {
                         ForEach(GradeLevel.allCases) { level in
                             Text(level.rawValue).tag(level)
                         }
                     }
-                    
-                    // Major & College Name as TextFields
                     TextField("Major (e.g., Computer Science)", text: $major)
                     TextField("College Name (e.g., Engineering)", text: $collegeName)
-                    
-                    // Email (read-only)
                     TextField("Email", text: .constant(viewModel.userProfile?.email ?? ""))
                         .disabled(true)
                 }
                 
                 // Housing Preferences Section
                 Section(header: Text("Housing Preferences")) {
-                    // Housing Status Picker
                     Picker("Housing Status", selection: $selectedHousingStatus) {
                         ForEach(HousingStatus.allCases) { status in
                             Text(status.rawValue).tag(status)
                         }
                     }
                     
-                    // Lease Duration Picker (only if applicable)
                     if selectedHousingStatus == .apartment || selectedHousingStatus == .house || selectedHousingStatus == .subleasing || selectedHousingStatus == .lookingForLease {
                         Picker("Lease Duration", selection: $selectedLeaseDuration) {
                             ForEach(LeaseDuration.allCases) { duration in
@@ -147,10 +152,7 @@ struct ProfileSetupView: View {
                         }
                     }
                     
-                    // Budget Range as a freeform TextField (since ranges can vary)
                     TextField("Budget Range (e.g., $500 - $1000)", text: $budgetRange)
-                    
-                    // Cleanliness, Sleep Schedule, Smoker, and Pet Friendly options
                     Picker("Cleanliness (1-5)", selection: $cleanliness) {
                         ForEach(1..<6) { number in
                             Text("\(number)").tag(number)
@@ -171,7 +173,7 @@ struct ProfileSetupView: View {
                         .autocapitalization(.none)
                 }
                 
-                // Save Button
+                // Save Button Section
                 Section {
                     Button(action: saveProfile) {
                         Text("Save Profile")
@@ -185,13 +187,21 @@ struct ProfileSetupView: View {
             }
             .onReceive(viewModel.$userProfile) { profile in
                 guard let profile = profile else { return }
-                // Update pickers and text fields from loaded profile.
+                // Populate fields from the loaded profile.
                 selectedGradeLevel = GradeLevel(rawValue: profile.gradeLevel ?? "") ?? .freshman
                 major = profile.major ?? ""
                 collegeName = profile.collegeName ?? ""
-                // Housing status & lease duration should be added to your UserModel. For now, we'll default:
-                selectedHousingStatus = .other  // Update this once you extend your UserModel.
-                selectedLeaseDuration = .notApplicable // Update this once you extend your UserModel.
+                // Set housingStatus and leaseDuration from profile; if missing, default to "Other" and "Not Applicable".
+                if let housing = profile.housingStatus, !housing.isEmpty {
+                    selectedHousingStatus = HousingStatus(rawValue: housing) ?? .other
+                } else {
+                    selectedHousingStatus = .other
+                }
+                if let lease = profile.leaseDuration, !lease.isEmpty {
+                    selectedLeaseDuration = LeaseDuration(rawValue: lease) ?? .notApplicable
+                } else {
+                    selectedLeaseDuration = .notApplicable
+                }
                 budgetRange = profile.budgetRange ?? ""
                 cleanliness = profile.cleanliness ?? 3
                 sleepSchedule = profile.sleepSchedule ?? "Flexible"
@@ -207,12 +217,10 @@ struct ProfileSetupView: View {
     
     /// Saves the updated profile to Firestore.
     private func saveProfile() {
-        // Convert interestsText to an array.
         let interestsArray = interestsText
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         
-        // Build an updated profile.
         var updatedProfile = viewModel.userProfile ?? UserModel(email: Auth.auth().currentUser?.email ?? "", isEmailVerified: false)
         updatedProfile.gradeLevel = selectedGradeLevel.rawValue
         updatedProfile.major = major
@@ -224,9 +232,9 @@ struct ProfileSetupView: View {
         updatedProfile.petFriendly = petFriendly
         updatedProfile.interests = interestsArray
         
-        // If you extend your UserModel to include housingStatus and leaseDuration, update them here.
-        // e.g., updatedProfile.housingStatus = selectedHousingStatus.rawValue
-        //       updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
+        // Update housing status and lease duration.
+        updatedProfile.housingStatus = selectedHousingStatus.rawValue
+        updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
         
         viewModel.updateUserProfile(updatedProfile: updatedProfile) { result in
             switch result {

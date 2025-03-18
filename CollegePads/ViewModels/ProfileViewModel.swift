@@ -4,6 +4,9 @@
 //
 //  Created by [Your Name] on [Date].
 //
+//  This ViewModel manages the current user's profile data. It loads and updates the user profile from Firestore,
+//  including all extended fields such as gradeLevel, housingStatus, leaseDuration, and blockedUserIDs.
+//  It also provides a helper method to remove a blocked user from the local profile.
 
 import Foundation
 import FirebaseFirestore
@@ -11,7 +14,6 @@ import FirebaseAuth
 import FirebaseFirestoreCombineSwift
 import Combine
 
-/// ViewModel for managing the current user's profile.
 class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
@@ -56,8 +58,8 @@ class ProfileViewModel: ObservableObject {
     
     /// Updates the current user's profile in Firestore.
     /// - Parameters:
-    ///   - updatedProfile: The updated UserModel.
-    ///   - completion: A completion handler with a Result.
+    ///   - updatedProfile: The updated UserModel (including all extended fields such as housingStatus and leaseDuration).
+    ///   - completion: A completion handler with a Result indicating success or failure.
     func updateUserProfile(updatedProfile: UserModel, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = userID else {
             completion(.failure(NSError(domain: "ProfileUpdate", code: 0, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])))
@@ -83,7 +85,7 @@ class ProfileViewModel: ObservableObject {
     /// - Parameter uid: The UID of the user to remove from the blocked list.
     func removeBlockedUser(with uid: String) {
         if var blocked = userProfile?.blockedUserIDs {
-            blocked.removeAll(where: { $0 == uid })
+            blocked.removeAll { $0 == uid }
             userProfile?.blockedUserIDs = blocked
         }
     }
