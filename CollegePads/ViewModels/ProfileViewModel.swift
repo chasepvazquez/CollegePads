@@ -11,15 +11,17 @@ import FirebaseAuth
 import FirebaseFirestoreCombineSwift
 import Combine
 
+/// ViewModel for managing the current user's profile.
 class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
     
-    // Shared instance for global access
+    /// Shared instance for global access.
     static let shared = ProfileViewModel()
     
+    /// Returns the current user's UID.
     var userID: String? {
         Auth.auth().currentUser?.uid
     }
@@ -53,6 +55,9 @@ class ProfileViewModel: ObservableObject {
     }
     
     /// Updates the current user's profile in Firestore.
+    /// - Parameters:
+    ///   - updatedProfile: The updated UserModel.
+    ///   - completion: A completion handler with a Result.
     func updateUserProfile(updatedProfile: UserModel, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = userID else {
             completion(.failure(NSError(domain: "ProfileUpdate", code: 0, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])))
@@ -71,6 +76,15 @@ class ProfileViewModel: ObservableObject {
             }
         } catch {
             completion(.failure(error))
+        }
+    }
+    
+    /// Removes a blocked user from the current user's local profile.
+    /// - Parameter uid: The UID of the user to remove from the blocked list.
+    func removeBlockedUser(with uid: String) {
+        if var blocked = userProfile?.blockedUserIDs {
+            blocked.removeAll(where: { $0 == uid })
+            userProfile?.blockedUserIDs = blocked
         }
     }
 }

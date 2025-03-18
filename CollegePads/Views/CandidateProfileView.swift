@@ -13,14 +13,16 @@ struct CandidateProfileView: View {
     @StateObject private var viewModel = CandidateProfileViewModel()
     @State private var showCompatibilityBreakdown = false
     @State private var showQuiz = false
-    @State private var showComparison = false  // For profile comparison
-    @State private var showReportSheet = false   // For reporting user
-    @State private var showBlockAlert = false      // For blocking confirmation
+    @State private var showComparison = false      // For profile comparison
+    @State private var showReportSheet = false       // For reporting user
+    @State private var showBlockAlert = false        // For blocking confirmation
+    @State private var showRatingSheet = false         // For rating roommate
     
     @StateObject private var blockUserVM = BlockUserViewModel()
     
     var body: some View {
         ZStack {
+            // Background gradient for the entire screen.
             LinearGradient(gradient: Gradient(colors: [.white, Color(UIColor.systemGray6)]),
                            startPoint: .top, endPoint: .bottom)
                 .edgesIgnoringSafeArea(.all)
@@ -29,7 +31,7 @@ struct CandidateProfileView: View {
                 if let candidate = viewModel.candidate {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // Profile image with Verified badge
+                            // Profile image with Verified badge overlay.
                             ZStack(alignment: .topTrailing) {
                                 if let imageUrl = candidate.profileImageUrl, let url = URL(string: imageUrl) {
                                     AsyncImage(url: url) { phase in
@@ -51,7 +53,7 @@ struct CandidateProfileView: View {
                                         .frame(width: 150, height: 150)
                                 }
                                 
-                                // Verified badge overlay:
+                                // Verified badge overlay.
                                 if let verified = candidate.isVerified, verified {
                                     Text("✓ Verified")
                                         .font(.caption2)
@@ -63,7 +65,7 @@ struct CandidateProfileView: View {
                                 }
                             }
                             
-                            // Candidate details in a card-style container
+                            // Candidate details in a card-style container.
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(candidate.email)
                                     .font(.headline)
@@ -84,6 +86,7 @@ struct CandidateProfileView: View {
                             
                             Divider()
                             
+                            // Additional candidate information.
                             VStack(alignment: .leading, spacing: 8) {
                                 if let dorm = candidate.dormType {
                                     Text("Dorm Type: \(dorm)")
@@ -109,7 +112,7 @@ struct CandidateProfileView: View {
                             }
                             .padding()
                             
-                            // Common Interests Section
+                            // Common Interests Section.
                             if let currentUser = ProfileViewModel.shared.userProfile,
                                let candidateInterests = candidate.interests,
                                let currentInterests = currentUser.interests {
@@ -133,9 +136,7 @@ struct CandidateProfileView: View {
                             
                             // Action Buttons
                             HStack(spacing: 16) {
-                                Button(action: {
-                                    showCompatibilityBreakdown = true
-                                }) {
+                                Button(action: { showCompatibilityBreakdown = true }) {
                                     Text("View Compatibility Breakdown")
                                         .foregroundColor(.white)
                                         .padding()
@@ -144,9 +145,7 @@ struct CandidateProfileView: View {
                                         .cornerRadius(8)
                                 }
                                 
-                                Button(action: {
-                                    showQuiz = true
-                                }) {
+                                Button(action: { showQuiz = true }) {
                                     Text("Take Compatibility Quiz")
                                         .foregroundColor(.white)
                                         .padding()
@@ -156,9 +155,7 @@ struct CandidateProfileView: View {
                                 }
                             }
                             
-                            Button(action: {
-                                showComparison = true
-                            }) {
+                            Button(action: { showComparison = true }) {
                                 Text("Compare with My Profile")
                                     .foregroundColor(.white)
                                     .padding()
@@ -168,9 +165,7 @@ struct CandidateProfileView: View {
                             }
                             
                             HStack(spacing: 16) {
-                                Button(action: {
-                                    showReportSheet = true
-                                }) {
+                                Button(action: { showReportSheet = true }) {
                                     Text("Report User")
                                         .foregroundColor(.white)
                                         .padding()
@@ -179,10 +174,7 @@ struct CandidateProfileView: View {
                                         .cornerRadius(8)
                                 }
                                 
-                                Button(action: {
-                                    // Show a confirmation alert before blocking
-                                    showBlockAlert = true
-                                }) {
+                                Button(action: { showBlockAlert = true }) {
                                     Text("Block User")
                                         .foregroundColor(.white)
                                         .padding()
@@ -190,6 +182,16 @@ struct CandidateProfileView: View {
                                         .background(Color.gray)
                                         .cornerRadius(8)
                                 }
+                            }
+                            
+                            // New: Rate Roommate Button.
+                            Button(action: { showRatingSheet = true }) {
+                                Text("Rate Roommate")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.orange)
+                                    .cornerRadius(8)
                             }
                         }
                         .padding()
@@ -219,6 +221,11 @@ struct CandidateProfileView: View {
         .sheet(isPresented: $showReportSheet) {
             if let candidate = viewModel.candidate {
                 ReportUserView(reportedUserID: candidate.id ?? "unknown")
+            }
+        }
+        .sheet(isPresented: $showRatingSheet) {
+            if let candidate = viewModel.candidate, let candidateID = candidate.id {
+                RoommateRatingView(ratedUserID: candidateID)
             }
         }
         .alert(isPresented: $showBlockAlert) {
@@ -251,7 +258,7 @@ struct CandidateProfileView: View {
             switch result {
             case .success:
                 print("User successfully blocked.")
-                // Optionally, remove the candidate from view or update UI accordingly.
+                ProfileViewModel.shared.removeBlockedUser(with: candidateID)
             case .failure(let error):
                 print("Error blocking user: \(error.localizedDescription)")
             }

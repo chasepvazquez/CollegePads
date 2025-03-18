@@ -6,43 +6,67 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct SettingsView: View {
+    @EnvironmentObject var authViewModel: AuthViewModel
+    @ObservedObject var profileVM = ProfileViewModel.shared
+    @State private var showVerification = false
+    @State private var showBlockedUsers = false
+
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Settings")
-                .font(.largeTitle)
-                .padding(.top)
-            
-            Text("Here you can update your app preferences, account settings, and more.")
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            
-            // Example settings options (expand as needed)
-            NavigationLink(destination: ProfileSetupView()) {
-                Text("Edit Profile")
-                    .foregroundColor(.white)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.green)
-                    .cornerRadius(8)
+        NavigationView {
+            Form {
+                // Account Information Section
+                Section(header: Text("Account")) {
+                    HStack {
+                        Text("Email")
+                        Spacer()
+                        Text(profileVM.userProfile?.email ?? "N/A")
+                            .foregroundColor(.gray)
+                    }
+                    HStack {
+                        Text("Verified")
+                        Spacer()
+                        if let verified = profileVM.userProfile?.isVerified, verified {
+                            Text("Yes")
+                                .foregroundColor(.green)
+                        } else {
+                            Text("No")
+                                .foregroundColor(.red)
+                        }
+                    }
+                    if profileVM.userProfile?.isVerified != true {
+                        Button(action: { showVerification = true }) {
+                            Text("Verify Now")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+                
+                // Blocked Users Section
+                Section(header: Text("Privacy")) {
+                    NavigationLink(destination: BlockedUsersView()) {
+                        Text("Manage Blocked Users")
+                    }
+                }
+                
+                // Sign Out Section
+                Section {
+                    Button(action: {
+                        authViewModel.signOut()
+                    }) {
+                        Text("Log Out")
+                            .foregroundColor(.red)
+                    }
+                }
             }
-            .padding(.horizontal)
-            
-            NavigationLink(destination: AdvancedFilterView()) {
-                Text("Advanced Search Options")
-                    .foregroundColor(.white)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.orange)
-                    .cornerRadius(8)
+            .navigationTitle("Settings")
+            .sheet(isPresented: $showVerification) {
+                // Present your VerificationView for account verification.
+                VerificationView()
             }
-            .padding(.horizontal)
-            
-            Spacer()
         }
-        .navigationTitle("Settings")
-        .padding()
     }
 }
 
@@ -50,6 +74,7 @@ struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
             SettingsView()
+                .environmentObject(AuthViewModel())
         }
     }
 }
