@@ -4,19 +4,46 @@
 //
 //  Created by [Your Name] on [Date].
 //
-
+//  This view lets matched roommates collaboratively build a formal agreement.
+//  It includes fields for move-in date, shared responsibilities, house rules, and now
+//  extended options for review mode and verification method. If "Lease Document" is chosen,
+//  the user may upload a lease document as proof of shared residence.
 import SwiftUI
+import FirebaseAuth
 
 struct AgreementView: View {
     @StateObject private var viewModel = AgreementViewModel()
-    // Assume these values are passed from the match/chat context
+    
+    // These values are assumed to be passed from the match/chat context.
     let matchID: String
     let userA: String
     let userB: String
     
+    // Agreement details
     @State private var moveInDate: Date = Date()
     @State private var sharedResponsibilities: String = ""
     @State private var houseRules: String = ""
+    
+    // Extended review options:
+    enum ReviewMode: String, CaseIterable, Identifiable {
+        case mutual = "Mutual"
+        case anonymous = "Anonymous"
+        case oneSided = "One-Sided"
+        var id: String { self.rawValue }
+    }
+    @State private var selectedReviewMode: ReviewMode = .mutual
+    
+    enum VerificationMethod: String, CaseIterable, Identifiable {
+        case none = "None"
+        case lease = "Lease Document"
+        var id: String { self.rawValue }
+    }
+    @State private var selectedVerificationMethod: VerificationMethod = .none
+    
+    // Optional lease document image
+    @State private var leaseImage: UIImage?
+    @State private var showingImagePicker = false
+    
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
@@ -26,20 +53,56 @@ struct AgreementView: View {
                     DatePicker("Select Date", selection: $moveInDate, displayedComponents: .date)
                 }
                 
-                Section(header: Text("Shared Responsibilities")) {
-                    TextEditor(text: $sharedResponsibilities)
-                        .frame(height: 100)
-                }
-                
-                Section(header: Text("House Rules")) {
+                Section(header: Text("Agreement Details")) {
+                    TextField("Rent Split (e.g., 50/50)", text: .constant("Determine later")) // Optionally add a field.
+                    TextField("Shared Responsibilities", text: $sharedResponsibilities)
                     TextEditor(text: $houseRules)
                         .frame(height: 100)
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                }
+                
+                Section(header: Text("Review Options")) {
+                    Picker("Review Mode", selection: $selectedReviewMode) {
+                        ForEach(ReviewMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                }
+                
+                Section(header: Text("Verification Method")) {
+                    Picker("Verification Method", selection: $selectedVerificationMethod) {
+                        ForEach(VerificationMethod.allCases) { method in
+                            Text(method.rawValue).tag(method)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    
+                    if selectedVerificationMethod == .lease {
+                        if let leaseImage = leaseImage {
+                            Image(uiImage: leaseImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(height: 150)
+                                .onTapGesture {
+                                    showingImagePicker = true
+                                }
+                        } else {
+                            Button("Upload Lease Document") {
+                                showingImagePicker = true
+                            }
+                        }
+                    }
                 }
                 
                 Section {
-                    Button(action: saveAgreement) {
-                        Text("Save Agreement")
-                            .frame(maxWidth: .infinity, alignment: .center)
+                    Button(action: submitAgreement) {
+                        Text("Submit Agreement")
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue)
+                            .cornerRadius(8)
                     }
                 }
             }
@@ -47,6 +110,9 @@ struct AgreementView: View {
             .navigationBarItems(trailing: Button("Cancel") {
                 presentationMode.wrappedValue.dismiss()
             })
+            .sheet(isPresented: $showingImagePicker) {
+                ImagePicker(image: $leaseImage)
+            }
             .alert(item: Binding(
                 get: {
                     if let errorMessage = viewModel.errorMessage {
@@ -61,9 +127,24 @@ struct AgreementView: View {
         }
     }
     
-    private func saveAgreement() {
-        let agreement = RoommateAgreement(matchID: matchID, userA: userA, userB: userB, moveInDate: moveInDate, sharedResponsibilities: sharedResponsibilities, houseRules: houseRules)
-        viewModel.saveAgreement(agreement) { result in
+    private func submitAgreement() {
+        // For demonstration purposes, if a lease document is required,
+        // you would upload the leaseImage using your FirebaseStorageService extension.
+        // Here we use a dummy URL if the lease option is chosen.
+        let leaseURL = (selectedVerificationMethod == .lease) ? "https://example.com/lease.jpg" : nil
+        
+        let newAgreement = RoommateAgreement(
+            matchID: matchID,
+            userA: userA,
+            userB: userB,
+            moveInDate: moveInDate,
+            sharedResponsibilities: sharedResponsibilities,
+            houseRules: houseRules,
+            reviewMode: selectedReviewMode.rawValue.lowercased(),
+            verificationMethod: selectedVerificationMethod.rawValue.lowercased(),
+            leaseDocumentURL: leaseURL
+        )
+        viewModel.saveAgreement(newAgreement) { result in
             switch result {
             case .success:
                 presentationMode.wrappedValue.dismiss()
@@ -76,7 +157,6 @@ struct AgreementView: View {
 
 struct AgreementView_Previews: PreviewProvider {
     static var previews: some View {
-        // Dummy data for preview – replace with actual match/user IDs
         AgreementView(matchID: "dummyMatchID", userA: "userA_ID", userB: "userB_ID")
     }
 }

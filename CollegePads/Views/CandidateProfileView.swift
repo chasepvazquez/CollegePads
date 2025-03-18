@@ -17,6 +17,7 @@ struct CandidateProfileView: View {
     @State private var showReportSheet = false       // For reporting user
     @State private var showBlockAlert = false        // For blocking confirmation
     @State private var showRatingSheet = false         // For rating roommate
+    @State private var showAgreementSheet: Bool = false  // For creating roommate agreement
     
     @StateObject private var blockUserVM = BlockUserViewModel()
     
@@ -193,6 +194,16 @@ struct CandidateProfileView: View {
                                     .background(Color.orange)
                                     .cornerRadius(8)
                             }
+                            
+                            // New: Create Roommate Agreement Button.
+                            Button(action: { showAgreementSheet = true }) {
+                                Text("Create Roommate Agreement")
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.purple)
+                                    .cornerRadius(8)
+                            }
                         }
                         .padding()
                     }
@@ -226,6 +237,12 @@ struct CandidateProfileView: View {
         .sheet(isPresented: $showRatingSheet) {
             if let candidate = viewModel.candidate, let candidateID = candidate.id {
                 RoommateRatingView(ratedUserID: candidateID)
+            }
+        }
+        .sheet(isPresented: $showAgreementSheet) {
+            if let candidate = viewModel.candidate, let currentUserID = ProfileViewModel.shared.userProfile?.id {
+                // For demonstration, using a dummy match ID; replace with your actual match ID as needed.
+                AgreementView(matchID: "matchID_example", userA: currentUserID, userB: candidate.id ?? "unknown")
             }
         }
         .alert(isPresented: $showBlockAlert) {
