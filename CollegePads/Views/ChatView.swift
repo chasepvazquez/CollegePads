@@ -18,12 +18,12 @@ struct ChatView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(viewModel.messages) { msg in
                             MessageBubble(message: msg, isCurrentUser: msg.senderID == viewModel.currentUserID)
-                                .id(msg.id)  // For scrolling to the bottom
+                                .id(msg.id)
                         }
                     }
                     .padding()
                 }
-                .onChange(of: viewModel.messages.count) { oldValue, newValue in
+                .onChange(of: viewModel.messages.count) { _, _ in
                     if let lastMessage = viewModel.messages.last, let id = lastMessage.id {
                         withAnimation {
                             scrollView.scrollTo(id, anchor: .bottom)

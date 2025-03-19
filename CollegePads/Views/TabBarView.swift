@@ -34,7 +34,7 @@ struct TabBarView: View {
                     Text("Profile")
                 }
         }
-        .accentColor(.red)
+        .accentColor(.brandAccent)
     }
 }
 

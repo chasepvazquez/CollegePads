@@ -4,12 +4,8 @@
 //
 //  Created by [Your Name] on [Date].
 //
-//  This view allows users to update their profile with comprehensive options for
-//  academic and housing details. Finite options are implemented as pickers to cover all
-//  common cases (e.g., undergrad, grad, PhD, etc.) as well as detailed housing situations
-//  (e.g., dorm, apartment, house, subleasing, etc.). A Profile Completion Meter at the top
-//  provides visual feedback on profile completeness.
-
+//  This view allows users to update their profile with comprehensive options for academic and housing details,
+//  including finite options using pickers and a Profile Completion Meter.
 import SwiftUI
 import FirebaseAuth
 
@@ -173,12 +169,12 @@ struct ProfileSetupView: View {
                         .autocapitalization(.none)
                 }
                 
-                // Save Button Section
+                // Save Button Section using PrimaryButtonStyle.
                 Section {
                     Button(action: saveProfile) {
                         Text("Save Profile")
-                            .frame(maxWidth: .infinity, alignment: .center)
                     }
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.brandPrimary))
                 }
             }
             .navigationTitle("Profile Setup")
@@ -187,21 +183,12 @@ struct ProfileSetupView: View {
             }
             .onReceive(viewModel.$userProfile) { profile in
                 guard let profile = profile else { return }
-                // Populate fields from the loaded profile.
                 selectedGradeLevel = GradeLevel(rawValue: profile.gradeLevel ?? "") ?? .freshman
                 major = profile.major ?? ""
                 collegeName = profile.collegeName ?? ""
-                // Set housingStatus and leaseDuration from profile; if missing, default to "Other" and "Not Applicable".
-                if let housing = profile.housingStatus, !housing.isEmpty {
-                    selectedHousingStatus = HousingStatus(rawValue: housing) ?? .other
-                } else {
-                    selectedHousingStatus = .other
-                }
-                if let lease = profile.leaseDuration, !lease.isEmpty {
-                    selectedLeaseDuration = LeaseDuration(rawValue: lease) ?? .notApplicable
-                } else {
-                    selectedLeaseDuration = .notApplicable
-                }
+                // Update housingStatus and leaseDuration; default if missing.
+                selectedHousingStatus = HousingStatus(rawValue: profile.housingStatus ?? "") ?? .other
+                selectedLeaseDuration = LeaseDuration(rawValue: profile.leaseDuration ?? "") ?? .notApplicable
                 budgetRange = profile.budgetRange ?? ""
                 cleanliness = profile.cleanliness ?? 3
                 sleepSchedule = profile.sleepSchedule ?? "Flexible"

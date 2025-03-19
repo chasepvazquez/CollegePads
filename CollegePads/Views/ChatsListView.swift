@@ -9,7 +9,7 @@ import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
-import Combine  // For AnyCancellable
+import Combine
 
 struct ChatListItem: Identifiable {
     let id: String

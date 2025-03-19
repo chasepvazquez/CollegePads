@@ -40,17 +40,13 @@ struct SignUpView: View {
                     ProgressView()
                 } else {
                     Text("Sign Up")
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(8)
                 }
             }
+            .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.blue))
             
             Text("Already have an account? Sign In")
                 .foregroundColor(.blue)
                 .onTapGesture {
-                    // Reset fields to switch view in AuthenticationView
                     authViewModel.errorMessage = nil
                     authViewModel.email = ""
                     authViewModel.password = ""

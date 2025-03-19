@@ -16,16 +16,15 @@ struct CandidateProfileView: View {
     @State private var showComparison = false      // For profile comparison
     @State private var showReportSheet = false       // For reporting user
     @State private var showBlockAlert = false        // For blocking confirmation
-    @State private var showRatingSheet = false         // For rating roommate (combined view)
+    @State private var showRatingSheet = false         // For rating roommate (combined review view)
     @State private var showAgreementSheet = false      // For creating roommate agreement
     
     @StateObject private var blockUserVM = BlockUserViewModel()
     
     var body: some View {
         ZStack {
-            // Background gradient for the entire screen.
-            LinearGradient(gradient: Gradient(colors: [.white, Color(UIColor.systemGray6)]),
-                           startPoint: .top, endPoint: .bottom)
+            // Use the global background color.
+            Color.brandBackground
                 .edgesIgnoringSafeArea(.all)
             
             Group {
@@ -41,7 +40,7 @@ struct CandidateProfileView: View {
                                                 .aspectRatio(contentMode: .fill)
                                                 .frame(width: 150, height: 150)
                                                 .clipShape(Circle())
-                                                .overlay(Circle().stroke(Color.blue, lineWidth: 4))
+                                                .overlay(Circle().stroke(Color.brandPrimary, lineWidth: 4))
                                         } else {
                                             Image(systemName: "person.crop.circle")
                                                 .resizable()
@@ -60,13 +59,13 @@ struct CandidateProfileView: View {
                                         .font(.caption2)
                                         .foregroundColor(.white)
                                         .padding(4)
-                                        .background(Color.blue.opacity(0.8))
+                                        .background(Color.brandPrimary.opacity(0.8))
                                         .clipShape(Capsule())
                                         .offset(x: -10, y: 10)
                                 }
                             }
                             
-                            // Candidate details in a card-style container.
+                            // Candidate details card.
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(candidate.email)
                                     .font(.headline)
@@ -135,74 +134,46 @@ struct CandidateProfileView: View {
                             
                             Divider()
                             
-                            // Action Buttons
-                            HStack(spacing: 16) {
-                                Button(action: { showCompatibilityBreakdown = true }) {
-                                    Text("View Compatibility Breakdown")
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .frame(maxWidth: .infinity)
-                                        .background(Color.indigo)
-                                        .cornerRadius(8)
+                            // Action Buttons using the global button styles.
+                            VStack(spacing: 16) {
+                                HStack(spacing: 16) {
+                                    Button(action: { showCompatibilityBreakdown = true }) {
+                                        Text("View Compatibility Breakdown")
+                                    }
+                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.indigo))
+                                    
+                                    Button(action: { showQuiz = true }) {
+                                        Text("Take Compatibility Quiz")
+                                    }
+                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.pink))
                                 }
                                 
-                                Button(action: { showQuiz = true }) {
-                                    Text("Take Compatibility Quiz")
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .frame(maxWidth: .infinity)
-                                        .background(Color.pink)
-                                        .cornerRadius(8)
+                                Button(action: { showComparison = true }) {
+                                    Text("Compare with My Profile")
                                 }
-                            }
-                            
-                            Button(action: { showComparison = true }) {
-                                Text("Compare with My Profile")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.blue)
-                                    .cornerRadius(8)
-                            }
-                            
-                            HStack(spacing: 16) {
-                                Button(action: { showReportSheet = true }) {
-                                    Text("Report User")
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .frame(maxWidth: .infinity)
-                                        .background(Color.red)
-                                        .cornerRadius(8)
+                                .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.blue))
+                                
+                                HStack(spacing: 16) {
+                                    Button(action: { showReportSheet = true }) {
+                                        Text("Report User")
+                                    }
+                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.brandAccent))
+                                    
+                                    Button(action: { showBlockAlert = true }) {
+                                        Text("Block User")
+                                    }
+                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.gray))
                                 }
                                 
-                                Button(action: { showBlockAlert = true }) {
-                                    Text("Block User")
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .frame(maxWidth: .infinity)
-                                        .background(Color.gray)
-                                        .cornerRadius(8)
+                                Button(action: { showRatingSheet = true }) {
+                                    Text("Rate Roommate")
                                 }
-                            }
-                            
-                            // Rate Roommate Button.
-                            Button(action: { showRatingSheet = true }) {
-                                Text("Rate Roommate")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.orange)
-                                    .cornerRadius(8)
-                            }
-                            
-                            // Create Roommate Agreement Button.
-                            Button(action: { showAgreementSheet = true }) {
-                                Text("Create Roommate Agreement")
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.purple)
-                                    .cornerRadius(8)
+                                .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.orange))
+                                
+                                Button(action: { showAgreementSheet = true }) {
+                                    Text("Create Roommate Agreement")
+                                }
+                                .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.purple))
                             }
                         }
                         .padding()
@@ -236,13 +207,12 @@ struct CandidateProfileView: View {
         }
         .sheet(isPresented: $showRatingSheet) {
             if let candidate = viewModel.candidate, let candidateID = candidate.id {
-                // Use the combined RoommateReviewView instead of RoommateRatingView.
+                // Use the combined RoommateReviewView.
                 RoommateReviewView(matchID: "matchID_example", ratedUserID: candidateID)
             }
         }
         .sheet(isPresented: $showAgreementSheet) {
             if let candidate = viewModel.candidate, let currentUserID = ProfileViewModel.shared.userProfile?.id {
-                // For demonstration, using a dummy match ID; replace with your actual match ID as needed.
                 AgreementView(matchID: "matchID_example", userA: currentUserID, userB: candidate.id ?? "unknown")
             }
         }
