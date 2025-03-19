@@ -23,7 +23,7 @@ struct CandidateProfileView: View {
     
     var body: some View {
         ZStack {
-            // Use the global background color.
+            // Use the global background color from the theme.
             Color.brandBackground
                 .edgesIgnoringSafeArea(.all)
             
@@ -31,7 +31,7 @@ struct CandidateProfileView: View {
                 if let candidate = viewModel.candidate {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // Profile image with Verified badge overlay.
+                            // MARK: - Profile Image Section
                             ZStack(alignment: .topTrailing) {
                                 if let imageUrl = candidate.profileImageUrl, let url = URL(string: imageUrl) {
                                     AsyncImage(url: url) { phase in
@@ -53,7 +53,7 @@ struct CandidateProfileView: View {
                                         .frame(width: 150, height: 150)
                                 }
                                 
-                                // Verified badge overlay.
+                                // Verified badge overlay using theme primary color.
                                 if let verified = candidate.isVerified, verified {
                                     Text("✓ Verified")
                                         .font(.caption2)
@@ -65,7 +65,7 @@ struct CandidateProfileView: View {
                                 }
                             }
                             
-                            // Candidate details card.
+                            // MARK: - Candidate Details Card
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(candidate.email)
                                     .font(.headline)
@@ -86,7 +86,7 @@ struct CandidateProfileView: View {
                             
                             Divider()
                             
-                            // Additional candidate information.
+                            // MARK: - Additional Information Section
                             VStack(alignment: .leading, spacing: 8) {
                                 if let dorm = candidate.dormType {
                                     Text("Dorm Type: \(dorm)")
@@ -112,7 +112,7 @@ struct CandidateProfileView: View {
                             }
                             .padding()
                             
-                            // Common Interests Section.
+                            // MARK: - Common Interests Section
                             if let currentUser = ProfileViewModel.shared.userProfile,
                                let candidateInterests = candidate.interests,
                                let currentInterests = currentUser.interests {
@@ -134,46 +134,46 @@ struct CandidateProfileView: View {
                             
                             Divider()
                             
-                            // Action Buttons using the global button styles.
+                            // MARK: - Action Buttons (using global PrimaryButtonStyle)
                             VStack(spacing: 16) {
                                 HStack(spacing: 16) {
                                     Button(action: { showCompatibilityBreakdown = true }) {
                                         Text("View Compatibility Breakdown")
                                     }
-                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.indigo))
+                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .indigo))
                                     
                                     Button(action: { showQuiz = true }) {
                                         Text("Take Compatibility Quiz")
                                     }
-                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.pink))
+                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .pink))
                                 }
                                 
                                 Button(action: { showComparison = true }) {
                                     Text("Compare with My Profile")
                                 }
-                                .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.blue))
+                                .buttonStyle(PrimaryButtonStyle(backgroundColor: .blue))
                                 
                                 HStack(spacing: 16) {
                                     Button(action: { showReportSheet = true }) {
                                         Text("Report User")
                                     }
-                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.brandAccent))
+                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .brandAccent))
                                     
                                     Button(action: { showBlockAlert = true }) {
                                         Text("Block User")
                                     }
-                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.gray))
+                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .gray))
                                 }
                                 
                                 Button(action: { showRatingSheet = true }) {
                                     Text("Rate Roommate")
                                 }
-                                .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.orange))
+                                .buttonStyle(PrimaryButtonStyle(backgroundColor: .orange))
                                 
                                 Button(action: { showAgreementSheet = true }) {
                                     Text("Create Roommate Agreement")
                                 }
-                                .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.purple))
+                                .buttonStyle(PrimaryButtonStyle(backgroundColor: .purple))
                             }
                         }
                         .padding()
@@ -207,7 +207,7 @@ struct CandidateProfileView: View {
         }
         .sheet(isPresented: $showRatingSheet) {
             if let candidate = viewModel.candidate, let candidateID = candidate.id {
-                // Use the combined RoommateReviewView.
+                // Open the combined review view.
                 RoommateReviewView(matchID: "matchID_example", ratedUserID: candidateID)
             }
         }

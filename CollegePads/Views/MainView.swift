@@ -13,7 +13,7 @@ struct MainView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Global gradient background.
+                // Global gradient background from theme
                 LinearGradient(gradient: Gradient(colors: [Color.white, Color(UIColor.systemGray5)]),
                                startPoint: .topLeading, endPoint: .bottomTrailing)
                     .edgesIgnoringSafeArea(.all)
@@ -26,37 +26,37 @@ struct MainView: View {
                     NavigationLink(destination: MatchingView()) {
                         Text("Find Roommates")
                     }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.blue))
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .brandPrimary))
                     .padding(.horizontal)
                     
                     NavigationLink(destination: ProfileSetupView()) {
                         Text("Setup/Update Profile")
                     }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.green))
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .green))
                     .padding(.horizontal)
                     
                     NavigationLink(destination: AdvancedFilterView()) {
                         Text("Advanced Search")
                     }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.orange))
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .orange))
                     .padding(.horizontal)
                     
                     NavigationLink(destination: ChatsListView()) {
                         Text("My Chats")
                     }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.purple))
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .purple))
                     .padding(.horizontal)
                     
                     NavigationLink(destination: MatchesDashboardView()) {
                         Text("My Matches")
                     }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.teal))
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .teal))
                     .padding(.horizontal)
                     
                     NavigationLink(destination: SettingsView()) {
                         Text("Settings")
                     }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.gray))
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .gray))
                     .padding(.horizontal)
                     
                     Button(action: {
@@ -64,7 +64,7 @@ struct MainView: View {
                     }) {
                         Text("Sign Out")
                     }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.red))
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .red))
                     .padding(.horizontal)
                 }
             }
