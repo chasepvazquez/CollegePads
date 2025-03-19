@@ -2,12 +2,13 @@
 //  ListingModel.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Created by [Your Name] on [Date]
 //
 
 import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
+import CoreLocation
 
 struct ListingModel: Codable, Identifiable {
     @DocumentID var id: String?
@@ -18,4 +19,11 @@ struct ListingModel: Codable, Identifiable {
     var latitude: Double?
     var longitude: Double?
     var createdAt: Date = Date()
+}
+
+// MARK: - Coordinate Computation
+extension ListingModel {
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude ?? 0, longitude: longitude ?? 0)
+    }
 }

@@ -16,8 +16,8 @@ struct CandidateProfileView: View {
     @State private var showComparison = false      // For profile comparison
     @State private var showReportSheet = false       // For reporting user
     @State private var showBlockAlert = false        // For blocking confirmation
-    @State private var showRatingSheet = false         // For rating roommate
-    @State private var showAgreementSheet: Bool = false  // For creating roommate agreement
+    @State private var showRatingSheet = false         // For rating roommate (combined view)
+    @State private var showAgreementSheet = false      // For creating roommate agreement
     
     @StateObject private var blockUserVM = BlockUserViewModel()
     
@@ -185,7 +185,7 @@ struct CandidateProfileView: View {
                                 }
                             }
                             
-                            // New: Rate Roommate Button.
+                            // Rate Roommate Button.
                             Button(action: { showRatingSheet = true }) {
                                 Text("Rate Roommate")
                                     .foregroundColor(.white)
@@ -195,7 +195,7 @@ struct CandidateProfileView: View {
                                     .cornerRadius(8)
                             }
                             
-                            // New: Create Roommate Agreement Button.
+                            // Create Roommate Agreement Button.
                             Button(action: { showAgreementSheet = true }) {
                                 Text("Create Roommate Agreement")
                                     .foregroundColor(.white)
@@ -236,7 +236,8 @@ struct CandidateProfileView: View {
         }
         .sheet(isPresented: $showRatingSheet) {
             if let candidate = viewModel.candidate, let candidateID = candidate.id {
-                RoommateRatingView(ratedUserID: candidateID)
+                // Use the combined RoommateReviewView instead of RoommateRatingView.
+                RoommateReviewView(matchID: "matchID_example", ratedUserID: candidateID)
             }
         }
         .sheet(isPresented: $showAgreementSheet) {

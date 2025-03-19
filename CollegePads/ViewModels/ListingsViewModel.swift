@@ -2,7 +2,7 @@
 //  ListingsViewModel.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Created by [Your Name] on [Date]
 //
 
 import SwiftUI
@@ -27,16 +27,13 @@ class ListingsViewModel: ObservableObject {
                     try? doc.data(as: ListingModel.self)
                 }
             }
-            .sink { completion in
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] completion in
                 if case let .failure(error) = completion {
-                    DispatchQueue.main.async {
-                        self.errorMessage = error.localizedDescription
-                    }
+                    self?.errorMessage = error.localizedDescription
                 }
-            } receiveValue: { listings in
-                DispatchQueue.main.async {
-                    self.listings = listings
-                }
+            } receiveValue: { [weak self] listings in
+                self?.listings = listings
             }
             .store(in: &cancellables)
     }

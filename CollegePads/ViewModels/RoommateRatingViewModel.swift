@@ -4,27 +4,15 @@
 //
 //  Created by [Your Name] on [Date].
 //
-
+//  This ViewModel handles the submission of roommate reviews and ratings to Firestore.
+//  It writes a new document to the "roommateReviews" collection containing the matchID,
+//  the IDs of both the rater and rated user, the rating, an optional review text, the selected review mode,
+//  the selected verification method, and an optional lease document URL.
 import Foundation
 import FirebaseFirestore
 import FirebaseAuth
-
-/// Represents a roommate review.
-struct RoommateReview: Codable, Identifiable {
-    @DocumentID var id: String?
-    var matchID: String         // The unique match identifier between the two users.
-    var raterID: String         // UID of the reviewer.
-    var ratedID: String         // UID of the person being reviewed.
-    var rating: Int             // Rating from 1 to 5.
-    var reviewText: String?     // Optional written review.
-    /// Review mode: "mutual", "anonymous", or "one-sided"
-    var reviewMode: String
-    /// Verification method: "none", "lease", etc.
-    var verificationMethod: String
-    /// URL to the uploaded lease/document, if any.
-    var leaseDocumentURL: String?
-    var timestamp: Date = Date()
-}
+import FirebaseFirestoreCombineSwift
+import Combine
 
 class RoommateReviewViewModel: ObservableObject {
     @Published var errorMessage: String?
@@ -32,56 +20,52 @@ class RoommateReviewViewModel: ObservableObject {
     
     /// Submits a roommate review to Firestore.
     /// - Parameters:
-    ///   - matchID: The unique match identifier.
-    ///   - ratedID: UID of the person being reviewed.
-    ///   - rating: An integer rating (1–5).
-    ///   - reviewText: Optional written review.
-    ///   - reviewMode: "mutual", "anonymous", or "one-sided".
-    ///   - verificationMethod: "none", "lease", etc.
-    ///   - leaseDocumentURL: Optional URL of the uploaded document.
-    ///   - completion: Completion handler with Result.
+    ///   - matchID: The match identifier.
+    ///   - ratedUserID: The UID of the user being reviewed.
+    ///   - rating: An integer rating (1 to 5).
+    ///   - reviewText: Optional review text.
+    ///   - reviewMode: The review mode as a lowercase string (e.g., "mutual", "anonymous", "one-sided").
+    ///   - verificationMethod: The verification method as a lowercase string (e.g., "none", "lease upload").
+    ///   - leaseDocumentURL: An optional URL for the lease document if uploaded.
+    ///   - completion: A completion handler returning success or error.
     func submitReview(matchID: String,
-                      ratedID: String,
+                      ratedUserID: String,
                       rating: Int,
-                      reviewText: String?,
+                      reviewText: String,
                       reviewMode: String,
                       verificationMethod: String,
                       leaseDocumentURL: String?,
                       completion: @escaping (Result<Void, Error>) -> Void) {
         
-        guard let raterID = Auth.auth().currentUser?.uid else {
-            let err = NSError(domain: "RoommateReview", code: 0, userInfo: [NSLocalizedDescriptionKey: "User not authenticated."])
+        guard let currentUserID = Auth.auth().currentUser?.uid else {
+            let error = NSError(domain: "RoommateReview", code: 0, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
             DispatchQueue.main.async {
-                self.errorMessage = err.localizedDescription
-                completion(.failure(err))
+                self.errorMessage = error.localizedDescription
+                completion(.failure(error))
             }
             return
         }
         
-        let review = RoommateReview(matchID: matchID,
-                                    raterID: raterID,
-                                    ratedID: ratedID,
-                                    rating: rating,
-                                    reviewText: reviewText,
-                                    reviewMode: reviewMode,
-                                    verificationMethod: verificationMethod,
-                                    leaseDocumentURL: leaseDocumentURL)
+        let reviewData: [String: Any] = [
+            "matchID": matchID,
+            "raterUserID": currentUserID,
+            "ratedUserID": ratedUserID,
+            "rating": rating,
+            "review": reviewText,
+            "reviewMode": reviewMode,
+            "verificationMethod": verificationMethod,
+            "leaseDocumentURL": leaseDocumentURL as Any,
+            "timestamp": FieldValue.serverTimestamp()
+        ]
         
-        do {
-            _ = try db.collection("roommateReviews").addDocument(from: review) { error in
-                DispatchQueue.main.async {
-                    if let error = error {
-                        self.errorMessage = error.localizedDescription
-                        completion(.failure(error))
-                    } else {
-                        completion(.success(()))
-                    }
-                }
-            }
-        } catch {
+        db.collection("roommateReviews").addDocument(data: reviewData) { error in
             DispatchQueue.main.async {
-                self.errorMessage = error.localizedDescription
-                completion(.failure(error))
+                if let error = error {
+                    self.errorMessage = error.localizedDescription
+                    completion(.failure(error))
+                } else {
+                    completion(.success(()))
+                }
             }
         }
     }

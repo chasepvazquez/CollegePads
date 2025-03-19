@@ -5,7 +5,8 @@
 //  Created by [Your Name] on [Date].
 //
 //  This ViewModel holds filter criteria and applies them to a list of potential matches.
-//  It first performs basic Firestore filtering and then applies local filtering for grade group, interests, and distance.
+//  It first performs basic Firestore filtering (using dorm type, housing status, college name, and budget range),
+//  then applies additional local filtering for grade group, interests, and maximum distance.
 import SwiftUI
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
@@ -14,7 +15,9 @@ import Combine
 import CoreLocation
 
 class AdvancedFilterViewModel: ObservableObject {
+    // Existing published filter properties.
     @Published var filterDormType: String = ""
+    @Published var filterHousingStatus: String = ""  // Added missing property.
     @Published var filterCollegeName: String = ""
     @Published var filterBudgetRange: String = ""
     @Published var filterGradeGroup: String = ""  // Options: "", "Freshman", "Underclassmen", "Upperclassmen", "Graduate"
@@ -30,8 +33,12 @@ class AdvancedFilterViewModel: ObservableObject {
     func applyFilters(currentLocation: CLLocation?) {
         var query: Query = db.collection("users")
         
+        // Basic Firestore filtering for dorm type, housing status, college name, and budget range.
         if !filterDormType.isEmpty {
             query = query.whereField("dormType", isEqualTo: filterDormType)
+        }
+        if !filterHousingStatus.isEmpty {
+            query = query.whereField("housingStatus", isEqualTo: filterHousingStatus)
         }
         if !filterCollegeName.isEmpty {
             query = query.whereField("collegeName", isEqualTo: filterCollegeName)
@@ -56,6 +63,7 @@ class AdvancedFilterViewModel: ObservableObject {
                             case "freshman":
                                 return grade == "freshman"
                             case "underclassmen":
+                                // Underclassmen: sophomore (if desired, adjust as needed)
                                 return grade == "sophomore"
                             case "upperclassmen":
                                 return grade == "junior" || grade == "senior"

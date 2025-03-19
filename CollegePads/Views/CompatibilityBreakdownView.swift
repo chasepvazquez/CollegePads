@@ -25,7 +25,8 @@ struct CompatibilityBreakdownView: View {
                     .bold()
                     .padding(.top)
                 
-                if let current = currentUser {
+                // Use a boolean check instead of binding to a variable that is never used.
+                if currentUser != nil {
                     Text("Overall Compatibility: \(Int(overallScore))%")
                         .font(.title)
                         .foregroundColor(overallScore > 70 ? .green : .orange)
@@ -115,7 +116,7 @@ struct CompatibilityBreakdownView_Previews: PreviewProvider {
         return ProfileComparisonPreview(candidate: candidate)
     }
     
-    // A simple wrapper to display CompatibilityBreakdownView
+    // A simple wrapper to display CompatibilityBreakdownView.
     struct ProfileComparisonPreview: View {
         let candidate: UserModel
         var body: some View {

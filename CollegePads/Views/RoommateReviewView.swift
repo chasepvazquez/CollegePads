@@ -1,15 +1,19 @@
 //
-//  RoommateReviewSubmissionView.swift
+//  RoommateReviewView.swift
 //  CollegePads
 //
 //  Created by [Your Name] on [Date].
 //
-
+//  This view combines roommate rating and review submission into a single interface.
+//  It allows users to select a star rating, provide an optional text review,
+//  choose a review mode (mutual, anonymous, one-sided), and select a verification method.
+//  If the "Lease Upload" verification method is selected, users can upload a lease document.
 import SwiftUI
 
-struct RoommateReviewSubmissionView: View {
-    let matchID: String        // Provided by the match context
-    let ratedUserID: String    // UID of the person being reviewed
+struct RoommateReviewView: View {
+    let matchID: String      // Provided by match context
+    let ratedUserID: String  // UID of the user being reviewed
+    
     @Environment(\.presentationMode) var presentationMode
     @StateObject private var viewModel = RoommateReviewViewModel()
     
@@ -38,13 +42,26 @@ struct RoommateReviewSubmissionView: View {
     @State private var leaseImage: UIImage?
     @State private var showingImagePicker: Bool = false
     
+    // Alert binding to reduce complexity.
+    private var alertBinding: Binding<GenericAlertError?> {
+        Binding<GenericAlertError?>(
+            get: {
+                if let error = viewModel.errorMessage {
+                    return GenericAlertError(message: error)
+                }
+                return nil
+            },
+            set: { _ in viewModel.errorMessage = nil }
+        )
+    }
+    
     var body: some View {
         NavigationView {
             Form {
                 Section(header: Text("Rating")) {
                     Picker("Rating", selection: $rating) {
                         ForEach(1...5, id: \.self) { star in
-                            Text("\(star) ★").tag(star)
+                            Text("\(star)★").tag(star)
                         }
                     }
                     .pickerStyle(SegmentedPickerStyle())
@@ -106,29 +123,18 @@ struct RoommateReviewSubmissionView: View {
             .sheet(isPresented: $showingImagePicker) {
                 ImagePicker(image: $leaseImage)
             }
-            .alert(item: Binding(
-                get: {
-                    if let errorMessage = viewModel.errorMessage {
-                        return GenericAlertError(message: errorMessage)
-                    }
-                    return nil
-                },
-                set: { _ in viewModel.errorMessage = nil }
-            )) { alertError in
+            .alert(item: alertBinding) { alertError in
                 Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
             }
         }
     }
     
     private func submitReview() {
-        // In a real app, if the selected verification method is lease,
-        // you would first upload the leaseImage using your FirebaseStorageService extension.
-        // For simplicity, we'll assume that if a lease is required, you have a leaseDocumentURL.
-        // Replace the following line with your upload logic if needed.
+        // For a real implementation, replace the dummy URL with the actual uploaded lease document URL.
         let leaseDocumentURL: String? = (selectedVerificationMethod == .lease) ? "https://example.com/lease.jpg" : nil
         
         viewModel.submitReview(matchID: matchID,
-                               ratedID: ratedUserID,
+                               ratedUserID: ratedUserID,
                                rating: rating,
                                reviewText: reviewText,
                                reviewMode: selectedReviewMode.rawValue.lowercased(),
@@ -144,9 +150,8 @@ struct RoommateReviewSubmissionView: View {
     }
 }
 
-struct RoommateReviewSubmissionView_Previews: PreviewProvider {
+struct RoommateReviewView_Previews: PreviewProvider {
     static var previews: some View {
-        // Replace "dummyMatchID" and "dummyRatedUserID" with sample data.
-        RoommateReviewSubmissionView(matchID: "dummyMatchID", ratedUserID: "dummyRatedUserID")
+        RoommateReviewView(matchID: "dummyMatchID", ratedUserID: "dummyRatedUserID")
     }
 }
