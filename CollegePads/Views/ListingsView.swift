@@ -17,16 +17,17 @@ struct ListingsView: View {
         span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
     )
     
-    // Filter listings with valid coordinates
+    // Filter listings with a valid location GeoPoint.
     private var validListings: [ListingModel] {
-        viewModel.listings.filter { $0.latitude != nil && $0.longitude != nil }
+        viewModel.listings.filter { $0.location != nil }
     }
     
     var body: some View {
         NavigationView {
             VStack {
-                // MARK: - Map with Markers using annotationItems (simpler for compiler)
+                // MARK: - Map with Markers using annotationItems
                 Map(coordinateRegion: $region, annotationItems: validListings) { listing in
+                    // Use the computed 'coordinate' from ListingModel extension
                     MapMarker(coordinate: listing.coordinate, tint: .red)
                 }
                 .frame(height: 300)

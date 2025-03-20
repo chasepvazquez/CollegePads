@@ -1,12 +1,3 @@
-//
-//  AdvancedFilterViewModel.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-//  This ViewModel holds filter criteria and applies them to a list of potential matches.
-//  It first performs basic Firestore filtering (using dorm type, housing status, college name, and budget range),
-//  then applies additional local filtering for grade group, interests, and maximum distance.
 import SwiftUI
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
@@ -15,14 +6,13 @@ import Combine
 import CoreLocation
 
 class AdvancedFilterViewModel: ObservableObject {
-    // Existing published filter properties.
     @Published var filterDormType: String = ""
-    @Published var filterHousingStatus: String = ""  // Added missing property.
+    @Published var filterHousingStatus: String = ""
     @Published var filterCollegeName: String = ""
     @Published var filterBudgetRange: String = ""
-    @Published var filterGradeGroup: String = ""  // Options: "", "Freshman", "Underclassmen", "Upperclassmen", "Graduate"
+    @Published var filterGradeGroup: String = ""
     @Published var filterInterests: String = ""
-    @Published var maxDistance: Double = 10.0  // in kilometers
+    @Published var maxDistance: Double = 10.0 // in kilometers
     
     @Published var filteredUsers: [UserModel] = []
     @Published var errorMessage: String?
@@ -33,7 +23,6 @@ class AdvancedFilterViewModel: ObservableObject {
     func applyFilters(currentLocation: CLLocation?) {
         var query: Query = db.collection("users")
         
-        // Basic Firestore filtering for dorm type, housing status, college name, and budget range.
         if !filterDormType.isEmpty {
             query = query.whereField("dormType", isEqualTo: filterDormType)
         }
@@ -53,7 +42,7 @@ class AdvancedFilterViewModel: ObservableObject {
                 snapshot.documents.compactMap { try? $0.data(as: UserModel.self) }
             }
             .map { users in
-                // Local filtering by grade group.
+                // Filter by grade group.
                 let gradeFiltered: [UserModel]
                 if !self.filterGradeGroup.isEmpty {
                     gradeFiltered = users.filter { user in
@@ -63,8 +52,7 @@ class AdvancedFilterViewModel: ObservableObject {
                             case "freshman":
                                 return grade == "freshman"
                             case "underclassmen":
-                                // Underclassmen: sophomore (if desired, adjust as needed)
-                                return grade == "sophomore"
+                                return grade == "sophomore" // adjust as needed
                             case "upperclassmen":
                                 return grade == "junior" || grade == "senior"
                             case "graduate":
@@ -82,9 +70,7 @@ class AdvancedFilterViewModel: ObservableObject {
                 // Filter by interests.
                 let interestsFiltered: [UserModel]
                 if !self.filterInterests.isEmpty {
-                    let keywords = self.filterInterests
-                        .split(separator: ",")
-                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                    let keywords = self.filterInterests.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
                     interestsFiltered = gradeFiltered.filter { user in
                         if let userInterests = user.interests {
                             let lowerUserInterests = userInterests.map { $0.lowercased() }
@@ -96,12 +82,12 @@ class AdvancedFilterViewModel: ObservableObject {
                     interestsFiltered = gradeFiltered
                 }
                 
-                // Filter by distance if location is available.
+                // Filter by distance.
                 let locationFiltered: [UserModel]
                 if let currentLocation = currentLocation {
                     locationFiltered = interestsFiltered.filter { user in
-                        if let lat = user.latitude, let lon = user.longitude {
-                            let userLocation = CLLocation(latitude: lat, longitude: lon)
+                        if let geoPoint = user.location {
+                            let userLocation = CLLocation(latitude: geoPoint.latitude, longitude: geoPoint.longitude)
                             let distance = currentLocation.distance(from: userLocation) / 1000.0
                             return distance <= self.maxDistance
                         }

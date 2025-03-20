@@ -1,10 +1,3 @@
-//
-//  CompatibilityCalculator.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-
 import Foundation
 import CoreLocation
 
@@ -96,11 +89,10 @@ struct CompatibilityCalculator {
             breakdown["Major"] = 0
         }
         
-        // Distance Factor
+        // Distance Factor (using GeoPoint)
         totalWeight += 10.0
-        if let lat1 = user1.latitude, let lon1 = user1.longitude,
-           let lat2 = user2.latitude, let lon2 = user2.longitude {
-            let distance = haversineDistance(lat1: lat1, lon1: lon1, lat2: lat2, lon2: lon2)
+        if let geo1 = user1.location, let geo2 = user2.location {
+            let distance = haversineDistance(lat1: geo1.latitude, lon1: geo1.longitude, lat2: geo2.latitude, lon2: geo2.longitude)
             let distanceScore: Double
             if distance <= 5 {
                 distanceScore = 10.0

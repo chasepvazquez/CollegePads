@@ -4,8 +4,7 @@
 //
 //  Created by [Your Name] on [Date].
 //
-//  This model represents a user profile for CollegePads, including basic info, roommate preferences,
-//  verification, blocked users, and extended housing details.
+
 import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
@@ -40,20 +39,19 @@ struct UserModel: Codable, Identifiable {
 
     // Profile Picture & Location
     var profileImageUrl: String?
-    var latitude: Double?
-    var longitude: Double?
-    
+    var location: GeoPoint? // NEW: Single field for location
+
     // Verification Fields
     var isVerified: Bool?
     var verificationImageUrl: String?
-    
+
     // Blocked Users
     var blockedUserIDs: [String]?
-    
+
     // Housing Details (New)
-    var housingStatus: String?       // e.g., "Dorm Resident", "Apartment Resident", etc.
-    var leaseDuration: String?       // e.g., "Current Lease", "Short Term (<6 months)", etc.
-    
+    var housingStatus: String?
+    var leaseDuration: String?
+
     init(
         email: String,
         isEmailVerified: Bool,
@@ -72,8 +70,7 @@ struct UserModel: Codable, Identifiable {
         studyHabits: Int? = nil,
         interests: [String]? = nil,
         profileImageUrl: String? = nil,
-        latitude: Double? = nil,
-        longitude: Double? = nil,
+        location: GeoPoint? = nil, // NEW
         isVerified: Bool? = false,
         verificationImageUrl: String? = nil,
         blockedUserIDs: [String]? = nil,
@@ -98,8 +95,7 @@ struct UserModel: Codable, Identifiable {
         self.studyHabits = studyHabits
         self.interests = interests
         self.profileImageUrl = profileImageUrl
-        self.latitude = latitude
-        self.longitude = longitude
+        self.location = location
         self.isVerified = isVerified
         self.verificationImageUrl = verificationImageUrl
         self.blockedUserIDs = blockedUserIDs

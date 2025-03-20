@@ -18,6 +18,7 @@ class ListingsViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private let db = Firestore.firestore()
     
+    /// Fetches listings ordered by creation date.
     func fetchListings() {
         db.collection("listings")
             .order(by: "createdAt", descending: true)

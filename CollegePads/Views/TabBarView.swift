@@ -2,7 +2,7 @@
 //  TabBarView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Created by [Your Name] on [Date]
 //
 
 import SwiftUI
@@ -10,28 +10,25 @@ import SwiftUI
 struct TabBarView: View {
     var body: some View {
         TabView {
+            // Swipe Tab remains.
             MatchingView()
                 .tabItem {
                     Image(systemName: "flame.fill")
                     Text("Swipe")
                 }
             
-            MatchesDashboardView()
-                .tabItem {
-                    Image(systemName: "heart.fill")
-                    Text("Matches")
-                }
-            
-            ChatsListView()
+            // New Combined Matches & Chat Tab.
+            CombinedMatchesChatView()
                 .tabItem {
                     Image(systemName: "bubble.left.and.bubble.right.fill")
-                    Text("Chats")
+                    Text("Messages")
                 }
             
-            ProfileSetupView()
+            // Updated Home Tab (consolidated Home view).
+            HomeView()
                 .tabItem {
-                    Image(systemName: "person.crop.circle")
-                    Text("Profile")
+                    Image(systemName: "house.fill")
+                    Text("Home")
                 }
         }
         .accentColor(.brandAccent)

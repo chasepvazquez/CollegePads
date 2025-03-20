@@ -25,21 +25,19 @@ struct CompatibilityBreakdownView: View {
                     .bold()
                     .padding(.top)
                 
-                // Use a boolean check instead of binding to a variable that is never used.
                 if currentUser != nil {
                     Text("Overall Compatibility: \(Int(overallScore))%")
                         .font(.title)
                         .foregroundColor(overallScore > 70 ? .green : .orange)
                     
-                    // For each factor, show a progress bar out of 10 pts.
                     ForEach(breakdown.keys.sorted(), id: \.self) { key in
                         HStack {
                             Text(key)
                                 .fontWeight(.semibold)
                                 .frame(width: 100, alignment: .leading)
-                            ProgressView(value: breakdown[key]!, total: 10)
+                            ProgressView(value: breakdown[key] ?? 0, total: 10)
                                 .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                            Text("\(Int(breakdown[key]!)) pts")
+                            Text("\(Int(breakdown[key] ?? 0)) pts")
                                 .frame(width: 50, alignment: .trailing)
                         }
                         .padding(.vertical, 4)
@@ -55,7 +53,7 @@ struct CompatibilityBreakdownView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Close") {
-                        // Dismiss the view (the parent view should handle dismissal)
+                        // Implement dismissal action if needed.
                     }
                 }
             }
@@ -67,60 +65,9 @@ struct CompatibilityBreakdownView: View {
     
     private func computeCompatibility() {
         guard let current = currentUser else { return }
+        // Call the compatibility calculator using exactly the two parameters.
         let result = CompatibilityCalculator.calculateCompatibilityBreakdown(between: current, and: candidate)
         overallScore = result.overall
         breakdown = result.breakdown
-    }
-}
-
-struct CompatibilityBreakdownView_Previews: PreviewProvider {
-    static var previews: some View {
-        // Dummy candidate for preview
-        let candidate = UserModel(
-            email: "candidate@edu",
-            isEmailVerified: true,
-            gradeLevel: "Freshman",
-            major: "Computer Science",
-            collegeName: "Engineering",
-            dormType: "On-Campus",
-            preferredDorm: nil,
-            budgetRange: "$500-$1000",
-            cleanliness: 4,
-            sleepSchedule: "Flexible",
-            smoker: false,
-            petFriendly: true,
-            livingStyle: "Social",
-            interests: ["music", "coding"],
-            latitude: 37.7749,
-            longitude: -122.4194
-        )
-        // For preview, set a dummy current user.
-        ProfileViewModel.shared.userProfile = UserModel(
-            email: "current@edu",
-            isEmailVerified: true,
-            gradeLevel: "Freshman",
-            major: "Computer Science",
-            collegeName: "Engineering",
-            dormType: "On-Campus",
-            preferredDorm: nil,
-            budgetRange: "$500-$1000",
-            cleanliness: 5,
-            sleepSchedule: "Flexible",
-            smoker: false,
-            petFriendly: true,
-            livingStyle: "Social",
-            interests: ["coding", "sports"],
-            latitude: 37.7749,
-            longitude: -122.4194
-        )
-        return ProfileComparisonPreview(candidate: candidate)
-    }
-    
-    // A simple wrapper to display CompatibilityBreakdownView.
-    struct ProfileComparisonPreview: View {
-        let candidate: UserModel
-        var body: some View {
-            CompatibilityBreakdownView(candidate: candidate)
-        }
     }
 }
