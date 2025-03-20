@@ -2,7 +2,7 @@
 //  SwipeDeckView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to refine swipe animations using interactive spring and improved haptics
 //
 
 import SwiftUI
@@ -10,7 +10,7 @@ import SwiftUI
 struct SwipeDeckView: View {
     @StateObject private var viewModel = MatchingViewModel()
     @State private var currentIndex: Int = 0
-
+    
     var body: some View {
         ZStack {
             if viewModel.potentialMatches.isEmpty {
@@ -27,7 +27,7 @@ struct SwipeDeckView: View {
                         .offset(y: offset(for: index))
                         .allowsHitTesting(index == currentIndex)
                         .transition(.slide)
-                        .animation(.spring(), value: currentIndex)
+                        .animation(.interactiveSpring(response: 0.5, dampingFraction: 0.7, blendDuration: 0.3), value: currentIndex)
                     }
                 }
             }

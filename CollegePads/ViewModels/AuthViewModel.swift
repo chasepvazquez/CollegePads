@@ -2,7 +2,8 @@
 //  AuthViewModel.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Created by [Your Name] on [Date]
+//  Updated for account management (delete account functionality)
 //
 
 import SwiftUI
@@ -19,7 +20,7 @@ class AuthViewModel: ObservableObject {
     private let authService = FirebaseAuthService()
     
     init() {
-        // Just set the current user; don't do the listener here.
+        // Set the current user; listener can be started from RootView.
         self.userSession = Auth.auth().currentUser
     }
     
@@ -69,6 +70,28 @@ class AuthViewModel: ObservableObject {
             userSession = nil
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Account Management Extension
+
+extension AuthViewModel {
+    /// Deletes the currently authenticated user's account.
+    /// This method calls Firebase Auth's delete method and returns the result via a completion handler.
+    /// Optionally, you may add cleanup for Firestore user data here.
+    func deleteAccount(completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let user = Auth.auth().currentUser else {
+            completion(.failure(NSError(domain: "Auth", code: 401, userInfo: [NSLocalizedDescriptionKey: "No authenticated user found."])))
+            return
+        }
+        user.delete { error in
+            if let error = error {
+                completion(.failure(error))
+            } else {
+                // Optionally, add Firestore data cleanup here.
+                completion(.success(()))
+            }
         }
     }
 }

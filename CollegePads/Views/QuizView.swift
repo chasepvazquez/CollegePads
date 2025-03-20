@@ -2,7 +2,7 @@
 //  QuizView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to include a submission loading state and success feedback alert
 //
 
 import SwiftUI
@@ -14,7 +14,9 @@ struct QuizView: View {
     // Quiz answers (scale 1-5)
     @State private var socialLevel: Double = 3
     @State private var studyHabits: Double = 3
-    
+    @State private var isSubmitting: Bool = false
+    @State private var showSuccessAlert: Bool = false
+
     var body: some View {
         NavigationView {
             Form {
@@ -31,49 +33,65 @@ struct QuizView: View {
                 }
                 
                 Button(action: saveQuizResults) {
-                    Text("Submit Quiz")
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(8)
+                    if isSubmitting {
+                        ProgressView()
+                    } else {
+                        Text("Submit Quiz")
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(8)
+                    }
                 }
+                .disabled(isSubmitting)
             }
             .navigationTitle("Roommate Quiz")
             .navigationBarItems(trailing: Button("Close") {
                 presentationMode.wrappedValue.dismiss()
             })
+            .alert(isPresented: $showSuccessAlert) {
+                Alert(title: Text("Success"),
+                      message: Text("Your quiz results have been saved."),
+                      dismissButton: .default(Text("OK"), action: {
+                          presentationMode.wrappedValue.dismiss()
+                      }))
+            }
         }
     }
     
     private func saveQuizResults() {
-        // Update current user's profile with the quiz answers.
+        isSubmitting = true
         if var profile = profileVM.userProfile {
             profile.socialLevel = Int(socialLevel)
             profile.studyHabits = Int(studyHabits)
             profileVM.updateUserProfile(updatedProfile: profile) { result in
-                switch result {
-                case .success:
-                    // Dismiss view after successful update.
-                    presentationMode.wrappedValue.dismiss()
-                case .failure(let error):
-                    print("Error updating quiz results: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    isSubmitting = false
+                    switch result {
+                    case .success:
+                        showSuccessAlert = true
+                    case .failure(let error):
+                        print("Error updating quiz results: \(error.localizedDescription)")
+                    }
                 }
             }
         } else {
-            // If no profile exists, create one with quiz results (minimal info).
             let newProfile = UserModel(
-                email: "", // Should be filled from current auth user
-                isEmailVerified: false, // Adjust accordingly
+                email: "", // Should be updated from current auth user
+                isEmailVerified: false,
                 socialLevel: Int(socialLevel),
                 studyHabits: Int(studyHabits)
             )
             profileVM.updateUserProfile(updatedProfile: newProfile) { result in
-                switch result {
-                case .success:
-                    presentationMode.wrappedValue.dismiss()
-                case .failure(let error):
-                    print("Error creating profile with quiz results: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    isSubmitting = false
+                    switch result {
+                    case .success:
+                        showSuccessAlert = true
+                    case .failure(let error):
+                        print("Error creating profile with quiz results: \(error.localizedDescription)")
+                    }
                 }
             }
         }

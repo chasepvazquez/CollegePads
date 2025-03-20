@@ -2,8 +2,8 @@
 //  ChatViewModel.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
-//
+//  Updated to include proper resource cleanup and a debounce mechanism for typing status updates.
+//  This ensures the chat view auto‐marks messages as read, handles errors gracefully, and minimizes unnecessary writes for typing status.
 
 import Foundation
 import FirebaseFirestore
@@ -18,6 +18,7 @@ class ChatViewModel: ObservableObject {
     
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
+    private var typingTimer: Timer?
     
     var chatID: String
     var currentUserID: String? {
@@ -28,6 +29,11 @@ class ChatViewModel: ObservableObject {
         self.chatID = chatID
         observeMessages()
         observeTypingStatus()
+    }
+    
+    deinit {
+        cancellables.forEach { $0.cancel() }
+        typingTimer?.invalidate()
     }
     
     /// Observes messages in real-time for this chat.
@@ -51,16 +57,16 @@ class ChatViewModel: ObservableObject {
                     }
                 }
             }
-            .sink { completion in
+            .sink { [weak self] completion in
                 if case let .failure(error) = completion {
                     DispatchQueue.main.async {
-                        self.errorMessage = error.localizedDescription
+                        self?.errorMessage = error.localizedDescription
                     }
                 }
-            } receiveValue: { fetchedMessages in
+            } receiveValue: { [weak self] fetchedMessages in
                 DispatchQueue.main.async {
-                    self.messages = fetchedMessages
-                    self.markMessagesAsRead()
+                    self?.messages = fetchedMessages
+                    self?.markMessagesAsRead()
                 }
             }
             .store(in: &cancellables)
@@ -70,14 +76,14 @@ class ChatViewModel: ObservableObject {
     func observeTypingStatus() {
         db.collection("chats")
             .document(chatID)
-            .addSnapshotListener { snapshot, error in
+            .addSnapshotListener { [weak self] snapshot, error in
                 if let error = error {
                     print("Error observing typing status: \(error.localizedDescription)")
                     return
                 }
                 if let data = snapshot?.data(), let typing = data["isTyping"] as? Bool {
                     DispatchQueue.main.async {
-                        self.isTyping = typing
+                        self?.isTyping = typing
                     }
                 }
             }
@@ -101,10 +107,14 @@ class ChatViewModel: ObservableObject {
                 .document(chatID)
                 .collection("messages")
                 .document()
-                .setData(from: newMessage) { error in
+                .setData(from: newMessage) { [weak self] error in
                     if let error = error {
                         DispatchQueue.main.async {
-                            self.errorMessage = error.localizedDescription
+                            self?.errorMessage = error.localizedDescription
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            self?.errorMessage = nil
                         }
                     }
                 }
@@ -113,7 +123,7 @@ class ChatViewModel: ObservableObject {
                 self.errorMessage = error.localizedDescription
             }
         }
-        // Reset typing status after sending message
+        // Reset typing status after sending the message.
         setTypingStatus(isTyping: false)
     }
     
@@ -138,5 +148,17 @@ class ChatViewModel: ObservableObject {
                 print("Error updating typing status: \(error.localizedDescription)")
             }
         }
+    }
+    
+    /// Call this method when the user is actively typing.
+    func userIsTyping() {
+        // Immediately set typing status to true.
+        setTypingStatus(isTyping: true)
+        // Invalidate the previous timer.
+        typingTimer?.invalidate()
+        // Start a new timer to reset typing status after 3 seconds of inactivity.
+        typingTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { [weak self] _ in
+            self?.setTypingStatus(isTyping: false)
+        })
     }
 }

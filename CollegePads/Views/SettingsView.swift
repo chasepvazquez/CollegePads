@@ -2,7 +2,8 @@
 //  SettingsView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to include a new "Account Management" section with a Delete Account option.
+//  Also includes existing dark mode, About, and Privacy sections.
 //
 
 import SwiftUI
@@ -13,11 +14,15 @@ struct SettingsView: View {
     @ObservedObject var profileVM = ProfileViewModel.shared
     @State private var showVerification = false
     @State private var showBlockedUsers = false
-
+    // Persist dark mode preference.
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    
+    private let appVersion = "1.0.0"  // Update this as needed.
+    
     var body: some View {
         NavigationView {
             Form {
-                // Account Information Section
+                // Account Information Section.
                 Section(header: Text("Account")) {
                     HStack {
                         Text("Email")
@@ -44,18 +49,43 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Blocked Users Section
+                // Privacy Section.
                 Section(header: Text("Privacy")) {
                     NavigationLink(destination: BlockedUsersView()) {
                         Text("Manage Blocked Users")
                     }
                 }
                 
-                // Sign Out Section
+                // Appearance Section.
+                Section(header: Text("Appearance")) {
+                    Toggle("Dark Mode", isOn: $isDarkMode)
+                        .accessibilityLabel("Dark Mode Toggle")
+                }
+                
+                // About Section.
+                Section(header: Text("About")) {
+                    HStack {
+                        Text("CollegePads")
+                        Spacer()
+                        Text("Version \(appVersion)")
+                            .foregroundColor(.gray)
+                    }
+                    NavigationLink(destination: AboutView()) {
+                        Text("Learn More")
+                    }
+                }
+                
+                // Account Management Section (New).
+                Section(header: Text("Account Management")) {
+                    NavigationLink(destination: DeleteAccountView().environmentObject(authViewModel)) {
+                        Text("Delete Account")
+                            .foregroundColor(.red)
+                    }
+                }
+                
+                // Sign Out Section.
                 Section {
-                    Button(action: {
-                        authViewModel.signOut()
-                    }) {
+                    Button(action: { authViewModel.signOut() }) {
                         Text("Log Out")
                             .foregroundColor(.red)
                     }
@@ -63,18 +93,32 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .sheet(isPresented: $showVerification) {
-                // Present your VerificationView for account verification.
                 VerificationView()
             }
         }
     }
 }
 
+struct AboutView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("CollegePads")
+                .font(.largeTitle)
+                .bold()
+            Text("A production‑ready app to help college students find the perfect roommate and housing. Built with scalability and user experience in mind.")
+                .multilineTextAlignment(.center)
+                .padding()
+            Spacer()
+        }
+        .padding()
+        .navigationTitle("About")
+    }
+}
+
 struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            SettingsView()
-                .environmentObject(AuthViewModel())
+            SettingsView().environmentObject(AuthViewModel())
         }
     }
 }

@@ -2,7 +2,7 @@
 //  OnboardingView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to include a page indicator for improved user orientation
 //
 
 import SwiftUI
@@ -26,6 +26,7 @@ struct OnboardingView: View {
                     .scaledToFit()
                     .frame(width: 150, height: 150)
                     .foregroundColor(.blue)
+                    .accessibilityHidden(true)
                 
                 Text(pages[currentPage].title)
                     .font(.largeTitle)
@@ -39,6 +40,15 @@ struct OnboardingView: View {
                     .padding(.horizontal)
                 
                 Spacer()
+                
+                // Page Indicator Dots
+                HStack(spacing: 8) {
+                    ForEach(0..<pages.count, id: \.self) { index in
+                        Circle()
+                            .fill(index == currentPage ? Color.blue : Color.gray.opacity(0.5))
+                            .frame(width: 10, height: 10)
+                    }
+                }
                 
                 HStack {
                     if currentPage > 0 {

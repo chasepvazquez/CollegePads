@@ -2,10 +2,9 @@
 //  ProfileSetupView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to include input validations, improved user feedback, and refined UI
 //
-//  This view allows users to update their profile with comprehensive options for academic and housing details,
-//  including finite options using pickers and a Profile Completion Meter.
+
 import SwiftUI
 import FirebaseAuth
 
@@ -64,6 +63,10 @@ struct ProfileSetupView: View {
     // MARK: - Profile Image
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
+    
+    // MARK: - Alert for Validation Errors
+    @State private var showAlert: Bool = false
+    @State private var alertMessage: String = ""
     
     // MARK: - Freeform Options for Sleep Schedule
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
@@ -169,7 +172,7 @@ struct ProfileSetupView: View {
                         .autocapitalization(.none)
                 }
                 
-                // Save Button Section using PrimaryButtonStyle.
+                // Save Button Section
                 Section {
                     Button(action: saveProfile) {
                         Text("Save Profile")
@@ -186,7 +189,6 @@ struct ProfileSetupView: View {
                 selectedGradeLevel = GradeLevel(rawValue: profile.gradeLevel ?? "") ?? .freshman
                 major = profile.major ?? ""
                 collegeName = profile.collegeName ?? ""
-                // Update housingStatus and leaseDuration; default if missing.
                 selectedHousingStatus = HousingStatus(rawValue: profile.housingStatus ?? "") ?? .other
                 selectedLeaseDuration = LeaseDuration(rawValue: profile.leaseDuration ?? "") ?? .notApplicable
                 budgetRange = profile.budgetRange ?? ""
@@ -199,11 +201,24 @@ struct ProfileSetupView: View {
             .sheet(isPresented: $showingImagePicker) {
                 ImagePicker(image: $selectedImage)
             }
+            .alert(isPresented: $showAlert) {
+                Alert(title: Text("Validation Error"),
+                      message: Text(alertMessage),
+                      dismissButton: .default(Text("OK")))
+            }
         }
     }
     
-    /// Saves the updated profile to Firestore.
+    /// Validates and saves the updated profile to Firestore.
     private func saveProfile() {
+        // Validate required fields
+        guard !major.trimmingCharacters(in: .whitespaces).isEmpty,
+              !collegeName.trimmingCharacters(in: .whitespaces).isEmpty else {
+            alertMessage = "Major and College Name are required fields."
+            showAlert = true
+            return
+        }
+        
         let interestsArray = interestsText
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -228,7 +243,8 @@ struct ProfileSetupView: View {
             case .success:
                 print("Profile successfully updated.")
             case .failure(let error):
-                print("Error updating profile: \(error.localizedDescription)")
+                alertMessage = "Error updating profile: \(error.localizedDescription)"
+                showAlert = true
             }
         }
     }

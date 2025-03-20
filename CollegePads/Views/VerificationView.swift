@@ -2,7 +2,7 @@
 //  VerificationView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to add a loading indicator during verification submission and improved form states
 //
 
 import SwiftUI
@@ -11,6 +11,7 @@ struct VerificationView: View {
     @StateObject private var viewModel = VerificationViewModel()
     @State private var selectedImage: UIImage?
     @State private var showingImagePicker = false
+    @State private var isSubmitting: Bool = false
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
@@ -25,18 +26,25 @@ struct VerificationView: View {
                             .onTapGesture {
                                 showingImagePicker = true
                             }
+                            .accessibilityLabel("Selected Verification Image")
                     } else {
                         Button("Select Verification Image") {
                             showingImagePicker = true
                         }
+                        .accessibilityLabel("Select Verification Image Button")
                     }
                 }
                 
                 Section {
                     Button(action: submitVerification) {
-                        Text("Submit Verification")
-                            .frame(maxWidth: .infinity, alignment: .center)
+                        if isSubmitting {
+                            ProgressView()
+                        } else {
+                            Text("Submit Verification")
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
                     }
+                    .disabled(selectedImage == nil || isSubmitting)
                 }
             }
             .navigationTitle("User Verification")
@@ -62,12 +70,16 @@ struct VerificationView: View {
     
     private func submitVerification() {
         guard let image = selectedImage else { return }
+        isSubmitting = true
         viewModel.submitVerification(image: image) { result in
-            switch result {
-            case .success:
-                presentationMode.wrappedValue.dismiss()
-            case .failure(let error):
-                print("Verification submission failed: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                isSubmitting = false
+                switch result {
+                case .success:
+                    presentationMode.wrappedValue.dismiss()
+                case .failure(let error):
+                    print("Verification submission failed: \(error.localizedDescription)")
+                }
             }
         }
     }

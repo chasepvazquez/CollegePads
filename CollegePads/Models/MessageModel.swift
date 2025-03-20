@@ -8,14 +8,13 @@
 import Foundation
 import FirebaseFirestoreCombineSwift
 
-struct MessageModel: Codable, Identifiable {
-    // Remove @DocumentID so we can satisfy Codable requirements.
-    // We'll assign the document ID manually in our view model.
+struct MessageModel: Identifiable, Codable {
     var id: String?
-    var senderID: String
-    var text: String
-    var timestamp: Date
+    let senderID: String
+    let text: String
+    let timestamp: Date
     var isRead: Bool?
+    var reactions: [String: Int]? = nil
     
     enum CodingKeys: String, CodingKey {
         case senderID, text, timestamp, isRead

@@ -2,7 +2,7 @@
 //  RootView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated for improved theming and accessibility
 //
 
 import SwiftUI
@@ -15,18 +15,20 @@ struct RootView: View {
     var body: some View {
         Group {
             if authViewModel.userSession == nil {
-                // Show authentication flow if not signed in
+                // Authentication flow with consistent light mode (adjust as needed)
                 AuthenticationView()
                     .environmentObject(authViewModel)
+                    .preferredColorScheme(.light)
             } else {
                 // Main app interface with custom tab bar
                 TabBarView()
                     .environmentObject(authViewModel)
+                    .preferredColorScheme(.light)
             }
         }
         .onAppear {
             authViewModel.listenToAuthState()
-            // Show onboarding if not completed yet
+            // Show onboarding if not completed yet.
             let completed = UserDefaults.standard.bool(forKey: "onboardingCompleted")
             if !completed {
                 showOnboarding = true
@@ -35,6 +37,7 @@ struct RootView: View {
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }
+        .accessibility(addTraits: .isHeader)
     }
 }
 

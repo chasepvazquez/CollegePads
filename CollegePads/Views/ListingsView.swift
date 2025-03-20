@@ -2,7 +2,7 @@
 //  ListingsView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date]
+//  Updated to include interactive map annotations with callouts for listing details
 //
 
 import SwiftUI
@@ -17,18 +17,35 @@ struct ListingsView: View {
         span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
     )
     
-    // Filter listings with a valid location GeoPoint.
+    // Filter listings with a valid location
     private var validListings: [ListingModel] {
         viewModel.listings.filter { $0.location != nil }
     }
     
+    // State for the selected listing to display details
+    @State private var selectedListing: ListingModel? = nil
+    
     var body: some View {
         NavigationView {
             VStack {
-                // MARK: - Map with Markers using annotationItems
+                // MARK: - Interactive Map with Custom Annotations
                 Map(coordinateRegion: $region, annotationItems: validListings) { listing in
-                    // Use the computed 'coordinate' from ListingModel extension
-                    MapMarker(coordinate: listing.coordinate, tint: .red)
+                    MapAnnotation(coordinate: listing.coordinate) {
+                        Button(action: {
+                            selectedListing = listing
+                        }) {
+                            VStack {
+                                Image(systemName: "mappin.circle.fill")
+                                    .resizable()
+                                    .frame(width: 30, height: 30)
+                                    .foregroundColor(.red)
+                                Text(listing.title)
+                                    .font(.caption)
+                                    .fixedSize()
+                            }
+                        }
+                        .accessibilityLabel("Listing: \(listing.title)")
+                    }
                 }
                 .frame(height: 300)
                 .cornerRadius(15)
@@ -37,7 +54,6 @@ struct ListingsView: View {
                 // MARK: - Listings List
                 List(viewModel.listings) { listing in
                     HStack {
-                        // Display image if available
                         if let urlStr = listing.imageUrl, let url = URL(string: urlStr) {
                             AsyncImage(url: url) { phase in
                                 switch phase {
@@ -97,7 +113,40 @@ struct ListingsView: View {
                     dismissButton: .default(Text("OK"))
                 )
             }
+            // Sheet to show detailed listing view when a marker is tapped.
+            .sheet(item: $selectedListing) { listing in
+                ListingDetailView(listing: listing)
+            }
         }
+    }
+}
+
+struct ListingDetailView: View {
+    let listing: ListingModel
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            if let urlStr = listing.imageUrl, let url = URL(string: urlStr) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                    } else {
+                        Color.gray
+                    }
+                }
+                .frame(height: 200)
+            }
+            Text(listing.title)
+                .font(.largeTitle)
+            Text(listing.address)
+                .font(.title3)
+            Text("Rent: \(listing.rent)")
+                .font(.headline)
+            Spacer()
+        }
+        .padding()
     }
 }
 

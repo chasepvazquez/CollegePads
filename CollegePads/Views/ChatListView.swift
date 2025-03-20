@@ -2,8 +2,8 @@
 //  ChatsListView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date]
-//
+//  Updated to include pull-to-refresh (iOS 15+), loading indicators, and improved empty state handling.
+//  This ensures that users can manually refresh their chats and receive clear feedback while data loads.
 
 import SwiftUI
 
@@ -12,14 +12,30 @@ struct ChatsListView: View {
     
     var body: some View {
         NavigationView {
-            List(viewModel.chats) { chat in
-                NavigationLink(destination: ChatView(viewModel: ChatViewModel(chatID: chat.id))) {
-                    VStack(alignment: .leading) {
-                        Text("Chat with: \(chat.participants.filter { $0 != viewModel.currentUserID ?? "" }.joined(separator: ", "))")
-                            .font(.headline)
-                        Text("Started on: \(chat.createdAt, formatter: dateFormatter)")
-                            .font(.caption)
-                            .foregroundColor(.gray)
+            Group {
+                if viewModel.isLoading {
+                    ProgressView("Loading chats...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if viewModel.chats.isEmpty {
+                    Text("No chats yet.")
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List(viewModel.chats) { chat in
+                        NavigationLink(destination: ChatView(viewModel: ChatViewModel(chatID: chat.id))) {
+                            VStack(alignment: .leading) {
+                                Text("Chat with: \(chat.participants.filter { $0 != viewModel.currentUserID ?? "" }.joined(separator: ", "))")
+                                    .font(.headline)
+                                Text("Started on: \(chat.createdAt, formatter: dateFormatter)")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                    .listStyle(PlainListStyle())
+                    // Pull-to-refresh support (iOS 15+)
+                    .refreshable {
+                        viewModel.fetchChats()
                     }
                 }
             }

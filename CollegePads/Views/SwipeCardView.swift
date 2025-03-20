@@ -2,7 +2,7 @@
 //  SwipeCardView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to improve animations, accessibility, and modularity in swipe interactions
 //
 
 import SwiftUI
@@ -32,33 +32,30 @@ struct SwipeCardView: View {
     
     var body: some View {
         ZStack {
-            // Background card with gradient
+            // Background card with gradient and shadow for a polished look
             LinearGradient(gradient: Gradient(colors: [.white, Color(UIColor.systemGray6)]),
                            startPoint: .top, endPoint: .bottom)
                 .cornerRadius(15)
-                .shadow(radius: 5)
+                .shadow(color: .gray, radius: 5, x: 0, y: 5)
             
             VStack(spacing: 10) {
-                // Profile image with favorite heart overlay and Verified badge
+                // Profile image with overlays for favorite and verified status
                 ZStack(alignment: .topTrailing) {
                     if let imageUrl = user.profileImageUrl, let url = URL(string: imageUrl) {
                         AsyncImage(url: url) { phase in
                             if let image = phase.image {
-                                image.resizable()
+                                image
+                                    .resizable()
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: 150, height: 150)
                                     .clipShape(Circle())
                                     .overlay(Circle().stroke(Color.blue, lineWidth: 4))
                             } else {
-                                Image(systemName: "person.crop.circle")
-                                    .resizable()
-                                    .frame(width: 150, height: 150)
+                                defaultPlaceholder(for: user)
                             }
                         }
                     } else {
-                        Image(systemName: "person.crop.circle")
-                            .resizable()
-                            .frame(width: 150, height: 150)
+                        defaultPlaceholder(for: user)
                     }
                     
                     // Verified badge overlay:
@@ -79,6 +76,7 @@ struct SwipeCardView: View {
                             .foregroundColor(isFavorite ? .red : .gray)
                             .padding(8)
                     }
+                    .accessibilityLabel(isFavorite ? "Remove from favorites" : "Add to favorites")
                 }
                 
                 // Information Section
@@ -175,9 +173,22 @@ struct SwipeCardView: View {
                 self.isFavorite = fav
             }
         }
+        .accessibilityElement(children: .contain)
         .animation(.easeInOut, value: offset)
     }
     
+    /// Provides a default circular placeholder with user initials.
+    private func defaultPlaceholder(for candidate: UserModel) -> some View {
+        let initials = candidate.email.components(separatedBy: "@").first?.prefix(2).uppercased() ?? "??"
+        return Text(initials)
+            .font(.headline)
+            .frame(width: 150, height: 150)
+            .background(Color.blue.opacity(0.5))
+            .foregroundColor(.white)
+            .clipShape(Circle())
+    }
+    
+    /// Toggles the favorite state with haptic feedback.
     private func toggleFavorite() {
         if isFavorite {
             FavoriteService().removeFavorite(candidate: user) { result in
