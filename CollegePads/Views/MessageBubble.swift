@@ -2,51 +2,40 @@
 //  MessageBubble.swift
 //  CollegePads
 //
-//  Updated to include support for emoji reactions.
-//  When the user long-presses a message, a reaction picker appears.
-//  Tapping an emoji calls the onReact callback with the selected emoji.
-//  This implementation does not change existing message display functionality.
+//  Updated to include support for emoji reactions and use AppTheme for message bubble colors.
 //
-
 import SwiftUI
 
 struct MessageBubble: View {
     let message: MessageModel
     let isCurrentUser: Bool
-    /// Optional callback to handle a reaction being added.
     var onReact: ((String) -> Void)? = nil
     
     @State private var showReactionPicker: Bool = false
-    
-    // Predefined emoji options for reactions.
     private let reactionEmojis = ["👍", "❤️", "😂", "😮", "😢", "👏"]
     
     var body: some View {
         VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 4) {
-            // Message content with long press gesture.
             HStack {
                 if isCurrentUser { Spacer() }
                 Text(message.text)
                     .padding()
                     .foregroundColor(.white)
-                    .background(isCurrentUser ? Color.blue : Color.gray)
+                    .background(isCurrentUser ? AppTheme.primaryColor : AppTheme.secondaryColor)
                     .cornerRadius(8)
                     .onLongPressGesture {
-                        // Show the reaction picker on long press.
                         withAnimation {
                             showReactionPicker = true
                         }
                     }
                 if !isCurrentUser { Spacer() }
             }
-            // Optional "Read" indicator.
             if isCurrentUser, let isRead = message.isRead, isRead {
                 Text("Read")
                     .font(.caption)
-                    .foregroundColor(.green)
+                    .foregroundColor(AppTheme.accentColor)
                     .padding(.trailing, 8)
             }
-            // Display reactions if any exist.
             if let reactions = message.reactions, !reactions.isEmpty {
                 HStack(spacing: 4) {
                     ForEach(reactions.keys.sorted(), id: \.self) { emoji in
@@ -54,7 +43,7 @@ struct MessageBubble: View {
                         Text("\(emoji) \(count)")
                             .font(.caption2)
                             .padding(4)
-                            .background(Color.gray.opacity(0.2))
+                            .background(AppTheme.secondaryColor.opacity(0.2))
                             .cornerRadius(4)
                     }
                 }
@@ -62,7 +51,6 @@ struct MessageBubble: View {
             }
         }
         .overlay(
-            // Reaction picker overlay.
             Group {
                 if showReactionPicker {
                     ReactionPicker(emojis: reactionEmojis) { selectedEmoji in
@@ -71,7 +59,6 @@ struct MessageBubble: View {
                             showReactionPicker = false
                         }
                     }
-                    // Dismiss picker if tapped outside.
                     .onTapGesture {
                         withAnimation {
                             showReactionPicker = false
@@ -84,10 +71,8 @@ struct MessageBubble: View {
     }
 }
 
-/// A small view that displays a row of emoji buttons for reacting.
 struct ReactionPicker: View {
     let emojis: [String]
-    /// Callback with the emoji selected.
     let onSelect: (String) -> Void
     
     var body: some View {
@@ -104,10 +89,10 @@ struct ReactionPicker: View {
             }
         }
         .padding(8)
-        .background(Color(UIColor.systemBackground).opacity(0.9))
+        .background(AppTheme.cardBackground.opacity(0.9))
         .cornerRadius(10)
         .shadow(radius: 4)
-        .padding(.top, -40) // Adjust as needed to position above the message.
+        .padding(.top, -40)
     }
 }
 

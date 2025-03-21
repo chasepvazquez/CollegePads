@@ -2,9 +2,9 @@
 //  ReportUserView.swift
 //  CollegePads
 //
-//  Updated to add a progress indicator during submission and improved button states
+//  Updated to add a progress indicator during submission and improved button states,
+//  replacing hardcoded color calls with AppTheme values.
 //
-
 import SwiftUI
 
 struct ReportUserView: View {
@@ -20,10 +20,13 @@ struct ReportUserView: View {
             Form {
                 Section(header: Text("Report User")) {
                     Text("Please provide a brief explanation of why you are reporting this user.")
-                        .font(.subheadline)
+                        .font(AppTheme.bodyFont)
                     TextEditor(text: $reason)
                         .frame(height: 120)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppTheme.defaultCornerRadius)
+                                .stroke(AppTheme.secondaryColor.opacity(0.3), lineWidth: 1)
+                        )
                         .accessibilityLabel("Report Reason Editor")
                 }
                 
@@ -36,8 +39,8 @@ struct ReportUserView: View {
                                 .foregroundColor(.white)
                                 .padding()
                                 .frame(maxWidth: .infinity)
-                                .background(Color.red)
-                                .cornerRadius(8)
+                                .background(AppTheme.accentColor)
+                                .cornerRadius(AppTheme.defaultCornerRadius)
                         }
                     }
                     .disabled(reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmitting)

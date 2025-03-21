@@ -1,10 +1,3 @@
-//
-//  ChatInputBar.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-
 import SwiftUI
 
 struct ChatInputBar: View {
@@ -16,11 +9,11 @@ struct ChatInputBar: View {
             TextEditor(text: $messageText)
                 .frame(minHeight: 40, maxHeight: 100)
                 .padding(8)
-                .background(Color(UIColor.systemGray6))
-                .cornerRadius(8)
+                .background(AppTheme.cardBackground)
+                .cornerRadius(AppTheme.defaultCornerRadius)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(UIColor.systemGray4), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: AppTheme.defaultCornerRadius)
+                        .stroke(AppTheme.secondaryColor.opacity(0.3), lineWidth: 1)
                 )
             
             Button(action: {
@@ -28,15 +21,15 @@ struct ChatInputBar: View {
                 HapticFeedbackManager.shared.generateImpact(style: .medium)
             }) {
                 Image(systemName: "paperplane.fill")
-                    .foregroundColor(messageText.isEmpty ? Color.gray : Color.blue)
+                    .foregroundColor(messageText.isEmpty ? AppTheme.secondaryColor : AppTheme.primaryColor)
                     .padding(10)
-                    .background(Circle().fill(Color(UIColor.systemGray5)))
+                    .background(Circle().fill(AppTheme.primaryColor.opacity(0.7)))
             }
             .disabled(messageText.isEmpty)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
-        .background(Color(UIColor.systemBackground).opacity(0.95))
+        .background(AppTheme.backgroundGradient.ignoresSafeArea())
     }
 }
 

@@ -1,10 +1,3 @@
-//
-//  AdvancedFilterView.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-
 import SwiftUI
 import CoreLocation
 
@@ -34,7 +27,8 @@ struct AdvancedFilterView: View {
         NavigationView {
             VStack {
                 Form {
-                    Section(content: {
+                    Section(header: Text("Filter Criteria")
+                                .font(AppTheme.subtitleFont)) {
                         // Grade Group Picker
                         Picker("Grade Group", selection: $viewModel.filterGradeGroup) {
                             Text("All").tag("")
@@ -62,24 +56,24 @@ struct AdvancedFilterView: View {
                         // Interests Text Field
                         TextField("Interests (comma-separated)", text: $viewModel.filterInterests)
                             .autocapitalization(.none)
+                            .font(AppTheme.bodyFont)
                         
                         // Maximum Distance Slider
                         VStack {
                             Text("Max Distance: \(Int(viewModel.maxDistance)) km")
+                                .font(AppTheme.bodyFont)
                             Slider(value: $viewModel.maxDistance, in: 1...50, step: 1)
                         }
-                    }, header: {
-                        Text("Filter Criteria")
-                    })
+                    }
                     
-                    Section(content: {
+                    Section {
                         Button("Apply Filters") {
                             viewModel.applyFilters(currentLocation: locationManager.currentLocation)
                         }
                         .buttonStyle(PrimaryButtonStyle())
-                    }, header: {
+                    } header: {
                         EmptyView()
-                    })
+                    }
                 }
                 
                 // Filtered matches list.
@@ -98,10 +92,11 @@ struct AdvancedFilterView: View {
                         if let interests = user.interests {
                             Text("Interests: \(interests.joined(separator: ", "))")
                                 .font(.footnote)
-                                .foregroundColor(.gray)
+                                .foregroundColor(AppTheme.secondaryColor)
                         }
                     }
                 }
+                .listStyle(PlainListStyle())
             }
             .navigationTitle("Advanced Filters")
             .alert(item: alertBinding) { alertError in

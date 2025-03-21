@@ -42,7 +42,7 @@ struct TabBarView: View {
                     Text("Search")
                 }
         }
-        .accentColor(.brandAccent)  // Use your global accent color.
+        .accentColor(AppTheme.accentColor)  // Use the global accent color from AppTheme.
     }
 }
 

@@ -2,50 +2,49 @@
 //  HomeView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date]
+//  Updated to use global background gradient, theme colors, and proper navigation using NavigationLink.
 //
-
 import SwiftUI
 
 struct HomeView: View {
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Welcome Header
-                    Text("Welcome to CollegePads!")
-                        .font(.largeTitle)
-                        .bold()
-                        .padding(.top)
-                    
-                    // Dashboard options (each as a NavigationLink)
-                    NavigationLink(destination: ProfileSetupView()) {
-                        Text("Setup / Update Profile")
-                    }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.green))
-                    .padding(.horizontal)
-                    
-                    NavigationLink(destination: AdvancedFilterView()) {
-                        Text("Advanced Search")
-                    }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.orange))
-                    .padding(.horizontal)
-                    
-                    NavigationLink(destination: SettingsView()) {
-                        Text("Settings")
-                    }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.gray))
-                    .padding(.horizontal)
+        ZStack {
+            AppTheme.backgroundGradient
+                .ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                Text("Welcome to CollegePads!")
+                    .font(AppTheme.titleFont)
+                    .foregroundColor(.primary)
+                
+                // Navigate to Profile Setup
+                NavigationLink(destination: ProfileSetupView()) {
+                    Text("Setup / Update Profile")
                 }
-                .padding()
+                .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
+                
+                // Navigate to Advanced Search (placeholder view)
+                NavigationLink(destination: AdvancedFilterView()) {
+                    Text("Advanced Search")
+                }
+                .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.accentColor))
+                
+                // Navigate to Settings
+                NavigationLink(destination: SettingsView().environmentObject(AuthViewModel())) {
+                    Text("Settings")
+                }
+                .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.secondaryColor))
             }
-            .navigationTitle("Home")
+            .padding()
         }
+        .navigationTitle("Home")
     }
 }
 
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
-        HomeView()
+        NavigationView {
+            HomeView()
+        }
     }
 }

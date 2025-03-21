@@ -2,8 +2,7 @@
 //  SettingsView.swift
 //  CollegePads
 //
-//  Updated to include a new "Account Management" section with a Delete Account option.
-//  Also includes existing dark mode, About, and Privacy sections.
+//  Updated to use global theme for typography, colors, and button styles.
 //
 
 import SwiftUI
@@ -14,24 +13,23 @@ struct SettingsView: View {
     @ObservedObject var profileVM = ProfileViewModel.shared
     @State private var showVerification = false
     @State private var showBlockedUsers = false
-    // Persist dark mode preference.
     @AppStorage("isDarkMode") private var isDarkMode: Bool = false
     
-    private let appVersion = "1.0.0"  // Update this as needed.
+    private let appVersion = "1.0.0"
     
     var body: some View {
         NavigationView {
             Form {
                 // Account Information Section.
-                Section(header: Text("Account")) {
+                Section(header: Text("Account").font(AppTheme.subtitleFont)) {
                     HStack {
-                        Text("Email")
+                        Text("Email").font(AppTheme.bodyFont)
                         Spacer()
                         Text(profileVM.userProfile?.email ?? "N/A")
                             .foregroundColor(.gray)
                     }
                     HStack {
-                        Text("Verified")
+                        Text("Verified").font(AppTheme.bodyFont)
                         Spacer()
                         if let verified = profileVM.userProfile?.isVerified, verified {
                             Text("Yes")
@@ -44,26 +42,26 @@ struct SettingsView: View {
                     if profileVM.userProfile?.isVerified != true {
                         Button(action: { showVerification = true }) {
                             Text("Verify Now")
-                                .foregroundColor(.blue)
                         }
+                        .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.accentColor))
                     }
                 }
                 
                 // Privacy Section.
-                Section(header: Text("Privacy")) {
+                Section(header: Text("Privacy").font(AppTheme.subtitleFont)) {
                     NavigationLink(destination: BlockedUsersView()) {
                         Text("Manage Blocked Users")
                     }
                 }
                 
                 // Appearance Section.
-                Section(header: Text("Appearance")) {
+                Section(header: Text("Appearance").font(AppTheme.subtitleFont)) {
                     Toggle("Dark Mode", isOn: $isDarkMode)
                         .accessibilityLabel("Dark Mode Toggle")
                 }
                 
                 // About Section.
-                Section(header: Text("About")) {
+                Section(header: Text("About").font(AppTheme.subtitleFont)) {
                     HStack {
                         Text("CollegePads")
                         Spacer()
@@ -75,8 +73,8 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Account Management Section (New).
-                Section(header: Text("Account Management")) {
+                // Account Management Section.
+                Section(header: Text("Account Management").font(AppTheme.subtitleFont)) {
                     NavigationLink(destination: DeleteAccountView().environmentObject(authViewModel)) {
                         Text("Delete Account")
                             .foregroundColor(.red)
@@ -87,8 +85,8 @@ struct SettingsView: View {
                 Section {
                     Button(action: { authViewModel.signOut() }) {
                         Text("Log Out")
-                            .foregroundColor(.red)
                     }
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: .red))
                 }
             }
             .navigationTitle("Settings")
@@ -103,7 +101,7 @@ struct AboutView: View {
     var body: some View {
         VStack(spacing: 20) {
             Text("CollegePads")
-                .font(.largeTitle)
+                .font(AppTheme.titleFont)
                 .bold()
             Text("A production‑ready app to help college students find the perfect roommate and housing. Built with scalability and user experience in mind.")
                 .multilineTextAlignment(.center)

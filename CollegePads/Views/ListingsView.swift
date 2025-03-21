@@ -2,33 +2,31 @@
 //  ListingsView.swift
 //  CollegePads
 //
-//  Updated to include interactive map annotations with callouts for listing details
+//  Updated to use the global background gradient and theme typography for map and list views.
+//  Hardcoded color references have been replaced with theme-based colors.
 //
-
 import SwiftUI
 import MapKit
 
 struct ListingsView: View {
     @StateObject private var viewModel = ListingsViewModel()
     
-    // Initial map region (San Francisco as an example)
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
         span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
     )
     
-    // Filter listings with a valid location
+    // Listings with valid location.
     private var validListings: [ListingModel] {
         viewModel.listings.filter { $0.location != nil }
     }
     
-    // State for the selected listing to display details
     @State private var selectedListing: ListingModel? = nil
     
     var body: some View {
         NavigationView {
             VStack {
-                // MARK: - Interactive Map with Custom Annotations
+                // Interactive Map with custom annotations.
                 Map(coordinateRegion: $region, annotationItems: validListings) { listing in
                     MapAnnotation(coordinate: listing.coordinate) {
                         Button(action: {
@@ -38,9 +36,9 @@ struct ListingsView: View {
                                 Image(systemName: "mappin.circle.fill")
                                     .resizable()
                                     .frame(width: 30, height: 30)
-                                    .foregroundColor(.red)
+                                    .foregroundColor(AppTheme.primaryColor)
                                 Text(listing.title)
-                                    .font(.caption)
+                                    .font(AppTheme.bodyFont)
                                     .fixedSize()
                             }
                         }
@@ -48,10 +46,10 @@ struct ListingsView: View {
                     }
                 }
                 .frame(height: 300)
-                .cornerRadius(15)
+                .cornerRadius(AppTheme.defaultCornerRadius)
                 .padding()
                 
-                // MARK: - Listings List
+                // Listings List
                 List(viewModel.listings) { listing in
                     HStack {
                         if let urlStr = listing.imageUrl, let url = URL(string: urlStr) {
@@ -62,32 +60,33 @@ struct ListingsView: View {
                                         .resizable()
                                         .aspectRatio(contentMode: .fill)
                                         .frame(width: 80, height: 80)
-                                        .cornerRadius(8)
+                                        .cornerRadius(AppTheme.defaultCornerRadius)
                                 case .failure(_), .empty:
-                                    Color.gray
+                                    AppTheme.cardBackground
                                         .frame(width: 80, height: 80)
-                                        .cornerRadius(8)
+                                        .cornerRadius(AppTheme.defaultCornerRadius)
                                 @unknown default:
-                                    Color.gray
+                                    AppTheme.cardBackground
                                         .frame(width: 80, height: 80)
-                                        .cornerRadius(8)
+                                        .cornerRadius(AppTheme.defaultCornerRadius)
                                 }
                             }
                         } else {
-                            Color.gray
+                            AppTheme.cardBackground
                                 .frame(width: 80, height: 80)
-                                .cornerRadius(8)
+                                .cornerRadius(AppTheme.defaultCornerRadius)
                         }
                         
                         VStack(alignment: .leading) {
                             Text(listing.title)
-                                .font(.headline)
+                                .font(AppTheme.bodyFont)
+                                .foregroundColor(.primary)
                             Text(listing.address)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
+                                .font(AppTheme.bodyFont)
+                                .foregroundColor(AppTheme.secondaryColor)
                             Text("Rent: \(listing.rent)")
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
+                                .font(AppTheme.bodyFont)
+                                .foregroundColor(AppTheme.accentColor)
                         }
                     }
                     .padding(.vertical, 4)
@@ -95,6 +94,7 @@ struct ListingsView: View {
                 .listStyle(PlainListStyle())
             }
             .navigationTitle("Listings")
+            .background(AppTheme.backgroundGradient.ignoresSafeArea())
             .onAppear {
                 viewModel.fetchListings()
             }
@@ -107,13 +107,10 @@ struct ListingsView: View {
                 },
                 set: { _ in viewModel.errorMessage = nil }
             )) { alertError in
-                Alert(
-                    title: Text("Error"),
-                    message: Text(alertError.message),
-                    dismissButton: .default(Text("OK"))
-                )
+                Alert(title: Text("Error"),
+                      message: Text(alertError.message),
+                      dismissButton: .default(Text("OK")))
             }
-            // Sheet to show detailed listing view when a marker is tapped.
             .sheet(item: $selectedListing) { listing in
                 ListingDetailView(listing: listing)
             }
@@ -133,17 +130,17 @@ struct ListingDetailView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                     } else {
-                        Color.gray
+                        AppTheme.cardBackground
                     }
                 }
                 .frame(height: 200)
             }
             Text(listing.title)
-                .font(.largeTitle)
+                .font(AppTheme.titleFont)
             Text(listing.address)
-                .font(.title3)
+                .font(AppTheme.bodyFont)
             Text("Rent: \(listing.rent)")
-                .font(.headline)
+                .font(AppTheme.bodyFont)
             Spacer()
         }
         .padding()

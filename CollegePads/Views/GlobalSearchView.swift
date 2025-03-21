@@ -2,9 +2,9 @@
 //  GlobalSearchView.swift
 //  CollegePads
 //
-//  This view presents the Global Search interface.
+//  This view presents the Global Search interface using the global theme.
 //  Users can enter a search query, choose between "Users" or "Listings", and view matching results.
-//  Tapping the "Search" button or pressing return in the text field triggers the search.
+//  Tapping "Search" or pressing return in the text field triggers the search.
 //
 
 import SwiftUI
@@ -18,11 +18,12 @@ struct GlobalSearchView: View {
                 // Search Bar
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.gray)
+                        .foregroundColor(AppTheme.secondaryColor)
                     TextField("Search...", text: $viewModel.query, onCommit: {
                         viewModel.performSearch()
                     })
                     .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .font(AppTheme.bodyFont)
                     .accessibilityLabel("Global search field")
                 }
                 .padding()
@@ -30,7 +31,9 @@ struct GlobalSearchView: View {
                 // Segmented Control for Search Type
                 Picker("Search Type", selection: $viewModel.searchType) {
                     ForEach(SearchType.allCases) { type in
-                        Text(type.rawValue).tag(type)
+                        Text(type.rawValue)
+                            .font(AppTheme.bodyFont)
+                            .tag(type)
                     }
                 }
                 .pickerStyle(SegmentedPickerStyle())
@@ -39,10 +42,12 @@ struct GlobalSearchView: View {
                 // Loading Indicator or Error Message
                 if viewModel.isLoading {
                     ProgressView("Searching...")
+                        .font(AppTheme.bodyFont)
                         .padding()
                 } else if let error = viewModel.errorMessage {
                     Text("Error: \(error)")
-                        .foregroundColor(.red)
+                        .font(AppTheme.bodyFont)
+                        .foregroundColor(AppTheme.accentColor)
                         .padding()
                 } else {
                     // List of Search Results
@@ -51,32 +56,35 @@ struct GlobalSearchView: View {
                             ForEach(viewModel.userResults) { user in
                                 VStack(alignment: .leading) {
                                     Text(user.email)
-                                        .font(.headline)
-                                    // Additional user details can be displayed here.
+                                        .font(AppTheme.titleFont)
+                                    // Additional user details can be added here.
                                 }
                             }
                         } else {
                             ForEach(viewModel.listingResults) { listing in
                                 VStack(alignment: .leading) {
                                     Text(listing.title)
-                                        .font(.headline)
+                                        .font(AppTheme.titleFont)
                                     Text(listing.address)
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
+                                        .font(AppTheme.bodyFont)
+                                        .foregroundColor(AppTheme.secondaryColor)
                                 }
                             }
                         }
                     }
+                    .listStyle(PlainListStyle())
                 }
                 
                 Spacer()
             }
+            .background(AppTheme.backgroundGradient.ignoresSafeArea())
             .navigationTitle("Global Search")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Search") {
                         viewModel.performSearch()
                     }
+                    .font(AppTheme.bodyFont)
                     .accessibilityLabel("Perform search")
                 }
             }

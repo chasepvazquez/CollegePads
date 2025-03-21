@@ -1,10 +1,3 @@
-//
-//  QuizView.swift
-//  CollegePads
-//
-//  Updated to include a submission loading state and success feedback alert
-//
-
 import SwiftUI
 
 struct QuizView: View {
@@ -20,16 +13,22 @@ struct QuizView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("How Social Are You?")) {
+                Section(header: Text("How Social Are You?")
+                            .font(AppTheme.subtitleFont)) {
                     Text("Rate from 1 (very introverted) to 5 (extremely social)")
+                        .font(AppTheme.bodyFont)
                     Slider(value: $socialLevel, in: 1...5, step: 1)
                     Text("Your rating: \(Int(socialLevel))")
+                        .font(AppTheme.bodyFont)
                 }
                 
-                Section(header: Text("How Rigorous Are Your Study Habits?")) {
+                Section(header: Text("How Rigorous Are Your Study Habits?")
+                            .font(AppTheme.subtitleFont)) {
                     Text("Rate from 1 (rarely study) to 5 (studies intensively)")
+                        .font(AppTheme.bodyFont)
                     Slider(value: $studyHabits, in: 1...5, step: 1)
                     Text("Your rating: \(Int(studyHabits))")
+                        .font(AppTheme.bodyFont)
                 }
                 
                 Button(action: saveQuizResults) {
@@ -40,10 +39,9 @@ struct QuizView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.blue)
-                            .cornerRadius(8)
                     }
                 }
+                .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                 .disabled(isSubmitting)
             }
             .navigationTitle("Roommate Quiz")

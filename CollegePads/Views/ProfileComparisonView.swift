@@ -2,9 +2,8 @@
 //  ProfileComparisonView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to use global theme fonts and colors for a consistent UI.
 //
-
 import SwiftUI
 
 struct ProfileComparisonView: View {
@@ -33,7 +32,7 @@ struct ProfileComparisonView: View {
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Done") {
-                            // The parent view should handle dismissal
+                            // Dismiss action handled by parent view.
                         }
                     }
                 }
@@ -52,16 +51,19 @@ struct ComparisonRow: View {
     var body: some View {
         HStack {
             Text(field)
-                .fontWeight(.bold)
+                .font(AppTheme.bodyFont.weight(.bold))
                 .frame(width: 120, alignment: .leading)
             Spacer()
             VStack(alignment: .leading) {
                 Text("You: \(currentValue ?? "-")")
-                    .foregroundColor(.blue)
+                    .font(AppTheme.bodyFont)
+                    .foregroundColor(AppTheme.primaryColor)
                 Text("Candidate: \(candidateValue ?? "-")")
-                    .foregroundColor(.green)
+                    .font(AppTheme.bodyFont)
+                    .foregroundColor(AppTheme.accentColor)
             }
-            if let current = currentValue, let candidate = candidateValue, current.lowercased() == candidate.lowercased() {
+            if let current = currentValue, let candidate = candidateValue,
+               current.lowercased() == candidate.lowercased() {
                 Image(systemName: "checkmark.seal.fill")
                     .foregroundColor(.green)
             }
@@ -72,9 +74,9 @@ struct ComparisonRow: View {
 
 struct ProfileComparisonView_Previews: PreviewProvider {
     static var previews: some View {
-        // Dummy profiles for preview
+        // Provide dummy data for preview.
         let candidate = UserModel(
-            email: "candidate@edu",
+            email: "candidate@example.com",
             isEmailVerified: true,
             gradeLevel: "Freshman",
             major: "Computer Science",
@@ -90,7 +92,7 @@ struct ProfileComparisonView_Previews: PreviewProvider {
             interests: ["music", "coding"]
         )
         ProfileViewModel.shared.userProfile = UserModel(
-            email: "current@edu",
+            email: "current@example.com",
             isEmailVerified: true,
             gradeLevel: "Freshman",
             major: "Computer Science",

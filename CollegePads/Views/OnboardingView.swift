@@ -1,10 +1,3 @@
-//
-//  OnboardingView.swift
-//  CollegePads
-//
-//  Updated to include a page indicator for improved user orientation
-//
-
 import SwiftUI
 
 struct OnboardingView: View {
@@ -19,68 +12,80 @@ struct OnboardingView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 30) {
-                Spacer()
-                Image(systemName: pages[currentPage].imageName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 150, height: 150)
-                    .foregroundColor(.blue)
-                    .accessibilityHidden(true)
+            ZStack {
+                // Global background gradient from your theme.
+                AppTheme.backgroundGradient
+                    .ignoresSafeArea()
                 
-                Text(pages[currentPage].title)
-                    .font(.largeTitle)
-                    .bold()
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                
-                Text(pages[currentPage].description)
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                
-                Spacer()
-                
-                // Page Indicator Dots
-                HStack(spacing: 8) {
-                    ForEach(0..<pages.count, id: \.self) { index in
-                        Circle()
-                            .fill(index == currentPage ? Color.blue : Color.gray.opacity(0.5))
-                            .frame(width: 10, height: 10)
-                    }
-                }
-                
-                HStack {
-                    if currentPage > 0 {
-                        Button("Back") {
-                            withAnimation { currentPage -= 1 }
-                        }
-                        .padding()
-                    }
+                VStack(spacing: 30) {
+                    Spacer()
+                    
+                    // Onboarding Image
+                    Image(systemName: pages[currentPage].imageName)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 150, height: 150)
+                        .foregroundColor(AppTheme.primaryColor)
+                        .accessibilityHidden(true)
+                    
+                    // Onboarding Title
+                    Text(pages[currentPage].title)
+                        .font(AppTheme.titleFont)
+                        .bold()
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    // Onboarding Description
+                    Text(pages[currentPage].description)
+                        .font(AppTheme.bodyFont)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                     
                     Spacer()
                     
-                    if currentPage < pages.count - 1 {
-                        Button("Next") {
-                            withAnimation { currentPage += 1 }
+                    // Page Indicator Dots
+                    HStack(spacing: 8) {
+                        ForEach(0..<pages.count, id: \.self) { index in
+                            Circle()
+                                .fill(index == currentPage
+                                      ? AppTheme.primaryColor
+                                      : AppTheme.secondaryColor.opacity(0.5))
+                                .frame(width: 10, height: 10)
                         }
-                        .padding()
-                    } else {
-                        Button("Get Started") {
-                            UserDefaults.standard.set(true, forKey: "onboardingCompleted")
-                            presentationMode.wrappedValue.dismiss()
-                        }
-                        .bold()
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
                     }
+                    
+                    // Navigation Buttons
+                    HStack {
+                        if currentPage > 0 {
+                            Button("Back") {
+                                withAnimation { currentPage -= 1 }
+                            }
+                            .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.secondaryColor))
+                            .padding()
+                        }
+                        
+                        Spacer()
+                        
+                        if currentPage < pages.count - 1 {
+                            Button("Next") {
+                                withAnimation { currentPage += 1 }
+                            }
+                            .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
+                            .padding()
+                        } else {
+                            Button("Get Started") {
+                                UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                                presentationMode.wrappedValue.dismiss()
+                            }
+                            .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
+                .navigationTitle("Onboarding")
             }
-            .navigationTitle("Onboarding")
         }
     }
 }

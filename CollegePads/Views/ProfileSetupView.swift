@@ -1,10 +1,3 @@
-//
-//  ProfileSetupView.swift
-//  CollegePads
-//
-//  Updated to include input validations, improved user feedback, and refined UI
-//
-
 import SwiftUI
 import FirebaseAuth
 
@@ -79,15 +72,15 @@ struct ProfileSetupView: View {
                     let completion = ProfileCompletionCalculator.calculateCompletion(for: profile)
                     VStack(alignment: .leading) {
                         Text("Profile Completion: \(Int(completion))%")
-                            .font(.caption)
+                            .font(AppTheme.bodyFont)
                         ProgressView(value: completion, total: 100)
-                            .accentColor(.green)
+                            .accentColor(AppTheme.accentColor)
                     }
                     .padding(.vertical, 8)
                 }
                 
                 // Profile Picture Section
-                Section(header: Text("Profile Picture")) {
+                Section(header: Text("Profile Picture").font(AppTheme.subtitleFont)) {
                     HStack {
                         Spacer()
                         if let image = selectedImage {
@@ -123,7 +116,7 @@ struct ProfileSetupView: View {
                 }
                 
                 // Basic Info Section
-                Section(header: Text("Basic Info")) {
+                Section(header: Text("Basic Info").font(AppTheme.subtitleFont)) {
                     Picker("Grade Level", selection: $selectedGradeLevel) {
                         ForEach(GradeLevel.allCases) { level in
                             Text(level.rawValue).tag(level)
@@ -136,7 +129,7 @@ struct ProfileSetupView: View {
                 }
                 
                 // Housing Preferences Section
-                Section(header: Text("Housing Preferences")) {
+                Section(header: Text("Housing Preferences").font(AppTheme.subtitleFont)) {
                     Picker("Housing Status", selection: $selectedHousingStatus) {
                         ForEach(HousingStatus.allCases) { status in
                             Text(status.rawValue).tag(status)
@@ -167,7 +160,7 @@ struct ProfileSetupView: View {
                 }
                 
                 // Interests Section
-                Section(header: Text("Interests")) {
+                Section(header: Text("Interests").font(AppTheme.subtitleFont)) {
                     TextField("Enter interests separated by commas", text: $interestsText)
                         .autocapitalization(.none)
                 }
@@ -177,7 +170,7 @@ struct ProfileSetupView: View {
                     Button(action: saveProfile) {
                         Text("Save Profile")
                     }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: Color.brandPrimary))
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                 }
             }
             .navigationTitle("Profile Setup")
@@ -209,9 +202,7 @@ struct ProfileSetupView: View {
         }
     }
     
-    /// Validates and saves the updated profile to Firestore.
     private func saveProfile() {
-        // Validate required fields
         guard !major.trimmingCharacters(in: .whitespaces).isEmpty,
               !collegeName.trimmingCharacters(in: .whitespaces).isEmpty else {
             alertMessage = "Major and College Name are required fields."
@@ -234,7 +225,6 @@ struct ProfileSetupView: View {
         updatedProfile.petFriendly = petFriendly
         updatedProfile.interests = interestsArray
         
-        // Update housing status and lease duration.
         updatedProfile.housingStatus = selectedHousingStatus.rawValue
         updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
         

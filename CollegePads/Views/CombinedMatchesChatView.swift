@@ -2,9 +2,8 @@
 //  CombinedMatchesChatView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date]
+//  Updated to use AppTheme for backgrounds and colors consistently.
 //
-
 import SwiftUI
 
 struct CombinedMatchesChatView: View {
@@ -18,7 +17,6 @@ struct CombinedMatchesChatView: View {
                 // Top Matches Bar
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                        // Button on the far left to show all matches.
                         Button(action: {
                             showAllMatches = true
                         }) {
@@ -27,22 +25,24 @@ struct CombinedMatchesChatView: View {
                                 Text("All Matches")
                             }
                             .padding(8)
-                            .background(Color.brandPrimary.opacity(0.1))
+                            .background(AppTheme.primaryColor.opacity(0.1))
                             .cornerRadius(8)
                         }
                         
-                        // For each match, show a MatchCardView.
                         ForEach(matchesVM.matches) { match in
-                            let candidateID = match.participants.first(where: { $0 != (matchesVM.currentUserID ?? "") }) ?? "unknown"
+                            let candidateID = match.participants.first(where: {
+                                $0 != (matchesVM.currentUserID ?? "")
+                            }) ?? "unknown"
                             MatchCardView(candidateID: candidateID)
                         }
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 8)
                 }
-                .background(Color(UIColor.systemBackground).opacity(0.95))
+                // Updated background: use AppTheme.backgroundGradient for consistency.
+                .background(AppTheme.backgroundGradient.opacity(0.95))
                 .sheet(isPresented: $showAllMatches) {
-                    AllMatchesView() // Create this file if needed, or reuse your MatchesDashboardView.
+                    AllMatchesView()
                 }
                 
                 Divider()

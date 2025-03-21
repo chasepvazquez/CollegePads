@@ -2,12 +2,8 @@
 //  RoommateReviewView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to use AppTheme for colors and fonts throughout, removing hardcoded color calls.
 //
-//  This view combines roommate rating and review submission into a single interface.
-//  It allows users to select a star rating, provide an optional text review,
-//  choose a review mode (mutual, anonymous, one-sided), and select a verification method.
-//  If the "Lease Upload" verification method is selected, users can upload a lease document.
 import SwiftUI
 
 struct RoommateReviewView: View {
@@ -58,7 +54,8 @@ struct RoommateReviewView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Rating")) {
+                Section(header: Text("Rating")
+                            .font(AppTheme.subtitleFont)) {
                     Picker("Rating", selection: $rating) {
                         ForEach(1...5, id: \.self) { star in
                             Text("\(star)★").tag(star)
@@ -67,13 +64,18 @@ struct RoommateReviewView: View {
                     .pickerStyle(SegmentedPickerStyle())
                 }
                 
-                Section(header: Text("Review")) {
+                Section(header: Text("Review")
+                            .font(AppTheme.subtitleFont)) {
                     TextEditor(text: $reviewText)
                         .frame(height: 100)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppTheme.defaultCornerRadius)
+                                .stroke(AppTheme.secondaryColor.opacity(0.3), lineWidth: 1)
+                        )
                 }
                 
-                Section(header: Text("Review Mode")) {
+                Section(header: Text("Review Mode")
+                            .font(AppTheme.subtitleFont)) {
                     Picker("Review Mode", selection: $selectedReviewMode) {
                         ForEach(ReviewMode.allCases) { mode in
                             Text(mode.rawValue).tag(mode)
@@ -82,7 +84,8 @@ struct RoommateReviewView: View {
                     .pickerStyle(SegmentedPickerStyle())
                 }
                 
-                Section(header: Text("Verification Method")) {
+                Section(header: Text("Verification Method")
+                            .font(AppTheme.subtitleFont)) {
                     Picker("Verification Method", selection: $selectedVerificationMethod) {
                         ForEach(VerificationMethod.allCases) { method in
                             Text(method.rawValue).tag(method)
@@ -101,6 +104,7 @@ struct RoommateReviewView: View {
                             Button("Upload Lease Document") {
                                 showingImagePicker = true
                             }
+                            .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.accentColor))
                         }
                     }
                 }
@@ -111,9 +115,8 @@ struct RoommateReviewView: View {
                             .foregroundColor(.white)
                             .padding()
                             .frame(maxWidth: .infinity)
-                            .background(Color.blue)
-                            .cornerRadius(8)
                     }
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                 }
             }
             .navigationTitle("Review Roommate")
@@ -124,7 +127,9 @@ struct RoommateReviewView: View {
                 ImagePicker(image: $leaseImage)
             }
             .alert(item: alertBinding) { alertError in
-                Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
+                Alert(title: Text("Error"),
+                      message: Text(alertError.message),
+                      dismissButton: .default(Text("OK")))
             }
         }
     }

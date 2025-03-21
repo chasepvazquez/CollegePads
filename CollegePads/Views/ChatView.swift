@@ -2,7 +2,8 @@
 //  ChatView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to include the global theme and improved layout.
+//  This view displays a chat conversation with auto-scrolling, a typing indicator, and uses custom theme typography and background.
 //
 
 import SwiftUI
@@ -17,7 +18,8 @@ struct ChatView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(viewModel.messages) { msg in
-                            MessageBubble(message: msg, isCurrentUser: msg.senderID == viewModel.currentUserID)
+                            MessageBubble(message: msg,
+                                          isCurrentUser: msg.senderID == viewModel.currentUserID)
                                 .id(msg.id)
                         }
                     }
@@ -35,7 +37,7 @@ struct ChatView: View {
             if viewModel.isTyping {
                 HStack {
                     Text("User is typing...")
-                        .font(.caption)
+                        .font(AppTheme.bodyFont)
                         .foregroundColor(.gray)
                     Spacer()
                 }
@@ -43,11 +45,12 @@ struct ChatView: View {
             }
             
             ChatInputBar(messageText: $newMessageText, onSend: {
-                guard !newMessageText.isEmpty else { return }
+                guard !newMessageText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
                 viewModel.sendMessage(text: newMessageText)
                 newMessageText = ""
             })
         }
+        .background(AppTheme.backgroundGradient.ignoresSafeArea())
         .navigationTitle("Chat")
         .onAppear {
             viewModel.markMessagesAsRead()
@@ -61,13 +64,17 @@ struct ChatView: View {
             },
             set: { _ in viewModel.errorMessage = nil }
         )) { alertError in
-            Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
+            Alert(title: Text("Error"),
+                  message: Text(alertError.message),
+                  dismissButton: .default(Text("OK")))
         }
     }
 }
 
 struct ChatView_Previews: PreviewProvider {
     static var previews: some View {
-        ChatView(viewModel: ChatViewModel(chatID: "dummyChatID"))
+        NavigationView {
+            ChatView(viewModel: ChatViewModel(chatID: "dummyChatID"))
+        }
     }
 }

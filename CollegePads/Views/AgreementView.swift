@@ -2,29 +2,22 @@
 //  AgreementView.swift
 //  CollegePads
 //
-//  Created by [Your Name] on [Date].
+//  Updated to use AppTheme for button styling and consistent typography.
 //
-//  This view lets matched roommates collaboratively build a formal agreement.
-//  It includes fields for move-in date, shared responsibilities, house rules, and now
-//  extended options for review mode and verification method. If "Lease Document" is chosen,
-//  the user may upload a lease document as proof of shared residence.
 import SwiftUI
 import FirebaseAuth
 
 struct AgreementView: View {
     @StateObject private var viewModel = AgreementViewModel()
     
-    // These values are assumed to be passed from the match/chat context.
     let matchID: String
     let userA: String
     let userB: String
     
-    // Agreement details
     @State private var moveInDate: Date = Date()
     @State private var sharedResponsibilities: String = ""
     @State private var houseRules: String = ""
     
-    // Extended review options:
     enum ReviewMode: String, CaseIterable, Identifiable {
         case mutual = "Mutual"
         case anonymous = "Anonymous"
@@ -40,7 +33,6 @@ struct AgreementView: View {
     }
     @State private var selectedVerificationMethod: VerificationMethod = .none
     
-    // Optional lease document image
     @State private var leaseImage: UIImage?
     @State private var showingImagePicker = false
     
@@ -49,19 +41,25 @@ struct AgreementView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Move-In Date")) {
+                Section(header: Text("Move-In Date")
+                            .font(AppTheme.subtitleFont)) {
                     DatePicker("Select Date", selection: $moveInDate, displayedComponents: .date)
                 }
                 
-                Section(header: Text("Agreement Details")) {
-                    TextField("Rent Split (e.g., 50/50)", text: .constant("Determine later")) // Optionally add a field.
+                Section(header: Text("Agreement Details")
+                            .font(AppTheme.subtitleFont)) {
+                    TextField("Rent Split (e.g., 50/50)", text: .constant("Determine later"))
                     TextField("Shared Responsibilities", text: $sharedResponsibilities)
                     TextEditor(text: $houseRules)
                         .frame(height: 100)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(AppTheme.secondaryColor.opacity(0.3), lineWidth: 1)
+                        )
                 }
                 
-                Section(header: Text("Review Options")) {
+                Section(header: Text("Review Options")
+                            .font(AppTheme.subtitleFont)) {
                     Picker("Review Mode", selection: $selectedReviewMode) {
                         ForEach(ReviewMode.allCases) { mode in
                             Text(mode.rawValue).tag(mode)
@@ -70,7 +68,8 @@ struct AgreementView: View {
                     .pickerStyle(SegmentedPickerStyle())
                 }
                 
-                Section(header: Text("Verification Method")) {
+                Section(header: Text("Verification Method")
+                            .font(AppTheme.subtitleFont)) {
                     Picker("Verification Method", selection: $selectedVerificationMethod) {
                         ForEach(VerificationMethod.allCases) { method in
                             Text(method.rawValue).tag(method)
@@ -91,6 +90,7 @@ struct AgreementView: View {
                             Button("Upload Lease Document") {
                                 showingImagePicker = true
                             }
+                            .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.accentColor))
                         }
                     }
                 }
@@ -98,12 +98,8 @@ struct AgreementView: View {
                 Section {
                     Button(action: submitAgreement) {
                         Text("Submit Agreement")
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.blue)
-                            .cornerRadius(8)
                     }
+                    .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                 }
             }
             .navigationTitle("Roommate Agreement")
@@ -122,15 +118,15 @@ struct AgreementView: View {
                 },
                 set: { _ in viewModel.errorMessage = nil }
             )) { alertError in
-                Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
+                Alert(title: Text("Error"),
+                      message: Text(alertError.message),
+                      dismissButton: .default(Text("OK")))
             }
         }
     }
     
     private func submitAgreement() {
-        // For demonstration purposes, if a lease document is required,
-        // you would upload the leaseImage using your FirebaseStorageService extension.
-        // Here we use a dummy URL if the lease option is chosen.
+        // For demonstration, use a dummy lease URL if lease option is chosen.
         let leaseURL = (selectedVerificationMethod == .lease) ? "https://example.com/lease.jpg" : nil
         
         let newAgreement = RoommateAgreement(

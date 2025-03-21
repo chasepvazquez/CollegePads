@@ -1,21 +1,11 @@
-//
-//  MatchCardView.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date]
-//
-//  This view displays a candidate’s small profile card (circular image and initials/name)
-//  for use in the horizontal matches bar in the Combined Matches & Chat tab.
-
 import SwiftUI
 import FirebaseFirestore
-import FirebaseFirestoreCombineSwift
 
 struct MatchCardView: View {
     let candidateID: String
     @State private var candidate: UserModel?
     @State private var errorMessage: String?
-
+    
     var body: some View {
         VStack {
             if let candidate = candidate {
@@ -34,17 +24,15 @@ struct MatchCardView: View {
                 } else {
                     defaultPlaceholder(for: candidate)
                 }
-                // Display a short name; if not available, use the first two letters of the email.
                 Text(candidate.email.components(separatedBy: "@").first ?? "User")
-                    .font(.caption)
+                    .font(AppTheme.bodyFont)
                     .lineLimit(1)
             } else {
-                // While loading, show a gray placeholder.
                 Circle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(AppTheme.cardBackground)
                     .frame(width: 60, height: 60)
                 Text("Loading")
-                    .font(.caption)
+                    .font(AppTheme.bodyFont)
             }
         }
         .onAppear {
@@ -52,14 +40,13 @@ struct MatchCardView: View {
         }
     }
     
-    /// Provides a default circular placeholder with initials.
+    /// Provides a default circular placeholder with candidate initials.
     private func defaultPlaceholder(for candidate: UserModel) -> some View {
-        // Extract the first two letters from the email (or fallback text)
         let initials = candidate.email.components(separatedBy: "@").first?.prefix(2).uppercased() ?? "??"
         return Text(initials)
-            .font(.headline)
+            .font(AppTheme.bodyFont.weight(.bold))
             .frame(width: 60, height: 60)
-            .background(Color.blue.opacity(0.5))
+            .background(AppTheme.primaryColor.opacity(0.5))
             .foregroundColor(.white)
             .clipShape(Circle())
     }

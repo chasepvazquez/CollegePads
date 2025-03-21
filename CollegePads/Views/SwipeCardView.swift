@@ -2,10 +2,11 @@
 //  SwipeCardView.swift
 //  CollegePads
 //
-//  Updated to improve animations, accessibility, and modularity in swipe interactions
+//  Updated to improve animations, accessibility, and modularity in swipe interactions,
+//  with all hardcoded color calls replaced by theme references from AppTheme.
 //
-
 import SwiftUI
+import FirebaseFirestore
 
 struct SwipeCardView: View {
     let user: UserModel
@@ -32,14 +33,13 @@ struct SwipeCardView: View {
     
     var body: some View {
         ZStack {
-            // Background card with gradient and shadow for a polished look
-            LinearGradient(gradient: Gradient(colors: [.white, Color(UIColor.systemGray6)]),
-                           startPoint: .top, endPoint: .bottom)
+            // Card background using theme's card background color.
+            AppTheme.cardBackground
                 .cornerRadius(15)
-                .shadow(color: .gray, radius: 5, x: 0, y: 5)
+                .shadow(color: AppTheme.secondaryColor.opacity(0.3), radius: 5, x: 0, y: 5)
             
             VStack(spacing: 10) {
-                // Profile image with overlays for favorite and verified status
+                // Profile image with overlays for favorite and verified status.
                 ZStack(alignment: .topTrailing) {
                     if let imageUrl = user.profileImageUrl, let url = URL(string: imageUrl) {
                         AsyncImage(url: url) { phase in
@@ -49,7 +49,7 @@ struct SwipeCardView: View {
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: 150, height: 150)
                                     .clipShape(Circle())
-                                    .overlay(Circle().stroke(Color.blue, lineWidth: 4))
+                                    .overlay(Circle().stroke(AppTheme.primaryColor, lineWidth: 4))
                             } else {
                                 defaultPlaceholder(for: user)
                             }
@@ -58,28 +58,28 @@ struct SwipeCardView: View {
                         defaultPlaceholder(for: user)
                     }
                     
-                    // Verified badge overlay:
+                    // Verified badge overlay using AppTheme.primaryColor.
                     if let verified = user.isVerified, verified {
                         Text("✓ Verified")
                             .font(.caption2)
                             .foregroundColor(.white)
                             .padding(4)
-                            .background(Color.blue.opacity(0.8))
+                            .background(AppTheme.primaryColor.opacity(0.8))
                             .clipShape(Capsule())
                             .offset(x: -10, y: 10)
                     }
                     
-                    // Heart icon for favorite
+                    // Heart icon for favorite.
                     Button(action: toggleFavorite) {
                         Image(systemName: isFavorite ? "heart.fill" : "heart")
                             .font(.system(size: 24))
-                            .foregroundColor(isFavorite ? .red : .gray)
+                            .foregroundColor(isFavorite ? AppTheme.accentColor : AppTheme.secondaryColor)
                             .padding(8)
                     }
                     .accessibilityLabel(isFavorite ? "Remove from favorites" : "Add to favorites")
                 }
                 
-                // Information Section
+                // Information Section.
                 VStack(spacing: 4) {
                     Text(user.email)
                         .font(.headline)
@@ -95,7 +95,7 @@ struct SwipeCardView: View {
                     if let score = compatibilityScore {
                         Text("Compatibility: \(Int(score))%")
                             .font(.subheadline)
-                            .foregroundColor(score > 70 ? .green : .orange)
+                            .foregroundColor(score > 70 ? AppTheme.likeColor : AppTheme.nopeColor)
                     }
                 }
                 .padding(.horizontal)
@@ -103,24 +103,24 @@ struct SwipeCardView: View {
             }
             .cornerRadius(15)
             
-            // Like / Nope overlays
+            // Like / Nope overlays.
             if showLikeOverlay {
                 Text("LIKE")
                     .font(.system(size: 48, weight: .heavy))
-                    .foregroundColor(.green)
+                    .foregroundColor(AppTheme.likeColor)
                     .rotationEffect(.degrees(-15))
                     .padding()
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.green, lineWidth: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.likeColor, lineWidth: 4))
                     .transition(.scale)
                     .position(x: 100, y: 50)
             }
             if showNopeOverlay {
                 Text("NOPE")
                     .font(.system(size: 48, weight: .heavy))
-                    .foregroundColor(.red)
+                    .foregroundColor(AppTheme.nopeColor)
                     .rotationEffect(.degrees(15))
                     .padding()
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.red, lineWidth: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.nopeColor, lineWidth: 4))
                     .transition(.scale)
                     .position(x: 300, y: 50)
             }
@@ -168,7 +168,7 @@ struct SwipeCardView: View {
                 }
         )
         .onAppear {
-            // Check if candidate is a favorite when the card appears
+            // Check if candidate is a favorite when the card appears.
             FavoriteService().isFavorite(candidate: user) { fav in
                 self.isFavorite = fav
             }
@@ -181,9 +181,9 @@ struct SwipeCardView: View {
     private func defaultPlaceholder(for candidate: UserModel) -> some View {
         let initials = candidate.email.components(separatedBy: "@").first?.prefix(2).uppercased() ?? "??"
         return Text(initials)
-            .font(.headline)
+            .font(AppTheme.bodyFont.weight(.bold))
             .frame(width: 150, height: 150)
-            .background(Color.blue.opacity(0.5))
+            .background(AppTheme.primaryColor.opacity(0.5))
             .foregroundColor(.white)
             .clipShape(Circle())
     }
@@ -216,7 +216,21 @@ struct SwipeCardView: View {
 
 struct SwipeCardView_Previews: PreviewProvider {
     static var previews: some View {
-        SwipeCardView(user: UserModel(email: "test@edu", isEmailVerified: true, gradeLevel: "Freshman", major: "Computer Science", collegeName: "Engineering", dormType: "On-Campus", budgetRange: "$500-$1000", cleanliness: 4, sleepSchedule: "Flexible", smoker: false, petFriendly: true, livingStyle: "Social", profileImageUrl: nil, isVerified: true), onSwipe: { _, _ in })
+        SwipeCardView(user: UserModel(email: "test@edu",
+                                      isEmailVerified: true,
+                                      gradeLevel: "Freshman",
+                                      major: "Computer Science",
+                                      collegeName: "Engineering",
+                                      dormType: "On-Campus",
+                                      budgetRange: "$500-$1000",
+                                      cleanliness: 4,
+                                      sleepSchedule: "Flexible",
+                                      smoker: false,
+                                      petFriendly: true,
+                                      livingStyle: "Social",
+                                      profileImageUrl: nil,
+                                      isVerified: true),
+                      onSwipe: { _, _ in })
             .padding()
     }
 }
