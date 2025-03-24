@@ -44,10 +44,20 @@ struct QuizView: View {
                 .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                 .disabled(isSubmitting)
             }
-            .navigationTitle("Roommate Quiz")
-            .navigationBarItems(trailing: Button("Close") {
-                presentationMode.wrappedValue.dismiss()
-            })
+            .scrollContentBackground(.hidden)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Roommate Quiz")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Close") {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                    .font(AppTheme.bodyFont)
+                }
+            }
             .alert(isPresented: $showSuccessAlert) {
                 Alert(title: Text("Success"),
                       message: Text("Your quiz results have been saved."),

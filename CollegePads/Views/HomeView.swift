@@ -1,16 +1,9 @@
-//
-//  HomeView.swift
-//  CollegePads
-//
-//  Updated to use global background gradient, theme colors, and proper navigation using NavigationLink.
-//
 import SwiftUI
 
 struct HomeView: View {
     var body: some View {
         ZStack {
-            AppTheme.backgroundGradient
-                .ignoresSafeArea()
+            AppTheme.backgroundGradient.ignoresSafeArea()
             
             VStack(spacing: 20) {
                 Text("Welcome to CollegePads!")
@@ -23,7 +16,7 @@ struct HomeView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                 
-                // Navigate to Advanced Search (placeholder view)
+                // Navigate to Advanced Search
                 NavigationLink(destination: AdvancedFilterView()) {
                     Text("Advanced Search")
                 }
@@ -36,8 +29,15 @@ struct HomeView: View {
                 .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.secondaryColor))
             }
             .padding()
+            .font(AppTheme.bodyFont)
         }
-        .navigationTitle("Home")
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Home")
+                    .font(AppTheme.titleFont)
+                    .foregroundColor(.primary)
+            }
+        }
     }
 }
 

@@ -1,10 +1,3 @@
-//
-//  FavoritesView.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-
 import SwiftUI
 import FirebaseFirestoreCombineSwift
 import Combine
@@ -19,20 +12,33 @@ struct FavoritesView: View {
     var body: some View {
         NavigationView {
             List(favorites) { candidate in
-                NavigationLink(destination: CandidateProfileView(candidateID: candidate.id ?? "")) {
-                    VStack(alignment: .leading) {
-                        Text(candidate.email)
-                            .font(.headline)
-                        if let dorm = candidate.dormType {
-                            Text("Dorm: \(dorm)")
-                        }
-                        if let budget = candidate.budgetRange {
-                            Text("Budget: \(budget)")
+                Group {
+                    let candidateId = candidate.id ?? ""
+                    NavigationLink(destination: CandidateProfileView(candidateID: candidateId)) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(candidate.email)
+                                .font(AppTheme.bodyFont)
+                            if let dorm = candidate.dormType {
+                                Text("Dorm: \(dorm)")
+                                    .font(AppTheme.bodyFont)
+                            }
+                            if let budget = candidate.budgetRange {
+                                Text("Budget: \(budget)")
+                                    .font(AppTheme.bodyFont)
+                            }
                         }
                     }
                 }
             }
-            .navigationTitle("Favorites")
+            .scrollContentBackground(.hidden)
+            .listStyle(PlainListStyle())
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Favorites")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
+            }
             .onAppear {
                 loadFavorites()
             }
@@ -45,7 +51,9 @@ struct FavoritesView: View {
                 },
                 set: { _ in errorMessage = nil }
             )) { alertError in
-                Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
+                Alert(title: Text("Error"),
+                      message: Text(alertError.message),
+                      dismissButton: .default(Text("OK")))
             }
         }
     }

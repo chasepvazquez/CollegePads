@@ -1,13 +1,3 @@
-//
-//  OnlineStatusView.swift
-//  CollegePads
-//
-//  New Feature: Online Status Indicator
-//  This view listens to a user's online status from Firestore using FirebaseFirestoreCombineSwift.
-//  It displays a green circle with "Online" if the user is online, or a gray circle with "Offline" if not.
-//  The user document in Firestore must include a Boolean field "isOnline".
-//
-
 import SwiftUI
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
@@ -22,7 +12,7 @@ struct OnlineStatusView: View {
     private var db = Firestore.firestore()
     @State private var cancellables = Set<AnyCancellable>()
     
-    // Explicit initializer to ensure the default memberwise initializer is accessible.
+    // Explicit initializer.
     init(userID: String) {
         self.userID = userID
     }
@@ -33,7 +23,7 @@ struct OnlineStatusView: View {
                 .fill(isOnline ? Color.green : Color.gray)
                 .frame(width: 10, height: 10)
             Text(isOnline ? "Online" : "Offline")
-                .font(.caption)
+                .font(AppTheme.bodyFont)
                 .foregroundColor(.primary)
         }
         .onAppear {

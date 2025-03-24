@@ -1,10 +1,3 @@
-//
-//  VerificationView.swift
-//  CollegePads
-//
-//  Updated to add a loading indicator during verification submission and improved form states
-//
-
 import SwiftUI
 
 struct VerificationView: View {
@@ -17,7 +10,8 @@ struct VerificationView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Upload Verification Document")) {
+                Section(header: Text("Upload Verification Document")
+                            .font(AppTheme.subtitleFont)) {
                     if let image = selectedImage {
                         Image(uiImage: image)
                             .resizable()
@@ -31,6 +25,7 @@ struct VerificationView: View {
                         Button("Select Verification Image") {
                             showingImagePicker = true
                         }
+                        .font(AppTheme.bodyFont)
                         .accessibilityLabel("Select Verification Image Button")
                     }
                 }
@@ -41,12 +36,15 @@ struct VerificationView: View {
                             ProgressView()
                         } else {
                             Text("Submit Verification")
+                                .font(AppTheme.bodyFont)
                                 .frame(maxWidth: .infinity, alignment: .center)
                         }
                     }
                     .disabled(selectedImage == nil || isSubmitting)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.backgroundGradient.ignoresSafeArea())
             .navigationTitle("User Verification")
             .navigationBarItems(trailing: Button("Cancel") {
                 presentationMode.wrappedValue.dismiss()

@@ -1,10 +1,3 @@
-//
-//  SwipeAnalyticsView.swift
-//  CollegePads
-//
-//  Updated to include a refresh button, loading state, and apply global theme typography and colors.
-//
-
 import SwiftUI
 
 struct SwipeAnalyticsView: View {
@@ -52,9 +45,11 @@ struct SwipeAnalyticsView: View {
                     }
                 }
                 .listStyle(PlainListStyle())
+                .scrollContentBackground(.hidden)
                 
                 if isRefreshing {
                     ProgressView("Refreshing Analytics...")
+                        .font(AppTheme.bodyFont)
                         .padding()
                 }
             }

@@ -1,10 +1,3 @@
-//
-//  CandidateProfileView.swift
-//  CollegePads
-//
-//  Updated to use AppTheme for backgrounds and colors throughout.
-
-//
 import SwiftUI
 
 struct CandidateProfileView: View {
@@ -53,7 +46,7 @@ struct CandidateProfileView: View {
                                 
                                 if let verified = candidate.isVerified, verified {
                                     Text("✓ Verified")
-                                        .font(.caption2)
+                                        .font(AppTheme.bodyFont) // Replaced captionFont with bodyFont
                                         .foregroundColor(.white)
                                         .padding(4)
                                         .background(AppTheme.primaryColor.opacity(0.8))
@@ -65,15 +58,18 @@ struct CandidateProfileView: View {
                             // Candidate Details Card
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(candidate.email)
-                                    .font(.headline)
+                                    .font(AppTheme.bodyFont) // Replacing headlineFont with bodyFont
                                 if let grade = candidate.gradeLevel {
                                     Text("Grade: \(grade)")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 if let major = candidate.major {
                                     Text("Major: \(major)")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 if let college = candidate.collegeName {
                                     Text("College: \(college)")
+                                        .font(AppTheme.bodyFont)
                                 }
                             }
                             .padding()
@@ -87,43 +83,51 @@ struct CandidateProfileView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 if let dorm = candidate.dormType {
                                     Text("Dorm Type: \(dorm)")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 if let budget = candidate.budgetRange {
                                     Text("Budget Range: \(budget)")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 if let cleanliness = candidate.cleanliness {
                                     Text("Cleanliness: \(cleanliness)/5")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 if let sleep = candidate.sleepSchedule {
                                     Text("Sleep Schedule: \(sleep)")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 if let style = candidate.livingStyle {
                                     Text("Living Style: \(style)")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 if let smoker = candidate.smoker {
                                     Text("Smoker: \(smoker ? "Yes" : "No")")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 if let petFriendly = candidate.petFriendly {
                                     Text("Pet Friendly: \(petFriendly ? "Yes" : "No")")
+                                        .font(AppTheme.bodyFont)
                                 }
                             }
                             .padding()
                             
-                            // Common Interests Section
+                            // Common Interests Section (Simplified)
                             if let currentUser = ProfileViewModel.shared.userProfile,
                                let candidateInterests = candidate.interests,
                                let currentInterests = currentUser.interests {
-                                let common = candidateInterests.filter { currentInterests.contains($0.lowercased()) }
-                                if !common.isEmpty {
+                                let lowercasedCurrent = currentInterests.map { $0.lowercased() }
+                                let commonInterests = candidateInterests.filter { lowercasedCurrent.contains($0.lowercased()) }
+                                if !commonInterests.isEmpty {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("Common Interests:")
-                                            .font(.headline)
-                                        Text(common.joined(separator: ", "))
-                                            .font(.body)
-                                            .foregroundColor(.secondary)
+                                            .font(AppTheme.subtitleFont)
+                                        Text(commonInterests.joined(separator: ", "))
+                                            .font(AppTheme.bodyFont)
+                                            .foregroundColor(AppTheme.secondaryColor)
                                     }
                                     .padding()
-                                    .background(AppTheme.cardBackground.opacity(0.8)) 
+                                    .background(AppTheme.cardBackground.opacity(0.8))
                                     .cornerRadius(8)
                                     .shadow(radius: 3)
                                 }
@@ -136,39 +140,46 @@ struct CandidateProfileView: View {
                                 HStack(spacing: 16) {
                                     Button(action: { showCompatibilityBreakdown = true }) {
                                         Text("View Compatibility Breakdown")
+                                            .font(AppTheme.bodyFont)
                                     }
                                     .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                                     
                                     Button(action: { showQuiz = true }) {
                                         Text("Take Compatibility Quiz")
+                                            .font(AppTheme.bodyFont)
                                     }
                                     .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                                 }
                                 
                                 Button(action: { showComparison = true }) {
                                     Text("Compare with My Profile")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                                 
                                 HStack(spacing: 16) {
                                     Button(action: { showReportSheet = true }) {
                                         Text("Report User")
+                                            .font(AppTheme.bodyFont)
                                     }
                                     .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.accentColor))
                                     
                                     Button(action: { showBlockAlert = true }) {
                                         Text("Block User")
+                                            .font(AppTheme.bodyFont)
                                     }
                                     .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.secondaryColor))
                                 }
                                 
                                 Button(action: { showRatingSheet = true }) {
                                     Text("Rate Roommate")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                                 
                                 Button(action: { showAgreementSheet = true }) {
                                     Text("Create Roommate Agreement")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                             }
@@ -177,13 +188,20 @@ struct CandidateProfileView: View {
                     }
                 } else {
                     ProgressView("Loading Profile...")
+                        .font(AppTheme.bodyFont)
                         .onAppear {
                             viewModel.loadCandidate(with: candidateID)
                         }
                 }
             }
         }
-        .navigationTitle("Candidate Profile")
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Candidate Profile")
+                    .font(AppTheme.titleFont)
+                    .foregroundColor(.primary)
+            }
+        }
         .sheet(isPresented: $showCompatibilityBreakdown) {
             if let candidate = viewModel.candidate {
                 CompatibilityBreakdownView(candidate: candidate)

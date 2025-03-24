@@ -15,6 +15,7 @@ struct ChatInputBar: View {
                     RoundedRectangle(cornerRadius: AppTheme.defaultCornerRadius)
                         .stroke(AppTheme.secondaryColor.opacity(0.3), lineWidth: 1)
                 )
+                .font(AppTheme.bodyFont)
             
             Button(action: {
                 onSend()

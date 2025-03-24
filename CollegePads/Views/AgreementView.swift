@@ -1,9 +1,3 @@
-//
-//  AgreementView.swift
-//  CollegePads
-//
-//  Updated to use AppTheme for button styling and consistent typography.
-//
 import SwiftUI
 import FirebaseAuth
 
@@ -39,88 +33,103 @@ struct AgreementView: View {
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Move-In Date")
-                            .font(AppTheme.subtitleFont)) {
-                    DatePicker("Select Date", selection: $moveInDate, displayedComponents: .date)
-                }
-                
-                Section(header: Text("Agreement Details")
-                            .font(AppTheme.subtitleFont)) {
-                    TextField("Rent Split (e.g., 50/50)", text: .constant("Determine later"))
-                    TextField("Shared Responsibilities", text: $sharedResponsibilities)
-                    TextEditor(text: $houseRules)
-                        .frame(height: 100)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(AppTheme.secondaryColor.opacity(0.3), lineWidth: 1)
-                        )
-                }
-                
-                Section(header: Text("Review Options")
-                            .font(AppTheme.subtitleFont)) {
-                    Picker("Review Mode", selection: $selectedReviewMode) {
-                        ForEach(ReviewMode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
+        ZStack {
+            // Global background from AppTheme.
+            AppTheme.backgroundGradient.ignoresSafeArea()
+            
+            NavigationView {
+                Form {
+                    Section(header: Text("Move-In Date")
+                                .font(AppTheme.subtitleFont)) {
+                        DatePicker("Select Date", selection: $moveInDate, displayedComponents: .date)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
-                }
-                
-                Section(header: Text("Verification Method")
-                            .font(AppTheme.subtitleFont)) {
-                    Picker("Verification Method", selection: $selectedVerificationMethod) {
-                        ForEach(VerificationMethod.allCases) { method in
-                            Text(method.rawValue).tag(method)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
                     
-                    if selectedVerificationMethod == .lease {
-                        if let leaseImage = leaseImage {
-                            Image(uiImage: leaseImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(height: 150)
-                                .onTapGesture {
+                    Section(header: Text("Agreement Details")
+                                .font(AppTheme.subtitleFont)) {
+                        TextField("Rent Split (e.g., 50/50)", text: .constant("Determine later"))
+                        TextField("Shared Responsibilities", text: $sharedResponsibilities)
+                        TextEditor(text: $houseRules)
+                            .frame(height: 100)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(AppTheme.secondaryColor.opacity(0.3), lineWidth: 1)
+                            )
+                    }
+                    
+                    Section(header: Text("Review Options")
+                                .font(AppTheme.subtitleFont)) {
+                        Picker("Review Mode", selection: $selectedReviewMode) {
+                            ForEach(ReviewMode.allCases) { mode in
+                                Text(mode.rawValue).tag(mode)
+                            }
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                    }
+                    
+                    Section(header: Text("Verification Method")
+                                .font(AppTheme.subtitleFont)) {
+                        Picker("Verification Method", selection: $selectedVerificationMethod) {
+                            ForEach(VerificationMethod.allCases) { method in
+                                Text(method.rawValue).tag(method)
+                            }
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        
+                        if selectedVerificationMethod == .lease {
+                            if let leaseImage = leaseImage {
+                                Image(uiImage: leaseImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(height: 150)
+                                    .onTapGesture {
+                                        showingImagePicker = true
+                                    }
+                            } else {
+                                Button("Upload Lease Document") {
                                     showingImagePicker = true
                                 }
-                        } else {
-                            Button("Upload Lease Document") {
-                                showingImagePicker = true
+                                .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.accentColor))
                             }
-                            .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.accentColor))
                         }
                     }
-                }
-                
-                Section {
-                    Button(action: submitAgreement) {
-                        Text("Submit Agreement")
+                    
+                    Section {
+                        Button(action: submitAgreement) {
+                            Text("Submit Agreement")
+                        }
+                        .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                     }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                 }
-            }
-            .navigationTitle("Roommate Agreement")
-            .navigationBarItems(trailing: Button("Cancel") {
-                presentationMode.wrappedValue.dismiss()
-            })
-            .sheet(isPresented: $showingImagePicker) {
-                ImagePicker(image: $leaseImage)
-            }
-            .alert(item: Binding(
-                get: {
-                    if let errorMessage = viewModel.errorMessage {
-                        return GenericAlertError(message: errorMessage)
+                // Hide the Form's default background and apply the global body font.
+                .scrollContentBackground(.hidden)
+                .font(AppTheme.bodyFont)
+                // Use a toolbar item for the custom navigation title.
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Text("Roommate Agreement")
+                            .font(AppTheme.titleFont)
+                            .foregroundColor(.primary)
                     }
-                    return nil
-                },
-                set: { _ in viewModel.errorMessage = nil }
-            )) { alertError in
-                Alert(title: Text("Error"),
-                      message: Text(alertError.message),
-                      dismissButton: .default(Text("OK")))
+                }
+                .navigationBarItems(trailing: Button("Cancel") {
+                    presentationMode.wrappedValue.dismiss()
+                })
+                .sheet(isPresented: $showingImagePicker) {
+                    ImagePicker(image: $leaseImage)
+                }
+                .alert(item: Binding(
+                    get: {
+                        if let errorMessage = viewModel.errorMessage {
+                            return GenericAlertError(message: errorMessage)
+                        }
+                        return nil
+                    },
+                    set: { _ in viewModel.errorMessage = nil }
+                )) { alertError in
+                    Alert(title: Text("Error"),
+                          message: Text(alertError.message),
+                          dismissButton: .default(Text("OK")))
+                }
             }
         }
     }

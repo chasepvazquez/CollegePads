@@ -1,10 +1,3 @@
-//
-//  RootView.swift
-//  CollegePads
-//
-//  Ensures global background gradient is used and references AppTheme for accent colors.
-//
-
 import SwiftUI
 import FirebaseAuth
 

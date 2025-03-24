@@ -1,9 +1,3 @@
-//
-//  RoommateReviewView.swift
-//  CollegePads
-//
-//  Updated to use AppTheme for colors and fonts throughout, removing hardcoded color calls.
-//
 import SwiftUI
 
 struct RoommateReviewView: View {
@@ -38,7 +32,7 @@ struct RoommateReviewView: View {
     @State private var leaseImage: UIImage?
     @State private var showingImagePicker: Bool = false
     
-    // Alert binding to reduce complexity.
+    // Alert binding
     private var alertBinding: Binding<GenericAlertError?> {
         Binding<GenericAlertError?>(
             get: {
@@ -115,27 +109,36 @@ struct RoommateReviewView: View {
                             .foregroundColor(.white)
                             .padding()
                             .frame(maxWidth: .infinity)
+                            .background(AppTheme.primaryColor)
+                            .cornerRadius(AppTheme.defaultCornerRadius)
                     }
-                    .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                 }
             }
-            .navigationTitle("Review Roommate")
-            .navigationBarItems(trailing: Button("Cancel") {
-                presentationMode.wrappedValue.dismiss()
-            })
+            .scrollContentBackground(.hidden)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Review Roommate")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                    .font(AppTheme.bodyFont)
+                }
+            }
             .sheet(isPresented: $showingImagePicker) {
                 ImagePicker(image: $leaseImage)
             }
             .alert(item: alertBinding) { alertError in
-                Alert(title: Text("Error"),
-                      message: Text(alertError.message),
-                      dismissButton: .default(Text("OK")))
+                Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
             }
         }
     }
     
     private func submitReview() {
-        // For a real implementation, replace the dummy URL with the actual uploaded lease document URL.
+        // For demonstration, use a dummy lease URL if lease option is chosen.
         let leaseDocumentURL: String? = (selectedVerificationMethod == .lease) ? "https://example.com/lease.jpg" : nil
         
         viewModel.submitReview(matchID: matchID,

@@ -1,10 +1,3 @@
-//
-//  CompatibilityBreakdownView.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-
 import SwiftUI
 
 struct CompatibilityBreakdownView: View {
@@ -19,38 +12,49 @@ struct CompatibilityBreakdownView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
-                Text("Compatibility Breakdown")
-                    .font(.largeTitle)
-                    .bold()
-                    .padding(.top)
+            ZStack {
+                AppTheme.backgroundGradient.ignoresSafeArea()
                 
-                if currentUser != nil {
-                    Text("Overall Compatibility: \(Int(overallScore))%")
-                        .font(.title)
-                        .foregroundColor(overallScore > 70 ? .green : .orange)
+                VStack(spacing: 20) {
+                    Text("Compatibility Breakdown")
+                        .font(AppTheme.titleFont)
+                        .bold()
+                        .padding(.top)
                     
-                    ForEach(breakdown.keys.sorted(), id: \.self) { key in
-                        HStack {
-                            Text(key)
-                                .fontWeight(.semibold)
-                                .frame(width: 100, alignment: .leading)
-                            ProgressView(value: breakdown[key] ?? 0, total: 10)
-                                .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                            Text("\(Int(breakdown[key] ?? 0)) pts")
-                                .frame(width: 50, alignment: .trailing)
+                    if currentUser != nil {
+                        Text("Overall Compatibility: \(Int(overallScore))%")
+                            .font(AppTheme.titleFont)
+                            .foregroundColor(overallScore > 70 ? .green : .orange)
+                        
+                        ForEach(breakdown.keys.sorted(), id: \.self) { key in
+                            HStack {
+                                Text(key)
+                                    .font(AppTheme.bodyFont)
+                                    .fontWeight(.semibold)
+                                    .frame(width: 100, alignment: .leading)
+                                ProgressView(value: breakdown[key] ?? 0, total: 10)
+                                    .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.primaryColor))
+                                Text("\(Int(breakdown[key] ?? 0)) pts")
+                                    .font(AppTheme.bodyFont)
+                                    .frame(width: 50, alignment: .trailing)
+                            }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
+                    } else {
+                        Text("Your profile is not loaded.")
+                            .font(AppTheme.bodyFont)
                     }
-                } else {
-                    Text("Your profile is not loaded.")
+                    
+                    Spacer()
                 }
-                
-                Spacer()
+                .padding()
             }
-            .padding()
-            .navigationTitle("Compatibility")
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Compatibility")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Close") {
                         // Implement dismissal action if needed.
@@ -65,7 +69,6 @@ struct CompatibilityBreakdownView: View {
     
     private func computeCompatibility() {
         guard let current = currentUser else { return }
-        // Call the compatibility calculator using exactly the two parameters.
         let result = CompatibilityCalculator.calculateCompatibilityBreakdown(between: current, and: candidate)
         overallScore = result.overall
         breakdown = result.breakdown

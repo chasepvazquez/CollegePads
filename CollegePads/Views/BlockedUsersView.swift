@@ -1,10 +1,3 @@
-//
-//  BlockedUsersView.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-
 import SwiftUI
 
 struct BlockedUsersView: View {
@@ -13,19 +6,22 @@ struct BlockedUsersView: View {
     @StateObject private var blockUserVM = BlockUserViewModel()
     
     var body: some View {
-        NavigationView {
+        ZStack {
+            // Global background from your theme.
+            AppTheme.backgroundGradient.ignoresSafeArea()
+            
+            // Removed inner NavigationView so the background shows correctly.
             List {
                 if let blocked = profileVM.userProfile?.blockedUserIDs, !blocked.isEmpty {
                     ForEach(blocked, id: \.self) { uid in
                         HStack {
-                            Text(uid) // In production, replace with a user lookup for name/photo.
-                                .font(.body)
+                            Text(uid) // Replace with user lookup for name/photo in production.
+                                .font(AppTheme.bodyFont)
                             Spacer()
                             Button(action: {
                                 blockUserVM.unblockUser(candidateID: uid) { result in
                                     switch result {
                                     case .success:
-                                        // Update the local profile model if needed.
                                         profileVM.removeBlockedUser(with: uid)
                                     case .failure(let error):
                                         print("Unblock error: \(error.localizedDescription)")
@@ -33,20 +29,34 @@ struct BlockedUsersView: View {
                                 }
                             }) {
                                 Text("Unblock")
-                                    .foregroundColor(.blue)
+                                    .font(AppTheme.bodyFont)
+                                    .foregroundColor(AppTheme.accentColor)
                             }
                         }
                         .padding(.vertical, 4)
                     }
                 } else {
                     Text("No blocked users.")
-                        .foregroundColor(.gray)
+                        .font(AppTheme.bodyFont)
+                        .foregroundColor(AppTheme.secondaryColor)
                 }
             }
-            .navigationTitle("Blocked Users")
-            .navigationBarItems(trailing: Button("Done") {
-                // Dismiss view if presented modally.
-            })
+            .scrollContentBackground(.hidden)
+            .listStyle(PlainListStyle())
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Blocked Users")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        // Dismiss view if presented modally.
+                    }
+                }
+            }
         }
     }
 }

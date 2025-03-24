@@ -1,9 +1,3 @@
-//
-//  MessageBubble.swift
-//  CollegePads
-//
-//  Updated to include support for emoji reactions and use AppTheme for message bubble colors.
-//
 import SwiftUI
 
 struct MessageBubble: View {
@@ -32,7 +26,7 @@ struct MessageBubble: View {
             }
             if isCurrentUser, let isRead = message.isRead, isRead {
                 Text("Read")
-                    .font(.caption)
+                    .font(AppTheme.bodyFont)
                     .foregroundColor(AppTheme.accentColor)
                     .padding(.trailing, 8)
             }
@@ -41,7 +35,7 @@ struct MessageBubble: View {
                     ForEach(reactions.keys.sorted(), id: \.self) { emoji in
                         let count = reactions[emoji] ?? 0
                         Text("\(emoji) \(count)")
-                            .font(.caption2)
+                            .font(AppTheme.bodyFont)
                             .padding(4)
                             .background(AppTheme.secondaryColor.opacity(0.2))
                             .cornerRadius(4)

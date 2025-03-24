@@ -1,12 +1,3 @@
-//
-//  AllMatchesView.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date]
-//
-//  This view displays a full list of all matches. It uses the MatchesDashboardViewModel
-//  to fetch matches and displays them in a list. Tapping a match navigates to the candidate’s profile.
-
 import SwiftUI
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
@@ -15,21 +6,37 @@ import Combine
 
 struct AllMatchesView: View {
     @StateObject private var viewModel = MatchesDashboardViewModel()
-
+    
     var body: some View {
-        NavigationView {
+        ZStack {
+            // Global background gradient.
+            AppTheme.backgroundGradient.ignoresSafeArea()
+            
+            // Remove inner NavigationView for consistent background.
             List(viewModel.matches) { match in
+                // Create participant text.
+                let participantText = match.participants.filter { $0 != viewModel.currentUserID }.joined(separator: ", ")
+                
                 NavigationLink(destination: CandidateProfileView(candidateID: candidateID(for: match))) {
-                    VStack(alignment: .leading) {
-                        Text("Match with: \(match.participants.filter { $0 != viewModel.currentUserID }.joined(separator: ", "))")
-                            .font(.headline)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Match with: \(participantText)")
+                            .font(AppTheme.bodyFont)
                         Text("Matched on: \(match.createdAt, formatter: dateFormatter)")
-                            .font(.caption)
-                            .foregroundColor(.gray)
+                            .font(AppTheme.bodyFont)
+                            .foregroundColor(AppTheme.secondaryColor)
                     }
+                    .padding(.vertical, 4)
                 }
             }
-            .navigationTitle("All Matches")
+            .listStyle(PlainListStyle())
+            .scrollContentBackground(.hidden)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("All Matches")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
+            }
             .onAppear {
                 viewModel.loadMatches()
             }

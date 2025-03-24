@@ -1,9 +1,3 @@
-//
-//  ProfileComparisonView.swift
-//  CollegePads
-//
-//  Updated to use global theme fonts and colors for a consistent UI.
-//
 import SwiftUI
 
 struct ProfileComparisonView: View {
@@ -28,8 +22,12 @@ struct ProfileComparisonView: View {
                     ComparisonRow(field: "Interests", currentValue: current.interests?.joined(separator: ", "), candidateValue: candidate.interests?.joined(separator: ", "))
                 }
                 .listStyle(InsetGroupedListStyle())
-                .navigationTitle("Profile Comparison")
                 .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Text("Profile Comparison")
+                            .font(AppTheme.titleFont)
+                            .foregroundColor(.primary)
+                    }
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Done") {
                             // Dismiss action handled by parent view.
@@ -38,6 +36,7 @@ struct ProfileComparisonView: View {
                 }
             } else {
                 ProgressView("Loading Your Profile...")
+                    .font(AppTheme.bodyFont)
             }
         }
     }

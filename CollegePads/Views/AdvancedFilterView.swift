@@ -24,7 +24,10 @@ struct AdvancedFilterView: View {
     }
     
     var body: some View {
-        NavigationView {
+        ZStack {
+            // Global background from AppTheme.
+            AppTheme.backgroundGradient.ignoresSafeArea()
+            
             VStack {
                 Form {
                     Section(header: Text("Filter Criteria")
@@ -45,7 +48,7 @@ struct AdvancedFilterView: View {
                             }
                         }
                         
-                        // Lease Duration Picker (using filterBudgetRange as placeholder—consider using a dedicated property)
+                        // Lease Duration Picker (using filterBudgetRange as placeholder)
                         Picker("Lease Duration", selection: $viewModel.filterBudgetRange) {
                             Text("All").tag("")
                             ForEach(leaseDurations, id: \.self) { duration in
@@ -56,12 +59,10 @@ struct AdvancedFilterView: View {
                         // Interests Text Field
                         TextField("Interests (comma-separated)", text: $viewModel.filterInterests)
                             .autocapitalization(.none)
-                            .font(AppTheme.bodyFont)
                         
                         // Maximum Distance Slider
                         VStack {
                             Text("Max Distance: \(Int(viewModel.maxDistance)) km")
-                                .font(AppTheme.bodyFont)
                             Slider(value: $viewModel.maxDistance, in: 1...50, step: 1)
                         }
                     }
@@ -75,32 +76,45 @@ struct AdvancedFilterView: View {
                         EmptyView()
                     }
                 }
+                // Hide Form's default background and apply global font style.
+                .scrollContentBackground(.hidden)
+                .font(AppTheme.bodyFont)
                 
                 // Filtered matches list.
                 List(viewModel.filteredUsers) { user in
                     VStack(alignment: .leading) {
                         Text(user.email)
-                            .font(.headline)
+                            .font(AppTheme.bodyFont)
                         if let grade = user.gradeLevel {
                             Text("Grade: \(grade)")
-                                .font(.subheadline)
+                                .font(AppTheme.bodyFont)
                         }
                         if let housing = user.housingStatus {
                             Text("Housing: \(housing)")
-                                .font(.subheadline)
+                                .font(AppTheme.bodyFont)
                         }
                         if let interests = user.interests {
                             Text("Interests: \(interests.joined(separator: ", "))")
-                                .font(.footnote)
+                                .font(AppTheme.bodyFont)
                                 .foregroundColor(AppTheme.secondaryColor)
                         }
                     }
                 }
                 .listStyle(PlainListStyle())
             }
-            .navigationTitle("Advanced Filters")
             .alert(item: alertBinding) { alertError in
-                Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
+                Alert(title: Text("Error"),
+                      message: Text(alertError.message),
+                      dismissButton: .default(Text("OK")))
+            }
+            // Instead of using the default navigationTitle modifier,
+            // use a toolbar item to style the navigation title.
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Advanced Filters")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
             }
         }
     }

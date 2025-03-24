@@ -1,10 +1,3 @@
-//
-//  ListingsView.swift
-//  CollegePads
-//
-//  Updated to use the global background gradient and theme typography for map and list views.
-//  Hardcoded color references have been replaced with theme-based colors.
-//
 import SwiftUI
 import MapKit
 
@@ -92,9 +85,16 @@ struct ListingsView: View {
                     .padding(.vertical, 4)
                 }
                 .listStyle(PlainListStyle())
+                .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Listings")
             .background(AppTheme.backgroundGradient.ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Listings")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
+            }
             .onAppear {
                 viewModel.fetchListings()
             }

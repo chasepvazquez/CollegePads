@@ -1,12 +1,3 @@
-//
-//  GlobalSearchView.swift
-//  CollegePads
-//
-//  This view presents the Global Search interface using the global theme.
-//  Users can enter a search query, choose between "Users" or "Listings", and view matching results.
-//  Tapping "Search" or pressing return in the text field triggers the search.
-//
-
 import SwiftUI
 
 struct GlobalSearchView: View {
@@ -73,13 +64,19 @@ struct GlobalSearchView: View {
                         }
                     }
                     .listStyle(PlainListStyle())
+                    .scrollContentBackground(.hidden)
                 }
                 
                 Spacer()
             }
+            .font(AppTheme.bodyFont)
             .background(AppTheme.backgroundGradient.ignoresSafeArea())
-            .navigationTitle("Global Search")
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Global Search")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Search") {
                         viewModel.performSearch()

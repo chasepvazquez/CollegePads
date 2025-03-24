@@ -1,34 +1,34 @@
-//
-//  AuthenticationView.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-
 import SwiftUI
 
 struct AuthenticationView: View {
     @State private var showSignIn: Bool = true
     
     var body: some View {
-        NavigationView {
-            VStack {
-                Picker("Authentication", selection: $showSignIn) {
-                    Text("Sign In").tag(true)
-                    Text("Sign Up").tag(false)
+        ZStack {
+            // Global background from your theme.
+            AppTheme.backgroundGradient.ignoresSafeArea()
+            
+            NavigationView {
+                VStack {
+                    Picker("Authentication", selection: $showSignIn) {
+                        Text("Sign In").tag(true)
+                        Text("Sign Up").tag(false)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding()
+                    
+                    if showSignIn {
+                        SignInView()
+                    } else {
+                        SignUpView()
+                    }
+                    
+                    Spacer()
                 }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding()
-                
-                if showSignIn {
-                    SignInView()
-                } else {
-                    SignUpView()
-                }
-                
-                Spacer()
+                // Apply the theme font globally to the content.
+                .font(AppTheme.bodyFont)
+                .navigationBarHidden(true)
             }
-            .navigationBarHidden(true)
         }
     }
 }

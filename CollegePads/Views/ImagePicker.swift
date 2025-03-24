@@ -1,10 +1,3 @@
-//
-//  ImagePicker.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-
 import SwiftUI
 import PhotosUI
 

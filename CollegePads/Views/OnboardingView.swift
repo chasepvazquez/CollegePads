@@ -13,7 +13,7 @@ struct OnboardingView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Global background gradient from your theme.
+                // Global background gradient
                 AppTheme.backgroundGradient
                     .ignoresSafeArea()
                 
@@ -84,7 +84,13 @@ struct OnboardingView: View {
                     }
                     .padding(.horizontal)
                 }
-                .navigationTitle("Onboarding")
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        Text("Onboarding")
+                            .font(AppTheme.titleFont)
+                            .foregroundColor(.primary)
+                    }
+                }
             }
         }
     }

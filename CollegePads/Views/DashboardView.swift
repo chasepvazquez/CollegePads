@@ -80,7 +80,13 @@ struct DashboardView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Dashboard")
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Dashboard")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
+            }
             .onAppear {
                 matchingVM.fetchPotentialMatches()
             }

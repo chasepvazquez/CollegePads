@@ -1,10 +1,3 @@
-//
-//  ReportUserView.swift
-//  CollegePads
-//
-//  Updated to add a progress indicator during submission and improved button states,
-//  replacing hardcoded color calls with AppTheme values.
-//
 import SwiftUI
 
 struct ReportUserView: View {
@@ -18,7 +11,8 @@ struct ReportUserView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Report User")) {
+                Section(header: Text("Report User")
+                            .font(AppTheme.subtitleFont)) {
                     Text("Please provide a brief explanation of why you are reporting this user.")
                         .font(AppTheme.bodyFont)
                     TextEditor(text: $reason)
@@ -47,10 +41,20 @@ struct ReportUserView: View {
                     .accessibilityLabel("Submit Report Button")
                 }
             }
-            .navigationTitle("Report User")
-            .navigationBarItems(trailing: Button("Cancel") {
-                presentationMode.wrappedValue.dismiss()
-            })
+            .scrollContentBackground(.hidden)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Report User")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                    .font(AppTheme.bodyFont)
+                }
+            }
             .alert(item: Binding(
                 get: {
                     if let errorMessage = viewModel.errorMessage {

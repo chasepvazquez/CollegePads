@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  CollegePads
-//
-//  Created by Chase Vazquez on 3/6/25.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -18,8 +11,10 @@ struct ContentView: View {
                 ForEach(items) { item in
                     NavigationLink {
                         Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
+                            .font(AppTheme.bodyFont)
                     } label: {
                         Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+                            .font(AppTheme.bodyFont)
                     }
                 }
                 .onDelete(perform: deleteItems)
@@ -27,20 +22,24 @@ struct ContentView: View {
 #if os(macOS)
             .navigationSplitViewColumnWidth(min: 180, ideal: 200)
 #endif
+            .scrollContentBackground(.hidden)
             .toolbar {
 #if os(iOS)
                 ToolbarItem(placement: .navigationBarTrailing) {
                     EditButton()
+                        .font(AppTheme.bodyFont)
                 }
 #endif
                 ToolbarItem {
                     Button(action: addItem) {
                         Label("Add Item", systemImage: "plus")
                     }
+                    .font(AppTheme.bodyFont)
                 }
             }
         } detail: {
             Text("Select an item")
+                .font(AppTheme.bodyFont)
         }
     }
 

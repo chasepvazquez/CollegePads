@@ -1,10 +1,3 @@
-//
-//  SwipeDeckView.swift
-//  CollegePads
-//
-//  Updated to refine swipe animations using interactive spring and improved haptics
-//
-
 import SwiftUI
 
 struct SwipeDeckView: View {
@@ -15,7 +8,7 @@ struct SwipeDeckView: View {
         ZStack {
             if viewModel.potentialMatches.isEmpty {
                 Text("No more matches")
-                    .font(.title)
+                    .font(AppTheme.titleFont)
             } else {
                 ForEach(viewModel.potentialMatches.indices.reversed(), id: \.self) { index in
                     if index >= currentIndex {

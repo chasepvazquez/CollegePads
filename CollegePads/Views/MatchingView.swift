@@ -3,20 +3,22 @@ import SwiftUI
 struct MatchingView: View {
     var body: some View {
         ZStack {
-            // Global background gradient from your theme.
-            AppTheme.backgroundGradient
-                .ignoresSafeArea()
-            
+            AppTheme.backgroundGradient.ignoresSafeArea()
             SwipeDeckView()
         }
-        .navigationTitle("Swipe to Match")
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("Swipe to Match")
+                    .font(AppTheme.titleFont)
+                    .foregroundColor(.primary)
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
-                    // Optional refresh action
+                    // Optional refresh action.
                 }) {
                     Image(systemName: "arrow.clockwise")
                 }
+                .font(AppTheme.bodyFont)
             }
         }
     }
