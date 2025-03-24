@@ -25,90 +25,101 @@ struct AdvancedFilterView: View {
     
     var body: some View {
         ZStack {
-            // Global background from AppTheme.
+            // Global background gradient.
             AppTheme.backgroundGradient.ignoresSafeArea()
             
-            VStack {
-                Form {
-                    Section(header: Text("Filter Criteria")
-                                .font(AppTheme.subtitleFont)) {
-                        // Grade Group Picker
-                        Picker("Grade Group", selection: $viewModel.filterGradeGroup) {
-                            Text("All").tag("")
-                            ForEach(gradeLevels, id: \.self) { level in
-                                Text(level).tag(level)
-                            }
-                        }
-                        
-                        // Housing Status Picker
-                        Picker("Housing Status", selection: $viewModel.filterHousingStatus) {
-                            Text("All").tag("")
-                            ForEach(housingStatuses, id: \.self) { status in
-                                Text(status).tag(status)
-                            }
-                        }
-                        
-                        // Lease Duration Picker (using filterBudgetRange as placeholder)
-                        Picker("Lease Duration", selection: $viewModel.filterBudgetRange) {
-                            Text("All").tag("")
-                            ForEach(leaseDurations, id: \.self) { duration in
-                                Text(duration).tag(duration)
-                            }
-                        }
-                        
-                        // Interests Text Field
-                        TextField("Interests (comma-separated)", text: $viewModel.filterInterests)
-                            .autocapitalization(.none)
-                        
-                        // Maximum Distance Slider
-                        VStack {
-                            Text("Max Distance: \(Int(viewModel.maxDistance)) km")
-                            Slider(value: $viewModel.maxDistance, in: 1...50, step: 1)
+            // Single List containing all sections (filter form + filtered results).
+            List {
+                // SECTION 1: Filter Criteria
+                Section(header: Text("Filter Criteria")
+                            .font(AppTheme.subtitleFont)) {
+                    
+                    // Grade Group Picker
+                    Picker("Grade Group", selection: $viewModel.filterGradeGroup) {
+                        Text("All").tag("")
+                        ForEach(gradeLevels, id: \.self) { level in
+                            Text(level).tag(level)
                         }
                     }
                     
-                    Section {
-                        Button("Apply Filters") {
-                            viewModel.applyFilters(currentLocation: locationManager.currentLocation)
+                    // Housing Status Picker
+                    Picker("Housing Status", selection: $viewModel.filterHousingStatus) {
+                        Text("All").tag("")
+                        ForEach(housingStatuses, id: \.self) { status in
+                            Text(status).tag(status)
                         }
-                        .buttonStyle(PrimaryButtonStyle())
-                    } header: {
-                        EmptyView()
                     }
-                }
-                // Hide Form's default background and apply global font style.
-                .scrollContentBackground(.hidden)
-                .font(AppTheme.bodyFont)
-                
-                // Filtered matches list.
-                List(viewModel.filteredUsers) { user in
+                    
+                    // Lease Duration Picker
+                    Picker("Lease Duration", selection: $viewModel.filterBudgetRange) {
+                        Text("All").tag("")
+                        ForEach(leaseDurations, id: \.self) { duration in
+                            Text(duration).tag(duration)
+                        }
+                    }
+                    
+                    // Interests Text Field
+                    TextField("Interests (comma-separated)", text: $viewModel.filterInterests)
+                        .autocapitalization(.none)
+                    
+                    // Maximum Distance Slider
                     VStack(alignment: .leading) {
-                        Text(user.email)
-                            .font(AppTheme.bodyFont)
-                        if let grade = user.gradeLevel {
-                            Text("Grade: \(grade)")
-                                .font(AppTheme.bodyFont)
-                        }
-                        if let housing = user.housingStatus {
-                            Text("Housing: \(housing)")
-                                .font(AppTheme.bodyFont)
-                        }
-                        if let interests = user.interests {
-                            Text("Interests: \(interests.joined(separator: ", "))")
-                                .font(AppTheme.bodyFont)
-                                .foregroundColor(AppTheme.secondaryColor)
-                        }
+                        Text("Max Distance: \(Int(viewModel.maxDistance)) km")
+                        Slider(value: $viewModel.maxDistance, in: 1...50, step: 1)
                     }
                 }
-                .listStyle(PlainListStyle())
+                
+                // SECTION 2: Apply Filters Button
+                Section {
+                    Button("Apply Filters") {
+                        viewModel.applyFilters(currentLocation: locationManager.currentLocation)
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                }
+                
+                // SECTION 3: Filtered Matches
+                if !viewModel.filteredUsers.isEmpty {
+                    Section(header: Text("Filtered Users")
+                                .font(AppTheme.subtitleFont)) {
+                        ForEach(viewModel.filteredUsers) { user in
+                            VStack(alignment: .leading) {
+                                Text(user.email)
+                                    .font(AppTheme.bodyFont)
+                                if let grade = user.gradeLevel {
+                                    Text("Grade: \(grade)")
+                                        .font(AppTheme.bodyFont)
+                                }
+                                if let housing = user.housingStatus {
+                                    Text("Housing: \(housing)")
+                                        .font(AppTheme.bodyFont)
+                                }
+                                if let interests = user.interests {
+                                    Text("Interests: \(interests.joined(separator: ", "))")
+                                        .font(AppTheme.bodyFont)
+                                        .foregroundColor(AppTheme.secondaryColor)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                } else {
+                    // If no users found, show an empty state (optional).
+                    Section {
+                        Text("No users found with current filters.")
+                            .font(AppTheme.bodyFont)
+                            .foregroundColor(.gray)
+                    }
+                }
             }
+            // Hide the default list background so your gradient shows through.
+            .scrollContentBackground(.hidden)
+            .listStyle(InsetGroupedListStyle()) // or PlainListStyle, if you prefer.
+            .font(AppTheme.bodyFont)
             .alert(item: alertBinding) { alertError in
                 Alert(title: Text("Error"),
                       message: Text(alertError.message),
                       dismissButton: .default(Text("OK")))
             }
-            // Instead of using the default navigationTitle modifier,
-            // use a toolbar item to style the navigation title.
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("Advanced Filters")
