@@ -129,7 +129,7 @@ struct AdvancedFilterView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Advanced Filters")
+                    Text("Advanced Search")
                         .font(AppTheme.titleFont)
                         .foregroundColor(.primary)
                 }

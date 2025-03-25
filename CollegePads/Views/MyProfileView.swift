@@ -320,12 +320,24 @@ struct MyProfileView: View {
                 .cornerRadius(AppTheme.defaultCornerRadius)
                 .onChange(of: budgetRange) { _ in autoSaveProfile() }
             
-            Picker("Cleanliness (1-5)", selection: $cleanliness) {
+            Picker("Cleanliness (1=Very Messy, 5=Very Tidy)", selection: $cleanliness) {
                 ForEach(1..<6) { number in
-                    Text("\(number)").tag(number)
+                    Text({
+                        switch number {
+                        case 1: return "1 - Very Messy"
+                        case 2: return "2 - Messy"
+                        case 3: return "3 - Average"
+                        case 4: return "4 - Tidy"
+                        case 5: return "5 - Very Tidy"
+                        default: return "\(number)"
+                        }
+                    }())
+                    .tag(number)
                 }
             }
-            .onChange(of: cleanliness) { _ in autoSaveProfile() }
+            .onChange(of: cleanliness) { _ in
+                autoSaveProfile()
+            }
             
             Picker("Sleep Schedule", selection: $sleepSchedule) {
                 ForEach(sleepScheduleOptions, id: \.self) { option in
