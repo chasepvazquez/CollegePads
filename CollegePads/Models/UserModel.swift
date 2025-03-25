@@ -1,10 +1,3 @@
-//
-//  UserModel.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-
 import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
@@ -38,8 +31,9 @@ struct UserModel: Codable, Identifiable {
     var interests: [String]?
 
     // Profile Picture & Location
-    var profileImageUrl: String?
-    var location: GeoPoint? // NEW: Single field for location
+    var profileImageUrl: String?          // Legacy single image (fallback)
+    var profileImageUrls: [String]?         // New: Array for multiple images (max 10)
+    var location: GeoPoint?               // NEW: User location
 
     // Verification Fields
     var isVerified: Bool?
@@ -70,7 +64,8 @@ struct UserModel: Codable, Identifiable {
         studyHabits: Int? = nil,
         interests: [String]? = nil,
         profileImageUrl: String? = nil,
-        location: GeoPoint? = nil, // NEW
+        profileImageUrls: [String]? = nil,
+        location: GeoPoint? = nil,
         isVerified: Bool? = false,
         verificationImageUrl: String? = nil,
         blockedUserIDs: [String]? = nil,
@@ -95,6 +90,7 @@ struct UserModel: Codable, Identifiable {
         self.studyHabits = studyHabits
         self.interests = interests
         self.profileImageUrl = profileImageUrl
+        self.profileImageUrls = profileImageUrls
         self.location = location
         self.isVerified = isVerified
         self.verificationImageUrl = verificationImageUrl

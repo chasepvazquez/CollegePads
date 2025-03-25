@@ -1,20 +1,14 @@
-//
-//  ProfileViewModel.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-//  This ViewModel manages the current user's profile data, including extended fields
-//  such as housingStatus and leaseDuration. It also provides a helper to remove blocked users.
 import Foundation
 import FirebaseFirestore
 import FirebaseAuth
+import FirebaseStorage
 import FirebaseFirestoreCombineSwift
 import Combine
 
 class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
+    
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
     
@@ -72,6 +66,34 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
+    /// Uploads a profile image to Firebase Storage, returning a download URL on success.
+    func uploadProfileImage(image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
+        guard let uid = userID,
+              let imageData = image.jpegData(compressionQuality: 0.8) else {
+            completion(.failure(NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid user or image data."])))
+            return
+        }
+        
+        let storageRef = Storage.storage().reference().child("profileImages/\(uid)_\(UUID().uuidString).jpg")
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        
+        storageRef.putData(imageData, metadata: metadata) { _, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+            storageRef.downloadURL { url, error in
+                if let error = error {
+                    completion(.failure(error))
+                } else if let downloadURL = url?.absoluteString {
+                    completion(.success(downloadURL))
+                }
+            }
+        }
+    }
+    
+    // e.g., removeBlockedUser(...) remains unchanged.
     func removeBlockedUser(with uid: String) {
         if var blocked = userProfile?.blockedUserIDs {
             blocked.removeAll { $0 == uid }

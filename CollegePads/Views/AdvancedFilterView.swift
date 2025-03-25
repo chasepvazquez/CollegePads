@@ -41,6 +41,9 @@ struct AdvancedFilterView: View {
                             Text(level).tag(level)
                         }
                     }
+                    .onChange(of: viewModel.filterGradeGroup) { _ in
+                        autoApplyAndSave()
+                    }
                     
                     // Housing Status Picker
                     Picker("Housing Status", selection: $viewModel.filterHousingStatus) {
@@ -48,6 +51,9 @@ struct AdvancedFilterView: View {
                         ForEach(housingStatuses, id: \.self) { status in
                             Text(status).tag(status)
                         }
+                    }
+                    .onChange(of: viewModel.filterHousingStatus) { _ in
+                        autoApplyAndSave()
                     }
                     
                     // Lease Duration Picker
@@ -57,27 +63,28 @@ struct AdvancedFilterView: View {
                             Text(duration).tag(duration)
                         }
                     }
+                    .onChange(of: viewModel.filterBudgetRange) { _ in
+                        autoApplyAndSave()
+                    }
                     
                     // Interests Text Field
                     TextField("Interests (comma-separated)", text: $viewModel.filterInterests)
                         .autocapitalization(.none)
+                        .onChange(of: viewModel.filterInterests) { _ in
+                            autoApplyAndSave()
+                        }
                     
                     // Maximum Distance Slider
                     VStack(alignment: .leading) {
                         Text("Max Distance: \(Int(viewModel.maxDistance)) km")
                         Slider(value: $viewModel.maxDistance, in: 1...50, step: 1)
+                            .onChange(of: viewModel.maxDistance) { _ in
+                                autoApplyAndSave()
+                            }
                     }
                 }
                 
-                // SECTION 2: Apply Filters Button
-                Section {
-                    Button("Apply Filters") {
-                        viewModel.applyFilters(currentLocation: locationManager.currentLocation)
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                }
-                
-                // SECTION 3: Filtered Matches
+                // SECTION 2: Filtered Matches
                 if !viewModel.filteredUsers.isEmpty {
                     Section(header: Text("Filtered Users")
                                 .font(AppTheme.subtitleFont)) {
@@ -113,7 +120,7 @@ struct AdvancedFilterView: View {
             }
             // Hide the default list background so your gradient shows through.
             .scrollContentBackground(.hidden)
-            .listStyle(InsetGroupedListStyle()) // or PlainListStyle, if you prefer.
+            .listStyle(InsetGroupedListStyle())
             .font(AppTheme.bodyFont)
             .alert(item: alertBinding) { alertError in
                 Alert(title: Text("Error"),
@@ -128,6 +135,21 @@ struct AdvancedFilterView: View {
                 }
             }
         }
+        .onAppear {
+            // Optionally load saved filters from Firestore (if you want them to persist).
+            viewModel.loadFiltersFromUserDoc {
+                // Once loaded, apply filters automatically.
+                viewModel.applyFilters(currentLocation: locationManager.currentLocation)
+            }
+        }
+    }
+    
+    // Called whenever a filter changes.
+    private func autoApplyAndSave() {
+        // 1) Apply filters to see immediate results.
+        viewModel.applyFilters(currentLocation: locationManager.currentLocation)
+        // 2) Save filters to Firestore so they persist across sessions.
+        viewModel.saveFiltersToUserDoc()
     }
 }
 

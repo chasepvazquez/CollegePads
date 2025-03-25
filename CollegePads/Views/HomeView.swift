@@ -10,26 +10,57 @@ struct HomeView: View {
                     .font(AppTheme.titleFont)
                     .foregroundColor(.primary)
                 
-                // Navigate to Profile Setup
-                NavigationLink(destination: ProfileSetupView()) {
-                    Text("Setup / Update Profile")
+                // Profile Icon: Displays the current user's profile picture.
+                NavigationLink(destination: MyProfileView()) {
+                                    if let profileImageUrl = ProfileViewModel.shared.userProfile?.profileImageUrl,
+                                       let url = URL(string: profileImageUrl) {
+                                        AsyncImage(url: url) { phase in
+                                            if let image = phase.image {
+                                                image
+                                                    .resizable()
+                                                    .aspectRatio(contentMode: .fill)
+                                                    .frame(width: 70, height: 70)
+                                                    .clipShape(Circle())
+                                                    .overlay(Circle().stroke(AppTheme.primaryColor, lineWidth: 2))
+                                            } else {
+                                                Image(systemName: "person.crop.circle")
+                                                    .resizable()
+                                                    .frame(width: 70, height: 70)
+                                            }
+                                        }
+                                    } else {
+                                        Image(systemName: "person.crop.circle")
+                                            .resizable()
+                                            .frame(width: 70, height: 70)
+                    }
                 }
-                .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
+                .padding()
                 
-                // Navigate to Advanced Search
+                // Navigation to Advanced Search
                 NavigationLink(destination: AdvancedFilterView()) {
                     Text("Advanced Search")
+                        .font(AppTheme.bodyFont)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(AppTheme.accentColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(AppTheme.defaultCornerRadius)
                 }
-                .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.accentColor))
                 
-                // Navigate to Settings
+                // Navigation to Settings
                 NavigationLink(destination: SettingsView().environmentObject(AuthViewModel())) {
                     Text("Settings")
+                        .font(AppTheme.bodyFont)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(AppTheme.secondaryColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(AppTheme.defaultCornerRadius)
                 }
-                .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.secondaryColor))
+                
+                Spacer()
             }
             .padding()
-            .font(AppTheme.bodyFont)
         }
         .toolbar {
             ToolbarItem(placement: .principal) {

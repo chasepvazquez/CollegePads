@@ -32,6 +32,7 @@ struct CandidateProfileView: View {
                                                 .frame(width: 150, height: 150)
                                                 .clipShape(Circle())
                                                 .overlay(Circle().stroke(AppTheme.primaryColor, lineWidth: 4))
+                                                .shadow(radius: 4)
                                         } else {
                                             Image(systemName: "person.crop.circle")
                                                 .resizable()
@@ -46,7 +47,7 @@ struct CandidateProfileView: View {
                                 
                                 if let verified = candidate.isVerified, verified {
                                     Text("✓ Verified")
-                                        .font(AppTheme.bodyFont) // Replaced captionFont with bodyFont
+                                        .font(AppTheme.bodyFont)
                                         .foregroundColor(.white)
                                         .padding(4)
                                         .background(AppTheme.primaryColor.opacity(0.8))
@@ -58,7 +59,7 @@ struct CandidateProfileView: View {
                             // Candidate Details Card
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(candidate.email)
-                                    .font(AppTheme.bodyFont) // Replacing headlineFont with bodyFont
+                                    .font(AppTheme.bodyFont)
                                 if let grade = candidate.gradeLevel {
                                     Text("Grade: \(grade)")
                                         .font(AppTheme.bodyFont)
@@ -112,7 +113,9 @@ struct CandidateProfileView: View {
                             }
                             .padding()
                             
-                            // Common Interests Section (Simplified)
+                            Divider()
+                            
+                            // Common Interests Section
                             if let currentUser = ProfileViewModel.shared.userProfile,
                                let candidateInterests = candidate.interests,
                                let currentInterests = currentUser.interests {
