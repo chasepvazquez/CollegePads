@@ -1,9 +1,9 @@
 import SwiftUI
-import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
 import Combine
 import CoreLocation
+import FirebaseAuth
 
 class AdvancedFilterViewModel: ObservableObject {
     // Filter fields
@@ -14,6 +14,10 @@ class AdvancedFilterViewModel: ObservableObject {
     @Published var filterGradeGroup: String = ""
     @Published var filterInterests: String = ""
     @Published var maxDistance: Double = 10.0 // in kilometers
+    
+    // NEW: Additional filter properties for gender and age difference.
+    @Published var filterPreferredGender: String = ""
+    @Published var maxAgeDifference: Double = 0.0
     
     // Filter results and errors
     @Published var filteredUsers: [UserModel] = []
@@ -58,14 +62,12 @@ class AdvancedFilterViewModel: ObservableObject {
                         case "freshman":
                             return grade == "freshman"
                         case "underclassmen":
-                            // Adjust logic for underclassmen (e.g., "freshman" or "sophomore")
                             return grade == "freshman" || grade == "sophomore"
                         case "upperclassmen":
                             return grade == "junior" || grade == "senior"
                         case "graduate":
                             return grade == "graduate"
                         default:
-                            // If none of the above, skip or accept?
                             return true
                         }
                     }
@@ -83,7 +85,6 @@ class AdvancedFilterViewModel: ObservableObject {
                     interestsFiltered = gradeFiltered.filter { user in
                         guard let userInterests = user.interests else { return false }
                         let lowerUserInterests = userInterests.map { $0.lowercased() }
-                        // Must share at least one interest
                         return !Set(keywords).intersection(lowerUserInterests).isEmpty
                     }
                 } else {
@@ -96,7 +97,7 @@ class AdvancedFilterViewModel: ObservableObject {
                     locationFiltered = interestsFiltered.filter { user in
                         guard let geoPoint = user.location else { return true }
                         let userLocation = CLLocation(latitude: geoPoint.latitude, longitude: geoPoint.longitude)
-                        let distance = currentLocation.distance(from: userLocation) / 1000.0 // convert to km
+                        let distance = currentLocation.distance(from: userLocation) / 1000.0
                         return distance <= self.maxDistance
                     }
                 } else {
@@ -119,13 +120,6 @@ class AdvancedFilterViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    /// Optionally, if you have a list of matches you want to display without a query
-    func loadMatches(matches: [UserModel]) {
-        self.filteredUsers = matches
-    }
-    
-    // MARK: - Filter Persistence (Optional)
-    
     /// Saves the current filter fields to the Firestore user document so they're remembered.
     func saveFiltersToUserDoc() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
@@ -138,7 +132,9 @@ class AdvancedFilterViewModel: ObservableObject {
             "filterBudgetRange": filterBudgetRange,
             "filterGradeGroup": filterGradeGroup,
             "filterInterests": filterInterests,
-            "filterMaxDistance": maxDistance
+            "filterMaxDistance": maxDistance,
+            "filterPreferredGender": filterPreferredGender,
+            "maxAgeDifference": maxAgeDifference
         ]
         
         docRef.setData(data, merge: true) { error in
@@ -151,7 +147,6 @@ class AdvancedFilterViewModel: ObservableObject {
     }
     
     /// Loads previously saved filter fields from the Firestore user document, if any.
-    /// - Parameter completion: A closure called after loading finishes, so you can trigger applyFilters.
     func loadFiltersFromUserDoc(completion: @escaping () -> Void = {}) {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion()
@@ -160,7 +155,7 @@ class AdvancedFilterViewModel: ObservableObject {
         let docRef = db.collection("users").document(uid)
         
         docRef.getDocument { snapshot, error in
-            defer { completion() }  // Always call completion
+            defer { completion() }
             
             if let error = error {
                 DispatchQueue.main.async {
@@ -178,6 +173,8 @@ class AdvancedFilterViewModel: ObservableObject {
                 self.filterGradeGroup = data["filterGradeGroup"] as? String ?? ""
                 self.filterInterests = data["filterInterests"] as? String ?? ""
                 self.maxDistance = data["filterMaxDistance"] as? Double ?? 10.0
+                self.filterPreferredGender = data["filterPreferredGender"] as? String ?? ""
+                self.maxAgeDifference = data["maxAgeDifference"] as? Double ?? 0.0
             }
         }
     }

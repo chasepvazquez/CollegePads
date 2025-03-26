@@ -5,6 +5,8 @@ import FirebaseStorage
 import FirebaseFirestoreCombineSwift
 import Combine
 
+/// ViewModel that manages the user profile data stored in Firestore.
+/// It now supports new fields: firstName, lastName, dateOfBirth, and gender.
 class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
@@ -18,6 +20,7 @@ class ProfileViewModel: ObservableObject {
         Auth.auth().currentUser?.uid
     }
     
+    /// Loads the user profile from Firestore, including new fields (firstName, lastName, dateOfBirth, gender).
     func loadUserProfile() {
         guard let uid = userID else {
             self.errorMessage = "User not authenticated"
@@ -45,6 +48,8 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
+    /// Updates the user profile in Firestore. This method automatically writes all fields,
+    /// including the new fields: firstName, lastName, dateOfBirth, and gender.
     func updateUserProfile(updatedProfile: UserModel, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = userID else {
             completion(.failure(NSError(domain: "ProfileUpdate", code: 0, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])))
@@ -66,7 +71,10 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
-    /// Uploads a profile image to Firebase Storage, returning a download URL on success.
+    /// Uploads a profile image to Firebase Storage.
+    /// - Parameters:
+    ///   - image: The UIImage to upload.
+    ///   - completion: Returns a download URL string on success.
     func uploadProfileImage(image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
         guard let uid = userID,
               let imageData = image.jpegData(compressionQuality: 0.8) else {
@@ -93,7 +101,7 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
-    // e.g., removeBlockedUser(...) remains unchanged.
+    /// Removes a blocked user ID from the user profile.
     func removeBlockedUser(with uid: String) {
         if var blocked = userProfile?.blockedUserIDs {
             blocked.removeAll { $0 == uid }

@@ -9,6 +9,8 @@ struct AdvancedFilterView: View {
     let gradeLevels = ["Freshman", "Underclassmen", "Upperclassmen", "Graduate"]
     let housingStatuses = ["Dorm Resident", "Apartment Resident", "House Owner/Renter", "Subleasing", "Looking for Roommate", "Looking for Lease", "Other"]
     let leaseDurations = ["Current Lease", "Short Term (<6 months)", "Medium Term (6-12 months)", "Long Term (1 year+)", "Future: Next Year", "Future: 2+ Years", "Not Applicable"]
+    // New options for Preferred Gender filter.
+    let preferredGenders = ["Any", "Male", "Female", "Other"]
     
     // Alert binding.
     private var alertBinding: Binding<GenericAlertError?> {
@@ -19,21 +21,19 @@ struct AdvancedFilterView: View {
                 }
                 return nil
             },
-            set: { _ in viewModel.errorMessage = nil }
+            set: { (newValue: GenericAlertError?) in
+                viewModel.errorMessage = newValue?.message
+            }
         )
     }
     
     var body: some View {
         ZStack {
-            // Global background gradient.
             AppTheme.backgroundGradient.ignoresSafeArea()
             
-            // Single List containing all sections (filter form + filtered results).
             List {
                 // SECTION 1: Filter Criteria
-                Section(header: Text("Filter Criteria")
-                            .font(AppTheme.subtitleFont)) {
-                    
+                Section {
                     // Grade Group Picker
                     Picker("Grade Group", selection: $viewModel.filterGradeGroup) {
                         Text("All").tag("")
@@ -82,16 +82,44 @@ struct AdvancedFilterView: View {
                                 autoApplyAndSave()
                             }
                     }
+                    
+                    // Preferred Roommate Gender Picker
+                    Picker("Preferred Gender", selection: $viewModel.filterPreferredGender) {
+                        ForEach(preferredGenders, id: \.self) { gender in
+                            Text(gender).tag(gender)
+                        }
+                    }
+                    .onChange(of: viewModel.filterPreferredGender) { _ in
+                        autoApplyAndSave()
+                    }
+                    
+                    // Maximum Age Difference Slider
+                    VStack(alignment: .leading) {
+                        Text("Max Age Difference: \(Int(viewModel.maxAgeDifference)) years")
+                        Slider(value: $viewModel.maxAgeDifference, in: 0...10, step: 1)
+                            .onChange(of: viewModel.maxAgeDifference) { _ in
+                                autoApplyAndSave()
+                            }
+                    }
+                } header: {
+                    Text("Filter Criteria")
+                        .font(AppTheme.subtitleFont)
                 }
                 
                 // SECTION 2: Filtered Matches
                 if !viewModel.filteredUsers.isEmpty {
-                    Section(header: Text("Filtered Users")
-                                .font(AppTheme.subtitleFont)) {
+                    Section {
                         ForEach(viewModel.filteredUsers) { user in
                             VStack(alignment: .leading) {
-                                Text(user.email)
-                                    .font(AppTheme.bodyFont)
+                                // Display candidate's full name if available.
+                                if let firstName = user.firstName, let lastName = user.lastName,
+                                   !firstName.isEmpty && !lastName.isEmpty {
+                                    Text("\(firstName) \(lastName)")
+                                        .font(AppTheme.titleFont)
+                                } else {
+                                    Text("Name not provided")
+                                        .font(AppTheme.titleFont)
+                                }
                                 if let grade = user.gradeLevel {
                                     Text("Grade: \(grade)")
                                         .font(AppTheme.bodyFont)
@@ -108,9 +136,11 @@ struct AdvancedFilterView: View {
                             }
                             .padding(.vertical, 4)
                         }
+                    } header: {
+                        Text("Filtered Users")
+                            .font(AppTheme.subtitleFont)
                     }
                 } else {
-                    // If no users found, show an empty state (optional).
                     Section {
                         Text("No users found with current filters.")
                             .font(AppTheme.bodyFont)
@@ -118,8 +148,7 @@ struct AdvancedFilterView: View {
                     }
                 }
             }
-            // Hide the default list background so your gradient shows through.
-            .scrollContentBackground(.hidden)
+            //.scrollContentBackground(.hidden)
             .listStyle(InsetGroupedListStyle())
             .font(AppTheme.bodyFont)
             .alert(item: alertBinding) { alertError in
@@ -136,19 +165,14 @@ struct AdvancedFilterView: View {
             }
         }
         .onAppear {
-            // Optionally load saved filters from Firestore (if you want them to persist).
             viewModel.loadFiltersFromUserDoc {
-                // Once loaded, apply filters automatically.
                 viewModel.applyFilters(currentLocation: locationManager.currentLocation)
             }
         }
     }
     
-    // Called whenever a filter changes.
     private func autoApplyAndSave() {
-        // 1) Apply filters to see immediate results.
         viewModel.applyFilters(currentLocation: locationManager.currentLocation)
-        // 2) Save filters to Firestore so they persist across sessions.
         viewModel.saveFiltersToUserDoc()
     }
 }

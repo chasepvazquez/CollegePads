@@ -10,12 +10,13 @@ struct CompatibilityCalculator {
     }
     
     /// Calculates a compatibility breakdown, including the overall score and each factor’s contribution.
+    /// Factors include: Grade, Dorm, Cleanliness, Sleep, Budget, LivingStyle, College, Major, Distance, Social, Study, Interests, Gender, and Age.
     static func calculateCompatibilityBreakdown(between user1: UserModel, and user2: UserModel) -> (overall: Double, breakdown: [String: Double]) {
         var breakdown: [String: Double] = [:]
         var totalWeight = 0.0
         var score = 0.0
         
-        // Grade Level
+        // Grade Level: 10 points
         totalWeight += 10.0
         if let grade1 = user1.gradeLevel, let grade2 = user2.gradeLevel, grade1 == grade2 {
             breakdown["Grade"] = 10.0
@@ -24,7 +25,7 @@ struct CompatibilityCalculator {
             breakdown["Grade"] = 0
         }
         
-        // Dorm Type
+        // Dorm Type: 15 points
         totalWeight += 15.0
         if let dorm1 = user1.dormType, let dorm2 = user2.dormType, dorm1 == dorm2 {
             breakdown["Dorm"] = 15.0
@@ -33,7 +34,7 @@ struct CompatibilityCalculator {
             breakdown["Dorm"] = 0
         }
         
-        // Cleanliness
+        // Cleanliness: 15 points
         totalWeight += 15.0
         if let clean1 = user1.cleanliness, let clean2 = user2.cleanliness {
             let diff = abs(Double(clean1) - Double(clean2))
@@ -44,7 +45,7 @@ struct CompatibilityCalculator {
             breakdown["Cleanliness"] = 0
         }
         
-        // Sleep Schedule
+        // Sleep Schedule: 10 points
         totalWeight += 10.0
         if let sleep1 = user1.sleepSchedule, let sleep2 = user2.sleepSchedule, sleep1 == sleep2 {
             breakdown["Sleep"] = 10.0
@@ -53,7 +54,7 @@ struct CompatibilityCalculator {
             breakdown["Sleep"] = 0
         }
         
-        // Budget Range
+        // Budget Range: 10 points
         totalWeight += 10.0
         if let budget1 = user1.budgetRange, let budget2 = user2.budgetRange, budget1 == budget2 {
             breakdown["Budget"] = 10.0
@@ -62,7 +63,7 @@ struct CompatibilityCalculator {
             breakdown["Budget"] = 0
         }
         
-        // Living Style
+        // Living Style: 10 points
         totalWeight += 10.0
         if let style1 = user1.livingStyle, let style2 = user2.livingStyle, style1 == style2 {
             breakdown["LivingStyle"] = 10.0
@@ -71,7 +72,7 @@ struct CompatibilityCalculator {
             breakdown["LivingStyle"] = 0
         }
         
-        // College Name
+        // College Name: 10 points
         totalWeight += 10.0
         if let college1 = user1.collegeName, let college2 = user2.collegeName, college1 == college2 {
             breakdown["College"] = 10.0
@@ -80,7 +81,7 @@ struct CompatibilityCalculator {
             breakdown["College"] = 0
         }
         
-        // Major
+        // Major: 10 points
         totalWeight += 10.0
         if let major1 = user1.major, let major2 = user2.major, major1 == major2 {
             breakdown["Major"] = 10.0
@@ -89,7 +90,7 @@ struct CompatibilityCalculator {
             breakdown["Major"] = 0
         }
         
-        // Distance Factor (using GeoPoint)
+        // Distance Factor: 10 points
         totalWeight += 10.0
         if let geo1 = user1.location, let geo2 = user2.location {
             let distance = haversineDistance(lat1: geo1.latitude, lon1: geo1.longitude, lat2: geo2.latitude, lon2: geo2.longitude)
@@ -107,7 +108,7 @@ struct CompatibilityCalculator {
             breakdown["Distance"] = 0
         }
         
-        // Social Level (Quiz)
+        // Social Level (Quiz): 10 points
         totalWeight += 10.0
         if let social1 = user1.socialLevel, let social2 = user2.socialLevel {
             breakdown["Social"] = (social1 == social2 ? 10.0 : 0)
@@ -116,7 +117,7 @@ struct CompatibilityCalculator {
             breakdown["Social"] = 0
         }
         
-        // Study Habits (Quiz)
+        // Study Habits (Quiz): 10 points
         totalWeight += 10.0
         if let study1 = user1.studyHabits, let study2 = user2.studyHabits {
             breakdown["Study"] = (study1 == study2 ? 10.0 : 0)
@@ -125,7 +126,7 @@ struct CompatibilityCalculator {
             breakdown["Study"] = 0
         }
         
-        // Common Interests – New Factor
+        // Common Interests: 10 points
         totalWeight += 10.0
         if let interests1 = user1.interests, let interests2 = user2.interests {
             let lowerInterests1 = interests1.map { $0.lowercased() }
@@ -138,8 +139,52 @@ struct CompatibilityCalculator {
             breakdown["Interests"] = 0
         }
         
+        // Gender Compatibility: 10 points
+        totalWeight += 10.0
+        if let gender1 = user1.gender, let gender2 = user2.gender, gender1 == gender2 {
+            breakdown["Gender"] = 10.0
+            score += 10.0
+        } else {
+            breakdown["Gender"] = 0
+        }
+        
+        // Age Similarity: 10 points
+        totalWeight += 10.0
+        if let dob1 = user1.dateOfBirth, let dob2 = user2.dateOfBirth,
+           let date1 = dateFromString(dob1), let date2 = dateFromString(dob2) {
+            let age1 = calculateAge(birthDate: date1)
+            let age2 = calculateAge(birthDate: date2)
+            let ageDiff = abs(age1 - age2)
+            let ageScore: Double
+            if ageDiff <= 2 {
+                ageScore = 10.0
+            } else if ageDiff >= 5 {
+                ageScore = 0.0
+            } else {
+                ageScore = ((5 - Double(ageDiff)) / 3) * 10.0
+            }
+            breakdown["Age"] = ageScore
+            score += ageScore
+        } else {
+            breakdown["Age"] = 0
+        }
+        
         let overall = (score / totalWeight) * 100
         return (overall, breakdown)
+    }
+    
+    // Helper functions for age calculations.
+    private static func dateFromString(_ str: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: str)
+    }
+    
+    private static func calculateAge(birthDate: Date) -> Int {
+        let now = Date()
+        let calendar = Calendar.current
+        let ageComponents = calendar.dateComponents([.year], from: birthDate, to: now)
+        return ageComponents.year ?? 0
     }
     
     private static func haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double) -> Double {

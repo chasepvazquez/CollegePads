@@ -9,6 +9,14 @@ struct UserModel: Codable, Identifiable {
     var email: String
     var createdAt: Date
     var isEmailVerified: Bool
+    
+    // NEW FIELDS
+    var firstName: String?
+    var lastName: String?
+    /// Store as a string for Firestore simplicity, or use a Date with custom date encoding/decoding.
+    var dateOfBirth: String?
+    /// “Male”, “Female”, or “Other”. Could also be an enum stored as a string.
+    var gender: String?
 
     // College & Living Info
     var gradeLevel: String?
@@ -31,9 +39,9 @@ struct UserModel: Codable, Identifiable {
     var interests: [String]?
 
     // Profile Picture & Location
-    var profileImageUrl: String?          // Legacy single image (fallback)
-    var profileImageUrls: [String]?         // New: Array for multiple images (max 10)
-    var location: GeoPoint?               // NEW: User location
+    var profileImageUrl: String?       // Legacy single image (fallback)
+    var profileImageUrls: [String]?    // Array for multiple images (max 10)
+    var location: GeoPoint?            // User location
 
     // Verification Fields
     var isVerified: Bool?
@@ -42,13 +50,20 @@ struct UserModel: Codable, Identifiable {
     // Blocked Users
     var blockedUserIDs: [String]?
 
-    // Housing Details (New)
+    // Housing Details
     var housingStatus: String?
     var leaseDuration: String?
 
     init(
         email: String,
         isEmailVerified: Bool,
+        // NEW FIELDS
+        firstName: String? = nil,
+        lastName: String? = nil,
+        dateOfBirth: String? = nil,
+        gender: String? = nil,
+
+        // Existing fields
         gradeLevel: String? = nil,
         major: String? = nil,
         collegeName: String? = nil,
@@ -75,6 +90,14 @@ struct UserModel: Codable, Identifiable {
         self.email = email
         self.isEmailVerified = isEmailVerified
         self.createdAt = Date()
+
+        // Assign new fields
+        self.firstName = firstName
+        self.lastName = lastName
+        self.dateOfBirth = dateOfBirth
+        self.gender = gender
+
+        // Assign existing fields
         self.gradeLevel = gradeLevel
         self.major = major
         self.collegeName = collegeName
