@@ -7,22 +7,23 @@ struct UserModel: Codable, Identifiable {
 
     // Basic Info
     var email: String
-    var createdAt: Date
+    var createdAt: Date?           // Changed to optional
+    
     var isEmailVerified: Bool
     
     // NEW FIELDS
     var firstName: String?
     var lastName: String?
-    /// Store as a string for Firestore simplicity, or use a Date with custom date encoding/decoding.
+    /// Stored as a string (yyyy-MM-dd) for simplicity.
     var dateOfBirth: String?
-    /// “Male”, “Female”, or “Other”. Could also be an enum stored as a string.
+    /// “Male”, “Female”, or “Other”
     var gender: String?
-
+    
     // College & Living Info
     var gradeLevel: String?
     var major: String?
     var collegeName: String?
-
+    
     // Roommate Preferences
     var dormType: String?
     var preferredDorm: String?
@@ -32,28 +33,28 @@ struct UserModel: Codable, Identifiable {
     var smoker: Bool?
     var petFriendly: Bool?
     var livingStyle: String?
-
+    
     // Quiz & Interests
     var socialLevel: Int?
     var studyHabits: Int?
     var interests: [String]?
-
+    
     // Profile Picture & Location
-    var profileImageUrl: String?       // Legacy single image (fallback)
-    var profileImageUrls: [String]?    // Array for multiple images (max 10)
-    var location: GeoPoint?            // User location
-
+    var profileImageUrl: String?         // Legacy single image (fallback)
+    var profileImageUrls: [String]?        // Array for multiple images (max 10)
+    var location: GeoPoint?              // User location
+    
     // Verification Fields
     var isVerified: Bool?
     var verificationImageUrl: String?
-
+    
     // Blocked Users
     var blockedUserIDs: [String]?
-
+    
     // Housing Details
     var housingStatus: String?
     var leaseDuration: String?
-
+    
     init(
         email: String,
         isEmailVerified: Bool,
@@ -62,7 +63,6 @@ struct UserModel: Codable, Identifiable {
         lastName: String? = nil,
         dateOfBirth: String? = nil,
         gender: String? = nil,
-
         // Existing fields
         gradeLevel: String? = nil,
         major: String? = nil,
@@ -85,18 +85,20 @@ struct UserModel: Codable, Identifiable {
         verificationImageUrl: String? = nil,
         blockedUserIDs: [String]? = nil,
         housingStatus: String? = nil,
-        leaseDuration: String? = nil
+        leaseDuration: String? = nil,
+        createdAt: Date? = nil
     ) {
         self.email = email
         self.isEmailVerified = isEmailVerified
-        self.createdAt = Date()
-
+        // Only set createdAt if it wasn't provided.
+        self.createdAt = createdAt ?? Date()
+        
         // Assign new fields
         self.firstName = firstName
         self.lastName = lastName
         self.dateOfBirth = dateOfBirth
         self.gender = gender
-
+        
         // Assign existing fields
         self.gradeLevel = gradeLevel
         self.major = major

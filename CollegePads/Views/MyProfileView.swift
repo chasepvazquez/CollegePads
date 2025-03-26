@@ -21,7 +21,7 @@ struct MyProfileView: View {
     @State private var selectedHousingStatus: HousingStatus = .dorm
     @State private var selectedLeaseDuration: LeaseDuration = .notApplicable
     
-    // NEW FIELDS: Local states to handle firstName, lastName, dateOfBirth, and gender
+    // NEW FIELDS: Local states for new profile information.
     @State private var firstName: String = ""
     @State private var lastName: String = ""
     @State private var dateOfBirth: String = ""
@@ -70,17 +70,17 @@ struct MyProfileView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
                     
-                    // Header with blurred background using profile image and overlayed email
+                    // Header view with profile image and email.
                     ProfileHeaderView(imageUrl: viewModel.userProfile?.profileImageUrl,
                                       email: viewModel.userProfile?.email ?? "Your Email")
                         .padding(.bottom, 10)
                     
-                    // Profile completion meter (card-styled)
+                    // Profile Completion Meter
                     if let profile = viewModel.userProfile {
                         ProfileCompletionView(completion: ProfileCompletionCalculator.calculateCompletion(for: profile))
                     }
                     
-                    // Multi-image carousel (Tinder-like card view) or fallback circular image
+                    // Multi-Image Carousel or Fallback Image
                     if let imageUrls = viewModel.userProfile?.profileImageUrls, !imageUrls.isEmpty {
                         ImageCarouselView(imageUrls: imageUrls)
                     } else {
@@ -89,13 +89,13 @@ struct MyProfileView: View {
                         }
                     }
                     
-                    // Profile card preview displaying key details (including new fields)
+                    // Profile Card Preview Section
                     ProfileCardPreviewSection(profile: viewModel.userProfile)
                     
-                    // Inline editing section including new fields and existing ones
+                    // Inline Editing Section (new & existing fields)
                     InlineEditingSection()
                     
-                    // Upload new image button (uses your custom PrimaryButtonStyle)
+                    // Upload new image button
                     Button(action: {
                         showingImagePicker = true
                     }) {
@@ -114,7 +114,7 @@ struct MyProfileView: View {
                     .foregroundColor(.primary)
             }
         }
-        // Image picker sheet to handle profile image uploads
+        // Image Picker Sheet
         .sheet(isPresented: $showingImagePicker, onDismiss: {
             guard let newImg = newProfileImage else { return }
             viewModel.uploadProfileImage(image: newImg) { result in
@@ -154,7 +154,6 @@ struct MyProfileView: View {
             lastName = p.lastName ?? ""
             dateOfBirth = p.dateOfBirth ?? ""
             gender = p.gender ?? "Other"
-            
             // Populate existing fields
             major = p.major ?? ""
             collegeName = p.collegeName ?? ""
@@ -172,7 +171,7 @@ struct MyProfileView: View {
     
     // MARK: - Nested Subviews
     
-    /// Header view with a blurred background and overlay displaying the profile image and email.
+    /// Header view with blurred background using profile image and overlaying email.
     struct ProfileHeaderView: View {
         let imageUrl: String?
         let email: String
@@ -233,7 +232,7 @@ struct MyProfileView: View {
         }
     }
     
-    /// A card-styled view showing the profile completion percentage.
+    /// A card-styled view showing profile completion percentage.
     struct ProfileCompletionView: View {
         let completion: Double
         
@@ -285,7 +284,7 @@ struct MyProfileView: View {
         }
     }
     
-    /// Fallback view for when there are no multiple profile images.
+    /// Fallback view for profile image if no multiple images exist.
     struct ProfileImageFallbackView: View {
         let action: () -> Void
         
@@ -300,12 +299,12 @@ struct MyProfileView: View {
         }
     }
     
-    /// A preview card showing key profile details, including new fields.
+    /// Preview card showing key profile details.
     @ViewBuilder
     func ProfileCardPreviewSection(profile: UserModel?) -> some View {
         if let profile = profile {
             VStack(alignment: .leading, spacing: 8) {
-                // NEW FIELDS: Display firstName, lastName, dateOfBirth, and gender
+                // NEW FIELDS: Display new information.
                 if let fn = profile.firstName, !fn.isEmpty,
                    let ln = profile.lastName, !ln.isEmpty {
                     Text("\(fn) \(ln)")
@@ -319,8 +318,7 @@ struct MyProfileView: View {
                     Text("Gender: \(g)")
                         .font(AppTheme.bodyFont)
                 }
-                
-                // Existing details
+                // Existing details.
                 Text(profile.email)
                     .font(AppTheme.bodyFont)
                 if let grade = profile.gradeLevel {
@@ -364,12 +362,12 @@ struct MyProfileView: View {
         }
     }
     
-    /// Inline editing section that combines new and existing profile fields.
+    /// Inline editing section combining new and existing profile fields.
     @ViewBuilder
     func InlineEditingSection() -> some View {
         VStack(alignment: .leading, spacing: 15) {
             Group {
-                // NEW FIELDS: Editing for firstName, lastName, dateOfBirth, and gender
+                // NEW FIELDS
                 TextField("First Name", text: $firstName)
                     .padding(AppTheme.defaultPadding)
                     .background(AppTheme.cardBackground)
@@ -396,7 +394,7 @@ struct MyProfileView: View {
                 .onChange(of: gender) { _ in autoSaveProfile() }
                 .pickerStyle(SegmentedPickerStyle())
                 
-                // Existing fields below
+                // Existing fields
                 Picker("Grade Level", selection: $selectedGradeLevel) {
                     ForEach(GradeLevel.allCases) { level in
                         Text(level.rawValue).tag(level)
@@ -518,9 +516,14 @@ struct MyProfileView: View {
         updatedProfile.housingStatus = selectedHousingStatus.rawValue
         updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
         
+        // Preserve the original createdAt value
+        let originalCreatedAt = updatedProfile.createdAt
+        
         viewModel.updateUserProfile(updatedProfile: updatedProfile) { result in
             switch result {
             case .success:
+                // Reapply the original createdAt in case it was overwritten.
+                updatedProfile.createdAt = originalCreatedAt
                 print("Profile auto-saved successfully.")
             case .failure(let error):
                 print("Error auto-saving profile: \(error.localizedDescription)")
@@ -531,5 +534,11 @@ struct MyProfileView: View {
     /// Minimal fallback user profile if none exists.
     private func defaultUserProfile() -> UserModel {
         UserModel(email: Auth.auth().currentUser?.email ?? "unknown@unknown.com", isEmailVerified: false)
+    }
+}
+
+struct MyProfileView_Previews: PreviewProvider {
+    static var previews: some View {
+        MyProfileView()
     }
 }
