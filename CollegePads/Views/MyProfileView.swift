@@ -69,20 +69,21 @@ struct MyProfileView: View {
             AppTheme.backgroundGradient.ignoresSafeArea()
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
-                    
-                    // Header view with profile image and email.
-                    ProfileHeaderView(imageUrl: viewModel.userProfile?.profileImageUrl,
-                                      email: viewModel.userProfile?.email ?? "Your Email")
-                        .padding(.bottom, 10)
+                    // Removed the header view that displayed the email and profile image.
                     
                     // Profile Completion Meter
                     if let profile = viewModel.userProfile {
                         ProfileCompletionView(completion: ProfileCompletionCalculator.calculateCompletion(for: profile))
                     }
                     
-                    // Multi-Image Carousel or Fallback Image
+                    // Multi-Image Carousel or Fallback Image:
+                    // – If images exist, show the carousel.
+                    // – Otherwise, show the fallback image that the user can tap to select an image.
                     if let imageUrls = viewModel.userProfile?.profileImageUrls, !imageUrls.isEmpty {
                         ImageCarouselView(imageUrls: imageUrls)
+                            .onTapGesture {
+                                showingImagePicker = true
+                            }
                     } else {
                         ProfileImageFallbackView {
                             showingImagePicker = true
@@ -92,17 +93,8 @@ struct MyProfileView: View {
                     // Profile Card Preview Section
                     ProfileCardPreviewSection(profile: viewModel.userProfile)
                     
-                    // Inline Editing Section (new & existing fields)
+                    // Inline Editing Section (combining new and existing fields)
                     InlineEditingSection()
-                    
-                    // Upload new image button
-                    Button(action: {
-                        showingImagePicker = true
-                    }) {
-                        Text("Upload Another Image")
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .padding(.horizontal)
                 }
                 .padding()
             }
@@ -114,31 +106,36 @@ struct MyProfileView: View {
                     .foregroundColor(.primary)
             }
         }
-        // Image Picker Sheet
+        // Image picker sheet for profile image upload
         .sheet(isPresented: $showingImagePicker, onDismiss: {
-            guard let newImg = newProfileImage else { return }
-            viewModel.uploadProfileImage(image: newImg) { result in
-                switch result {
-                case .success(let downloadURL):
-                    var updatedProfile = viewModel.userProfile ?? defaultUserProfile()
-                    var urls = updatedProfile.profileImageUrls ?? []
-                    urls.insert(downloadURL, at: 0)
-                    if urls.count > 10 { urls = Array(urls.prefix(10)) }
-                    updatedProfile.profileImageUrls = urls
-                    if updatedProfile.profileImageUrl == nil {
-                        updatedProfile.profileImageUrl = downloadURL
-                    }
-                    viewModel.updateUserProfile(updatedProfile: updatedProfile) { res in
-                        switch res {
-                        case .success:
-                            print("Profile images updated successfully.")
-                        case .failure(let error):
-                            print("Failed to update images: \(error.localizedDescription)")
+            // Only upload if an image was selected.
+            if let newImg = newProfileImage {
+                viewModel.uploadProfileImage(image: newImg) { result in
+                    switch result {
+                    case .success(let downloadURL):
+                        var updatedProfile = viewModel.userProfile ?? defaultUserProfile()
+                        var urls = updatedProfile.profileImageUrls ?? []
+                        // Insert the new URL at the beginning.
+                        urls.insert(downloadURL, at: 0)
+                        if urls.count > 10 { urls = Array(urls.prefix(10)) }
+                        updatedProfile.profileImageUrls = urls
+                        // If there's no legacy image, set it as fallback.
+                        if updatedProfile.profileImageUrl == nil {
+                            updatedProfile.profileImageUrl = downloadURL
                         }
+                        viewModel.updateUserProfile(updatedProfile: updatedProfile) { res in
+                            switch res {
+                            case .success:
+                                print("Profile images updated successfully.")
+                            case .failure(let error):
+                                print("Failed to update images: \(error.localizedDescription)")
+                            }
+                        }
+                    case .failure(let error):
+                        print("Image upload error: \(error.localizedDescription)")
                     }
-                case .failure(let error):
-                    print("Image upload error: \(error.localizedDescription)")
                 }
+                // Reset the newProfileImage after upload.
                 newProfileImage = nil
             }
         }) {
@@ -149,12 +146,12 @@ struct MyProfileView: View {
         }
         .onReceive(viewModel.$userProfile) { profile in
             guard let p = profile else { return }
-            // Populate new fields
+            // Autofill new fields from stored profile.
             firstName = p.firstName ?? ""
             lastName = p.lastName ?? ""
             dateOfBirth = p.dateOfBirth ?? ""
             gender = p.gender ?? "Other"
-            // Populate existing fields
+            // Autofill existing fields.
             major = p.major ?? ""
             collegeName = p.collegeName ?? ""
             budgetRange = p.budgetRange ?? ""
@@ -171,68 +168,7 @@ struct MyProfileView: View {
     
     // MARK: - Nested Subviews
     
-    /// Header view with blurred background using profile image and overlaying email.
-    struct ProfileHeaderView: View {
-        let imageUrl: String?
-        let email: String
-        
-        var body: some View {
-            ZStack {
-                if let urlStr = imageUrl, let url = URL(string: urlStr) {
-                    AsyncImage(url: url) { phase in
-                        if let image = phase.image {
-                            image.resizable()
-                                .scaledToFill()
-                                .frame(height: 250)
-                                .clipped()
-                                .overlay(Color.black.opacity(0.3))
-                                .blur(radius: 5)
-                        } else {
-                            Color.gray
-                        }
-                    }
-                } else {
-                    Color.gray
-                }
-                VStack {
-                    Spacer()
-                    if let urlStr = imageUrl, let url = URL(string: urlStr) {
-                        AsyncImage(url: url) { phase in
-                            if let image = phase.image {
-                                image.resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 120, height: 120)
-                                    .clipShape(Circle())
-                                    .overlay(Circle().stroke(AppTheme.primaryColor, lineWidth: 4))
-                                    .shadow(radius: 6)
-                            } else {
-                                Image(systemName: "person.crop.circle")
-                                    .resizable()
-                                    .frame(width: 120, height: 120)
-                                    .foregroundColor(.white)
-                            }
-                        }
-                    } else {
-                        Image(systemName: "person.crop.circle")
-                            .resizable()
-                            .frame(width: 120, height: 120)
-                            .foregroundColor(.white)
-                    }
-                    Spacer().frame(height: 10)
-                    Text(email)
-                        .font(AppTheme.titleFont)
-                        .foregroundColor(.white)
-                        .shadow(radius: 3)
-                    Spacer()
-                }
-                .frame(height: 250)
-            }
-            .cornerRadius(15)
-            .padding(.horizontal)
-        }
-    }
-    
-    /// A card-styled view showing profile completion percentage.
+    /// A card-styled view showing the profile completion percentage.
     struct ProfileCompletionView: View {
         let completion: Double
         
@@ -299,12 +235,12 @@ struct MyProfileView: View {
         }
     }
     
-    /// Preview card showing key profile details.
+    /// A preview card showing key profile details.
     @ViewBuilder
     func ProfileCardPreviewSection(profile: UserModel?) -> some View {
         if let profile = profile {
             VStack(alignment: .leading, spacing: 8) {
-                // NEW FIELDS: Display new information.
+                // NEW FIELDS: Display firstName, lastName, dateOfBirth, and gender.
                 if let fn = profile.firstName, !fn.isEmpty,
                    let ln = profile.lastName, !ln.isEmpty {
                     Text("\(fn) \(ln)")
@@ -362,7 +298,7 @@ struct MyProfileView: View {
         }
     }
     
-    /// Inline editing section combining new and existing profile fields.
+    /// Inline editing section that combines new and existing profile fields.
     @ViewBuilder
     func InlineEditingSection() -> some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -516,13 +452,12 @@ struct MyProfileView: View {
         updatedProfile.housingStatus = selectedHousingStatus.rawValue
         updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
         
-        // Preserve the original createdAt value
+        // Preserve the original createdAt value.
         let originalCreatedAt = updatedProfile.createdAt
         
         viewModel.updateUserProfile(updatedProfile: updatedProfile) { result in
             switch result {
             case .success:
-                // Reapply the original createdAt in case it was overwritten.
                 updatedProfile.createdAt = originalCreatedAt
                 print("Profile auto-saved successfully.")
             case .failure(let error):

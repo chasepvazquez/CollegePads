@@ -1,15 +1,20 @@
 import SwiftUI
-import FirebaseAuth
 
 struct SignInView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     
+    // Local state to track if user tapped "Sign In."
+    @State private var hasAttemptedSignIn: Bool = false
+    
+    // Computed property for form validity.
+    private var isFormValid: Bool {
+        return !authViewModel.email.isEmpty && !authViewModel.password.isEmpty
+    }
+    
     var body: some View {
         ZStack {
-            // Global background.
             AppTheme.backgroundGradient.ignoresSafeArea()
             
-            // Use a VStack that expands to full height.
             VStack(spacing: 20) {
                 Spacer(minLength: 20)
                 
@@ -28,14 +33,23 @@ struct SignInView: View {
                     .background(AppTheme.cardBackground)
                     .cornerRadius(AppTheme.defaultCornerRadius)
                 
-                if let errorMessage = authViewModel.errorMessage {
-                    Text(errorMessage)
-                        .font(AppTheme.bodyFont)
-                        .foregroundColor(AppTheme.nopeColor)
-                        .multilineTextAlignment(.center)
+                // Error message container – uses red text as in SignUpView.
+                Group {
+                    if hasAttemptedSignIn,
+                       let errorMessage = authViewModel.errorMessage,
+                       !errorMessage.isEmpty {
+                        Text(errorMessage)
+                            .font(AppTheme.bodyFont)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    } else {
+                        Color.clear.frame(height: 0)
+                    }
                 }
                 
                 Button(action: {
+                    hasAttemptedSignIn = true
                     authViewModel.signIn()
                 }) {
                     if authViewModel.isLoading {
@@ -46,15 +60,19 @@ struct SignInView: View {
                             .foregroundColor(.white)
                             .padding(AppTheme.defaultPadding)
                             .frame(maxWidth: .infinity)
-                            .background(AppTheme.primaryColor)
+                            .background(isFormValid ? AppTheme.primaryColor : AppTheme.primaryColor.opacity(0.5))
                             .cornerRadius(AppTheme.defaultCornerRadius)
                     }
                 }
+                .disabled(!isFormValid)
+                .scaleEffect(isFormValid ? 1.0 : 0.95)
+                .animation(.easeInOut(duration: 0.2), value: isFormValid)
                 
                 Text("Don't have an account? Sign Up")
                     .font(AppTheme.bodyFont)
                     .foregroundColor(AppTheme.primaryColor)
                     .onTapGesture {
+                        // Clear errors and fields when switching.
                         authViewModel.errorMessage = nil
                         authViewModel.email = ""
                         authViewModel.password = ""

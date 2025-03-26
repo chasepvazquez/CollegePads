@@ -1,11 +1,3 @@
-//
-//  AuthViewModel.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date]
-//  Updated for account management (delete account functionality)
-//
-
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
@@ -17,14 +9,11 @@ class AuthViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var userSession: FirebaseAuth.User? = nil
     
-    private let authService = FirebaseAuthService()
-    
     init() {
-        // Set the current user; listener can be started from RootView.
         self.userSession = Auth.auth().currentUser
     }
     
-    /// Call this in RootView’s onAppear to start listening for auth changes.
+    /// Starts listening for auth state changes.
     func listenToAuthState() {
         _ = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             self?.userSession = user
@@ -35,14 +24,33 @@ class AuthViewModel: ObservableObject {
         errorMessage = nil
         isLoading = true
         
-        authService.signUpWithEmail(email: email, password: password) { [weak self] result in
+        Auth.auth().createUser(withEmail: email, password: password) { [weak self] authResult, error in
             DispatchQueue.main.async {
                 self?.isLoading = false
-                switch result {
-                case .success:
-                    self?.userSession = Auth.auth().currentUser
-                case .failure(let error):
+                if let error = error {
                     self?.errorMessage = error.localizedDescription
+                    return
+                }
+                guard let uid = Auth.auth().currentUser?.uid else {
+                    self?.errorMessage = "User ID not available."
+                    return
+                }
+                // Store additional user data in Firestore.
+                let userData: [String: Any] = [
+                    "email": self?.email ?? "",
+                    "createdAt": FieldValue.serverTimestamp()
+                    // You can add other default fields as needed.
+                ]
+                Firestore.firestore().collection("users").document(uid).setData(userData, merge: true) { error in
+                    if let error = error {
+                        DispatchQueue.main.async {
+                            self?.errorMessage = error.localizedDescription
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            self?.userSession = Auth.auth().currentUser
+                        }
+                    }
                 }
             }
         }
@@ -77,9 +85,6 @@ class AuthViewModel: ObservableObject {
 // MARK: - Account Management Extension
 
 extension AuthViewModel {
-    /// Deletes the currently authenticated user's account.
-    /// This method calls Firebase Auth's delete method and returns the result via a completion handler.
-    /// Optionally, you may add cleanup for Firestore user data here.
     func deleteAccount(completion: @escaping (Result<Void, Error>) -> Void) {
         guard let user = Auth.auth().currentUser else {
             completion(.failure(NSError(domain: "Auth", code: 401, userInfo: [NSLocalizedDescriptionKey: "No authenticated user found."])))
@@ -89,7 +94,6 @@ extension AuthViewModel {
             if let error = error {
                 completion(.failure(error))
             } else {
-                // Optionally, add Firestore data cleanup here.
                 completion(.success(()))
             }
         }

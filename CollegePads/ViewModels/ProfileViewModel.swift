@@ -6,7 +6,7 @@ import FirebaseFirestoreCombineSwift
 import Combine
 
 /// ViewModel that manages the user profile data stored in Firestore.
-/// It now supports new fields: firstName, lastName, dateOfBirth, and gender.
+/// It supports new fields: firstName, lastName, dateOfBirth, and gender.
 class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
@@ -20,19 +20,27 @@ class ProfileViewModel: ObservableObject {
         Auth.auth().currentUser?.uid
     }
     
-    /// Loads the user profile from Firestore, including new fields (firstName, lastName, dateOfBirth, gender).
-    func loadUserProfile() {
+    /// Loads the user profile from Firestore and updates userProfile in state.
+    /// If a completion is provided, it is called with the loaded profile (or nil on error).
+    func loadUserProfile(completion: ((UserModel?) -> Void)? = nil) {
         guard let uid = userID else {
             self.errorMessage = "User not authenticated"
+            completion?(nil)
             return
         }
         db.collection("users").document(uid).getDocument { snapshot, error in
             if let error = error {
-                self.errorMessage = error.localizedDescription
+                DispatchQueue.main.async {
+                    self.errorMessage = error.localizedDescription
+                }
+                completion?(nil)
                 return
             }
             guard let snapshot = snapshot, snapshot.exists else {
-                self.errorMessage = "User profile does not exist"
+                DispatchQueue.main.async {
+                    self.errorMessage = "User profile does not exist"
+                }
+                completion?(nil)
                 return
             }
             do {
@@ -40,16 +48,18 @@ class ProfileViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     self.userProfile = profile
                 }
+                completion?(profile)
             } catch {
                 DispatchQueue.main.async {
                     self.errorMessage = error.localizedDescription
                 }
+                completion?(nil)
             }
         }
     }
     
-    /// Updates the user profile in Firestore. This method automatically writes all fields,
-    /// including the new fields: firstName, lastName, dateOfBirth, and gender.
+    /// Updates the user profile in Firestore. Writes all fields, including new ones:
+    /// firstName, lastName, dateOfBirth, gender, etc.
     func updateUserProfile(updatedProfile: UserModel, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = userID else {
             completion(.failure(NSError(domain: "ProfileUpdate", code: 0, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])))
@@ -71,10 +81,7 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
-    /// Uploads a profile image to Firebase Storage.
-    /// - Parameters:
-    ///   - image: The UIImage to upload.
-    ///   - completion: Returns a download URL string on success.
+    /// Uploads a profile image to Firebase Storage, returning a download URL on success.
     func uploadProfileImage(image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
         guard let uid = userID,
               let imageData = image.jpegData(compressionQuality: 0.8) else {
@@ -101,7 +108,7 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
-    /// Removes a blocked user ID from the user profile.
+    /// Removes a blocked user ID from the user profile in memory (does not persist automatically).
     func removeBlockedUser(with uid: String) {
         if var blocked = userProfile?.blockedUserIDs {
             blocked.removeAll { $0 == uid }

@@ -6,13 +6,13 @@ struct SettingsView: View {
     @ObservedObject var profileVM = ProfileViewModel.shared
     @State private var showVerification = false
     @State private var showBlockedUsers = false
-    @AppStorage("isDarkMode") private var isDarkMode: Bool = false
+    // Instead of using @AppStorage, we use local state for dark mode
+    @State private var localDarkMode: Bool = false
     
     private let appVersion = "1.0.0"  // Update as needed.
     
     var body: some View {
         ZStack {
-            // Global background gradient.
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             Form {
@@ -62,8 +62,12 @@ struct SettingsView: View {
                 // Appearance Section.
                 Section(header: Text("Appearance")
                             .font(AppTheme.subtitleFont)) {
-                    Toggle("Dark Mode", isOn: $isDarkMode)
+                    Toggle("Dark Mode", isOn: $localDarkMode)
                         .accessibilityLabel("Dark Mode Toggle")
+                        .onChange(of: localDarkMode) { newValue in
+                            // Update the stored value manually.
+                            UserDefaults.standard.set(newValue, forKey: "isDarkMode")
+                        }
                 }
                 
                 // About Section.
@@ -102,9 +106,7 @@ struct SettingsView: View {
                     }
                 }
             }
-            // Hide the Form's default background.
             .scrollContentBackground(.hidden)
-            // Apply the global font.
             .font(AppTheme.bodyFont)
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -116,6 +118,10 @@ struct SettingsView: View {
             .sheet(isPresented: $showVerification) {
                 VerificationView()
             }
+        }
+        .onAppear {
+            // Set the local dark mode state from UserDefaults so the view doesn't dismiss on change.
+            localDarkMode = UserDefaults.standard.bool(forKey: "isDarkMode")
         }
     }
 }

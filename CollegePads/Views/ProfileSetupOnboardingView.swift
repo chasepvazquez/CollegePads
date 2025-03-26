@@ -1,48 +1,20 @@
-/*
 import SwiftUI
 import FirebaseAuth
 
-/// Data model for tutorial pages.
-struct OnboardingPage {
-    let title: String
-    let description: String
-    let imageName: String
-}
-
-/// Main Onboarding View: displays 6 pages in order.
-/// Pages 0–2: Tutorial (swipeable).
-/// Pages 3–5: Profile setup.
-/// On completion, the view dismisses so that RootView can show sign‑in or main content.
-struct OnboardingView: View {
+/// ProfileSetupOnboardingView – displays pages 3–5: Name, Birthday, and Create Profile.
+/// This view is presented only after a user is signed in and their profile is incomplete.
+struct ProfileSetupOnboardingView: View {
     @Environment(\.presentationMode) var presentationMode
     @StateObject private var viewModel = ProfileViewModel.shared
     
-    // Tracks the current page (0 to 5).
-    @State private var currentPage: Int = 0
+    // Tracks the current page (3 to 5).
+    @State private var currentPage: Int = 3
     
-    // Tutorial pages (pages 0–2)
-    private let tutorialPages: [OnboardingPage] = [
-        OnboardingPage(title: "Welcome to CollegePads",
-                       description: "Find your perfect roommate easily!",
-                       imageName: "person.3.fill"),
-        OnboardingPage(title: "Swipe to Match",
-                       description: "Swipe right to like, left to pass, just like Tinder!",
-                       imageName: "hand.point.right.fill"),
-        OnboardingPage(title: "Chat & Connect",
-                       description: "Start chatting once you match with someone!",
-                       imageName: "message.fill")
-    ]
-    
-    // Profile setup fields (pages 3–5)
+    // Profile setup fields.
     @State private var firstName: String = ""
     @State private var lastName: String = ""
     @State private var birthDate: Date = Date()
     @State private var selectedGender: Gender = .other
-    
-    // If the user is not logged in, show tutorial only. If user is logged in, skip tutorial.
-    private var isLoggedIn: Bool {
-        Auth.auth().currentUser != nil
-    }
     
     // MARK: - Gender Enum
     enum Gender: String, CaseIterable, Identifiable {
@@ -58,36 +30,56 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             AppTheme.backgroundGradient.ignoresSafeArea()
-            
-            // Main container centered vertically.
             VStack(spacing: 30) {
-                if currentPage < 3 {
-                    tutorialFlow
+                if currentPage == 3 {
+                    OnboardingNameView(
+                        firstName: $firstName,
+                        lastName: $lastName,
+                        onContinue: { withAnimation { currentPage += 1 } },
+                        onCancel: {
+                            // Simply dismiss since user is already signed in.
+                            presentationMode.wrappedValue.dismiss()
+                        }
+                    )
+                } else if currentPage == 4 {
+                    OnboardingBirthdayView(
+                        birthDate: $birthDate,
+                        onContinue: {
+                            if calculateAge(from: birthDate) < 16 {
+                                showAgeAlert = true
+                            } else {
+                                withAnimation { currentPage += 1 }
+                            }
+                        },
+                        onCancel: { withAnimation { currentPage -= 1 } }
+                    )
                 } else {
-                    profileSetupFlow
+                    OnboardingCreateProfileView(
+                        firstName: $firstName,
+                        lastName: $lastName,
+                        birthDate: $birthDate,
+                        selectedGender: $selectedGender,
+                        onContinue: {
+                            saveProfileFields()
+                            UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                            presentationMode.wrappedValue.dismiss()
+                        }
+                    )
                 }
                 Spacer()
             }
-            // Center the content vertically
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .padding()
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Onboarding")
+                    Text("Profile Setup")
                         .font(AppTheme.titleFont)
                         .foregroundColor(.primary)
                 }
             }
         }
         .onAppear {
-            // If user is logged in, skip tutorial (start at page 3).
-            // If user is not logged in, show tutorial pages 0–2.
-            if isLoggedIn {
-                currentPage = 3
-                prefillFromExistingProfile()
-            } else {
-                currentPage = 0
-            }
+            prefillFromExistingProfile()
         }
         .alert(isPresented: $showAgeAlert) {
             Alert(title: Text("Age Restriction"),
@@ -96,95 +88,9 @@ struct OnboardingView: View {
         }
     }
     
-    // MARK: - Tutorial Flow (Pages 0–2)
-    private var tutorialFlow: some View {
-        VStack {
-            TabView(selection: $currentPage) {
-                ForEach(0..<tutorialPages.count, id: \.self) { index in
-                    VStack(spacing: 20) {
-                        Image(systemName: tutorialPages[index].imageName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 150, height: 150)
-                            .foregroundColor(AppTheme.primaryColor)
-                            .accessibilityHidden(true)
-                        
-                        Text(tutorialPages[index].title)
-                            .font(AppTheme.titleFont)
-                            .bold()
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                        
-                        Text(tutorialPages[index].description)
-                            .font(AppTheme.bodyFont)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-                    .tag(index)
-                }
-            }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
-            .frame(maxHeight: 400)
-            
-            // "Get Started" button on last tutorial page
-            if currentPage == tutorialPages.count - 1 {
-                Button(action: {
-                    // If user isn't logged in, dismiss so they can sign up / sign in.
-                    presentationMode.wrappedValue.dismiss()
-                }) {
-                    Text("Get Started")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PrimaryButtonStyle())
-                .padding()
-            }
-        }
-    }
-    
-    // MARK: - Profile Setup Flow (Pages 3–5)
-    private var profileSetupFlow: some View {
-        VStack {
-            if currentPage == 3 {
-                OnboardingNameView(
-                    firstName: $firstName,
-                    lastName: $lastName,
-                    onContinue: { withAnimation { currentPage += 1 } },
-                    onCancel: {
-                        // If user cancels, just dismiss onboarding.
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                )
-            } else if currentPage == 4 {
-                OnboardingBirthdayView(
-                    birthDate: $birthDate,
-                    onContinue: {
-                        if calculateAge(from: birthDate) < 16 {
-                            showAgeAlert = true
-                        } else {
-                            withAnimation { currentPage += 1 }
-                        }
-                    },
-                    onCancel: { withAnimation { currentPage -= 1 } }
-                )
-            } else {
-                OnboardingCreateProfileView(
-                    firstName: $firstName,
-                    lastName: $lastName,
-                    birthDate: $birthDate,
-                    selectedGender: $selectedGender,
-                    onContinue: {
-                        saveProfileFields()
-                        UserDefaults.standard.set(true, forKey: "onboardingCompleted")
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                )
-            }
-        }
-    }
-    
     // MARK: - Helper Functions
     
-    /// Pre-fills fields from existing userProfile if available.
+    /// Pre-fills fields from the existing profile if available.
     private func prefillFromExistingProfile() {
         if let profile = viewModel.userProfile {
             firstName = profile.firstName ?? ""
@@ -218,7 +124,6 @@ struct OnboardingView: View {
         return ageComponents.year ?? 0
     }
     
-    /// Saves the name, DOB, gender fields to the existing userProfile or creates a new one.
     private func saveProfileFields() {
         if var profile = viewModel.userProfile {
             profile.firstName = firstName
@@ -251,6 +156,12 @@ struct OnboardingView: View {
                 }
             }
         }
+    }
+}
+
+struct ProfileSetupOnboardingView_Previews: PreviewProvider {
+    static var previews: some View {
+        ProfileSetupOnboardingView()
     }
 }
 
@@ -291,14 +202,6 @@ struct OnboardingNameView: View {
             }
             .buttonStyle(PrimaryButtonStyle())
             .padding()
-            
-            Button(action: onCancel) {
-                Text("Already have an account? Sign in")
-                    .font(AppTheme.bodyFont)
-                    .underline()
-                    .foregroundColor(AppTheme.primaryColor)
-            }
-            .padding(.bottom, 20)
         }
     }
 }
@@ -352,7 +255,7 @@ struct OnboardingCreateProfileView: View {
     @Binding var firstName: String
     @Binding var lastName: String
     @Binding var birthDate: Date
-    @Binding var selectedGender: OnboardingView.Gender
+    @Binding var selectedGender: ProfileSetupOnboardingView.Gender
     let onContinue: () -> Void
     
     var body: some View {
@@ -386,7 +289,7 @@ struct OnboardingCreateProfileView: View {
                 .cornerRadius(AppTheme.defaultCornerRadius)
                 
                 Picker("I am:", selection: $selectedGender) {
-                    ForEach(OnboardingView.Gender.allCases) { gender in
+                    ForEach(ProfileSetupOnboardingView.Gender.allCases) { gender in
                         Text(gender.rawValue).tag(gender)
                     }
                 }
@@ -414,4 +317,3 @@ struct OnboardingCreateProfileView: View {
         return formatter.string(from: date)
     }
 }
-*/

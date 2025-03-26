@@ -23,23 +23,51 @@ struct RootView: View {
         .preferredColorScheme(isDarkMode ? .dark : .light)
         .onAppear {
             authViewModel.listenToAuthState()
-            // Show onboarding if it hasn't been completed yet.
+            // Check onboarding flag first.
             let completed = UserDefaults.standard.bool(forKey: "onboardingCompleted")
             if !completed {
-                showOnboarding = true
+                // If no user is signed in, show tutorial.
+                if authViewModel.userSession == nil {
+                    showOnboarding = true
+                } else {
+                    // If a user is signed in, check profile completeness.
+                    checkUserProfile()
+                }
             }
         }
-        .onChange(of: authViewModel.userSession) { _ in
-            // When user session changes, check onboarding status.
+        .onChange(of: authViewModel.userSession) { newSession in
             let completed = UserDefaults.standard.bool(forKey: "onboardingCompleted")
             if !completed {
-                showOnboarding = true
+                if newSession == nil {
+                    showOnboarding = true
+                } else {
+                    checkUserProfile()
+                }
             } else {
                 showOnboarding = false
             }
         }
         .fullScreenCover(isPresented: $showOnboarding) {
-            OnboardingView()
+            // Present the appropriate onboarding view based on authentication state.
+            if authViewModel.userSession == nil {
+                TutorialOnboardingView()
+            } else {
+                ProfileSetupOnboardingView()
+            }
+        }
+    }
+    
+    /// Checks the current user's profile from Firestore.
+    /// If firstName, lastName, or dateOfBirth are missing, sets showOnboarding = true.
+    private func checkUserProfile() {
+        ProfileViewModel.shared.loadUserProfile { userProfile in
+            if let profile = userProfile {
+                let missingName = (profile.firstName?.isEmpty ?? true) || (profile.lastName?.isEmpty ?? true)
+                let missingDOB = (profile.dateOfBirth?.isEmpty ?? true)
+                showOnboarding = missingName || missingDOB
+            } else {
+                showOnboarding = true
+            }
         }
     }
 }
