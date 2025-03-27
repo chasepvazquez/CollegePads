@@ -6,11 +6,13 @@ import FirebaseFirestoreCombineSwift
 import Combine
 
 /// ViewModel that manages the user profile data stored in Firestore.
-/// It supports new fields: firstName, lastName, dateOfBirth, and gender.
 class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
     
+    // Flag to suspend updates when needed (e.g., while image picker is active)
+    var suspendUpdates = false
+
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
     
@@ -20,8 +22,7 @@ class ProfileViewModel: ObservableObject {
         Auth.auth().currentUser?.uid
     }
     
-    /// Loads the user profile from Firestore and updates userProfile in state.
-    /// If a completion is provided, it is called with the loaded profile (or nil on error).
+    /// Loads the user profile from Firestore.
     func loadUserProfile(completion: ((UserModel?) -> Void)? = nil) {
         guard let uid = userID else {
             self.errorMessage = "User not authenticated"
@@ -46,7 +47,11 @@ class ProfileViewModel: ObservableObject {
             do {
                 let profile = try snapshot.data(as: UserModel.self)
                 DispatchQueue.main.async {
-                    self.userProfile = profile
+                    if !self.suspendUpdates {
+                        self.userProfile = profile
+                    } else {
+                        print("ProfileViewModel: Updates are suspended.")
+                    }
                 }
                 completion?(profile)
             } catch {
@@ -58,8 +63,7 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
-    /// Updates the user profile in Firestore. Writes all fields, including new ones:
-    /// firstName, lastName, dateOfBirth, gender, etc.
+    /// Updates the user profile in Firestore.
     func updateUserProfile(updatedProfile: UserModel, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = userID else {
             completion(.failure(NSError(domain: "ProfileUpdate", code: 0, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])))
@@ -71,7 +75,9 @@ class ProfileViewModel: ObservableObject {
                     completion(.failure(error))
                 } else {
                     DispatchQueue.main.async {
-                        self.userProfile = updatedProfile
+                        if !self.suspendUpdates {
+                            self.userProfile = updatedProfile
+                        }
                     }
                     completion(.success(()))
                 }
@@ -81,7 +87,7 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
-    /// Uploads a profile image to Firebase Storage, returning a download URL on success.
+    /// Uploads a profile image to Firebase Storage.
     func uploadProfileImage(image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
         guard let uid = userID,
               let imageData = image.jpegData(compressionQuality: 0.8) else {
@@ -108,7 +114,7 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
-    /// Removes a blocked user ID from the user profile in memory (does not persist automatically).
+    /// Removes a blocked user ID from the profile (in memory).
     func removeBlockedUser(with uid: String) {
         if var blocked = userProfile?.blockedUserIDs {
             blocked.removeAll { $0 == uid }

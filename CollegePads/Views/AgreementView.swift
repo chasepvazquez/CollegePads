@@ -34,7 +34,6 @@ struct AgreementView: View {
     
     var body: some View {
         ZStack {
-            // Global background from AppTheme.
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             NavigationView {
@@ -100,10 +99,8 @@ struct AgreementView: View {
                         .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                     }
                 }
-                // Hide the Form's default background and apply the global body font.
                 .scrollContentBackground(.hidden)
                 .font(AppTheme.bodyFont)
-                // Use a toolbar item for the custom navigation title.
                 .toolbar {
                     ToolbarItem(placement: .principal) {
                         Text("Roommate Agreement")
@@ -114,8 +111,9 @@ struct AgreementView: View {
                 .navigationBarItems(trailing: Button("Cancel") {
                     presentationMode.wrappedValue.dismiss()
                 })
+                // Use CustomImagePicker instead of the old picker.
                 .sheet(isPresented: $showingImagePicker) {
-                    ImagePicker(image: $leaseImage)
+                    CustomImagePicker(image: $leaseImage)
                 }
                 .alert(item: Binding(
                     get: {
@@ -135,7 +133,6 @@ struct AgreementView: View {
     }
     
     private func submitAgreement() {
-        // For demonstration, use a dummy lease URL if lease option is chosen.
         let leaseURL = (selectedVerificationMethod == .lease) ? "https://example.com/lease.jpg" : nil
         
         let newAgreement = RoommateAgreement(

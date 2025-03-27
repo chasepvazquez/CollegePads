@@ -1,36 +1,42 @@
 import SwiftUI
+import PhotosUI
 import FirebaseAuth
 
 struct MyProfileView: View {
     @StateObject private var viewModel = ProfileViewModel.shared
 
-    // Image picker state
-    @State private var showingImagePicker = false
-    @State private var newProfileImage: UIImage?
-    
-    // Existing inline editing state variables
+    // MARK: - Photo Picker State
+    @State private var showingPhotoPicker = false
+    @State private var newProfileImage: UIImage? = nil
+    @State private var tappedImageIndex: Int? = nil
+    @State private var isPickerActive = false  // Tracks if picker is currently active
+
+    // MARK: - Inline Editing State Variables
     @State private var selectedGradeLevel: GradeLevel = .freshman
-    @State private var major: String = ""
-    @State private var collegeName: String = ""
-    @State private var budgetRange: String = ""
-    @State private var cleanliness: Int = 3
-    @State private var sleepSchedule: String = "Flexible"
-    @State private var smoker: Bool = false
-    @State private var petFriendly: Bool = false
-    @State private var interestsText: String = ""
+    @State private var major = ""
+    @State private var collegeName = ""
+    @State private var budgetRange = ""
+    @State private var cleanliness = 3
+    @State private var sleepSchedule = "Flexible"
+    @State private var smoker = false
+    @State private var petFriendly = false
+    @State private var interestsText = ""
     @State private var selectedHousingStatus: HousingStatus = .dorm
     @State private var selectedLeaseDuration: LeaseDuration = .notApplicable
-    
-    // NEW FIELDS: Local states for new profile information.
-    @State private var firstName: String = ""
-    @State private var lastName: String = ""
-    @State private var dateOfBirth: String = ""
-    @State private var gender: String = "Other" // "Male", "Female", or "Other"
-    
+
+    // MARK: - New Profile Fields
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var dateOfBirth = ""
+    @State private var gender = "Other" // "Male", "Female", or "Other"
+
     // Sleep schedule options
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
-    
-    // MARK: - Enumerations for Inline Editing
+
+    // Debouncer for autosave
+    @State private var autoSaveWorkItem: DispatchWorkItem?
+
+    // MARK: - Enumerations
     enum GradeLevel: String, CaseIterable, Identifiable {
         case freshman = "Freshman"
         case sophomore = "Sophomore"
@@ -41,7 +47,7 @@ struct MyProfileView: View {
         case other = "Other"
         var id: String { self.rawValue }
     }
-    
+
     enum HousingStatus: String, CaseIterable, Identifiable {
         case dorm = "Dorm Resident"
         case apartment = "Apartment Resident"
@@ -52,7 +58,7 @@ struct MyProfileView: View {
         case other = "Other"
         var id: String { self.rawValue }
     }
-    
+
     enum LeaseDuration: String, CaseIterable, Identifiable {
         case current = "Current Lease"
         case shortTerm = "Short Term (<6 months)"
@@ -63,37 +69,35 @@ struct MyProfileView: View {
         case notApplicable = "Not Applicable"
         var id: String { self.rawValue }
     }
-    
+
+    // MARK: - Body
     var body: some View {
         ZStack {
             AppTheme.backgroundGradient.ignoresSafeArea()
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
-                    // Removed the header view that displayed the email and profile image.
-                    
-                    // Profile Completion Meter
                     if let profile = viewModel.userProfile {
-                        ProfileCompletionView(completion: ProfileCompletionCalculator.calculateCompletion(for: profile))
+                        ProfileCompletionView(
+                            completion: ProfileCompletionCalculator.calculateCompletion(for: profile)
+                        )
                     }
                     
-                    // Multi-Image Carousel or Fallback Image:
-                    // – If images exist, show the carousel.
-                    // – Otherwise, show the fallback image that the user can tap to select an image.
-                    if let imageUrls = viewModel.userProfile?.profileImageUrls, !imageUrls.isEmpty {
-                        ImageCarouselView(imageUrls: imageUrls)
-                            .onTapGesture {
-                                showingImagePicker = true
-                            }
-                    } else {
-                        ProfileImageFallbackView {
-                            showingImagePicker = true
+                    MediaGridView(
+                        imageUrls: viewModel.userProfile?.profileImageUrls ?? [],
+                        onTapAddOrEdit: { index in
+                            tappedImageIndex = index
+                            newProfileImage = nil  // Clear any stale image
+                            isPickerActive = true
+                            viewModel.suspendUpdates = true  // Suspend external updates
+                            showingPhotoPicker = true
+                            print("MyProfileView: Tapped grid index \(index); presenting picker.")
+                        },
+                        onRemoveImage: { index in
+                            removeImage(at: index)
                         }
-                    }
+                    )
                     
-                    // Profile Card Preview Section
                     ProfileCardPreviewSection(profile: viewModel.userProfile)
-                    
-                    // Inline Editing Section (combining new and existing fields)
                     InlineEditingSection()
                 }
                 .padding()
@@ -106,72 +110,165 @@ struct MyProfileView: View {
                     .foregroundColor(.primary)
             }
         }
-        // Image picker sheet for profile image upload
-        .sheet(isPresented: $showingImagePicker, onDismiss: {
-            // Only upload if an image was selected.
-            if let newImg = newProfileImage {
-                viewModel.uploadProfileImage(image: newImg) { result in
-                    switch result {
-                    case .success(let downloadURL):
-                        var updatedProfile = viewModel.userProfile ?? defaultUserProfile()
-                        var urls = updatedProfile.profileImageUrls ?? []
-                        // Insert the new URL at the beginning.
-                        urls.insert(downloadURL, at: 0)
-                        if urls.count > 10 { urls = Array(urls.prefix(10)) }
-                        updatedProfile.profileImageUrls = urls
-                        // If there's no legacy image, set it as fallback.
-                        if updatedProfile.profileImageUrl == nil {
-                            updatedProfile.profileImageUrl = downloadURL
-                        }
-                        viewModel.updateUserProfile(updatedProfile: updatedProfile) { res in
-                            switch res {
-                            case .success:
-                                print("Profile images updated successfully.")
-                            case .failure(let error):
-                                print("Failed to update images: \(error.localizedDescription)")
-                            }
-                        }
-                    case .failure(let error):
-                        print("Image upload error: \(error.localizedDescription)")
-                    }
-                }
-                // Reset the newProfileImage after upload.
-                newProfileImage = nil
-            }
-        }) {
-            ImagePicker(image: $newProfileImage)
-        }
         .onAppear {
+            print("MyProfileView: onAppear called.")
             viewModel.loadUserProfile()
         }
-        .onReceive(viewModel.$userProfile) { profile in
-            guard let p = profile else { return }
-            // Autofill new fields from stored profile.
-            firstName = p.firstName ?? ""
-            lastName = p.lastName ?? ""
-            dateOfBirth = p.dateOfBirth ?? ""
-            gender = p.gender ?? "Other"
-            // Autofill existing fields.
-            major = p.major ?? ""
-            collegeName = p.collegeName ?? ""
-            budgetRange = p.budgetRange ?? ""
-            cleanliness = p.cleanliness ?? 3
-            sleepSchedule = p.sleepSchedule ?? "Flexible"
-            smoker = p.smoker ?? false
-            petFriendly = p.petFriendly ?? false
-            interestsText = (p.interests ?? []).joined(separator: ", ")
-            selectedGradeLevel = GradeLevel(rawValue: p.gradeLevel ?? "") ?? .freshman
-            selectedHousingStatus = HousingStatus(rawValue: p.housingStatus ?? "") ?? .other
-            selectedLeaseDuration = LeaseDuration(rawValue: p.leaseDuration ?? "") ?? .notApplicable
+        // Debounce external profile updates to prevent rapid state changes
+        .onReceive(viewModel.$userProfile.debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)) { profile in
+            if !isPickerActive, let p = profile {
+                print("MyProfileView (debounced): userProfile updated (picker not active).")
+                populateLocalFields(from: p)
+            } else {
+                print("MyProfileView (debounced): userProfile updated but picker is active.")
+            }
+        }
+        .sheet(isPresented: $showingPhotoPicker, onDismiss: {
+            isPickerActive = false
+            viewModel.suspendUpdates = false  // Re-enable external updates
+            print("MyProfileView: Photo picker dismissed.")
+        }) {
+            CustomImagePicker(image: $newProfileImage)
+        }
+        .onChange(of: newProfileImage) { image in
+            print("MyProfileView: newProfileImage changed: \(String(describing: image)).")
+            if image != nil {
+                handlePhotoSelected()
+            }
         }
     }
-    
+
+    // MARK: - Handle Photo Selection
+    private func handlePhotoSelected() {
+        guard let newImg = newProfileImage, let index = tappedImageIndex else {
+            print("MyProfileView: No image or index selected.")
+            return
+        }
+        print("MyProfileView: Uploading new image for grid index \(index)...")
+        viewModel.uploadProfileImage(image: newImg) { result in
+            switch result {
+            case .success(let downloadURL):
+                print("MyProfileView: Image uploaded: \(downloadURL)")
+                var updatedProfile = viewModel.userProfile ?? defaultUserProfile()
+                var urls = updatedProfile.profileImageUrls ?? []
+                if index < urls.count {
+                    urls[index] = downloadURL
+                } else {
+                    urls.append(downloadURL)
+                }
+                updatedProfile.profileImageUrls = Array(urls.prefix(9))
+                updatedProfile.profileImageUrl = updatedProfile.profileImageUrls?.first
+                viewModel.updateUserProfile(updatedProfile: updatedProfile) { res in
+                    switch res {
+                    case .success:
+                        print("MyProfileView: Profile updated successfully at index \(index).")
+                        viewModel.loadUserProfile()  // Refresh UI
+                    case .failure(let error):
+                        print("MyProfileView: Failed to update profile images: \(error.localizedDescription)")
+                    }
+                }
+            case .failure(let error):
+                print("MyProfileView: Image upload error: \(error.localizedDescription)")
+            }
+            newProfileImage = nil
+        }
+    }
+
+    // MARK: - Remove Image
+    private func removeImage(at index: Int) {
+        guard var profile = viewModel.userProfile,
+              var urls = profile.profileImageUrls, index < urls.count else { return }
+        urls.remove(at: index)
+        profile.profileImageUrls = urls
+        profile.profileImageUrl = urls.first
+        viewModel.updateUserProfile(updatedProfile: profile) { result in
+            switch result {
+            case .success:
+                print("MyProfileView: Removed image at index \(index).")
+            case .failure(let error):
+                print("MyProfileView: Error removing image: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Populate Local Fields
+    private func populateLocalFields(from profile: UserModel) {
+        firstName = profile.firstName ?? ""
+        lastName = profile.lastName ?? ""
+        dateOfBirth = profile.dateOfBirth ?? ""
+        gender = profile.gender ?? "Other"
+        major = profile.major ?? ""
+        collegeName = profile.collegeName ?? ""
+        budgetRange = profile.budgetRange ?? ""
+        cleanliness = profile.cleanliness ?? 3
+        sleepSchedule = profile.sleepSchedule ?? "Flexible"
+        smoker = profile.smoker ?? false
+        petFriendly = profile.petFriendly ?? false
+        interestsText = (profile.interests ?? []).joined(separator: ", ")
+        selectedGradeLevel = GradeLevel(rawValue: profile.gradeLevel ?? "") ?? .freshman
+        selectedHousingStatus = HousingStatus(rawValue: profile.housingStatus ?? "") ?? .other
+        selectedLeaseDuration = LeaseDuration(rawValue: profile.leaseDuration ?? "") ?? .notApplicable
+    }
+
+    // MARK: - Provide a Fallback Profile
+    private func defaultUserProfile() -> UserModel {
+        UserModel(
+            email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
+            isEmailVerified: false
+        )
+    }
+
+    // MARK: - Debounced Auto-Save
+    private func scheduleAutoSave() {
+        autoSaveWorkItem?.cancel()
+        let workItem = DispatchWorkItem { autoSaveProfile() }
+        autoSaveWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: workItem)
+    }
+
+    private func autoSaveProfile() {
+        guard !isPickerActive else {
+            print("MyProfileView: Auto-save skipped because picker is active.")
+            return
+        }
+        guard var updatedProfile = viewModel.userProfile else {
+            print("MyProfileView: No user profile loaded yet.")
+            return
+        }
+        let interestsArray = interestsText
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        updatedProfile.firstName = firstName
+        updatedProfile.lastName = lastName
+        updatedProfile.dateOfBirth = dateOfBirth
+        updatedProfile.gender = gender
+        updatedProfile.gradeLevel = selectedGradeLevel.rawValue
+        updatedProfile.major = major
+        updatedProfile.collegeName = collegeName
+        updatedProfile.budgetRange = budgetRange
+        updatedProfile.cleanliness = cleanliness
+        updatedProfile.sleepSchedule = sleepSchedule
+        updatedProfile.smoker = smoker
+        updatedProfile.petFriendly = petFriendly
+        updatedProfile.interests = interestsArray
+        updatedProfile.housingStatus = selectedHousingStatus.rawValue
+        updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
+        let originalCreatedAt = updatedProfile.createdAt
+        viewModel.updateUserProfile(updatedProfile: updatedProfile) { result in
+            switch result {
+            case .success:
+                updatedProfile.createdAt = originalCreatedAt
+                print("MyProfileView: Profile auto-saved successfully.")
+            case .failure(let error):
+                print("MyProfileView: Error auto-saving profile: \(error.localizedDescription)")
+            }
+        }
+    }
+
     // MARK: - Nested Subviews
-    
-    /// A card-styled view showing the profile completion percentage.
+
     struct ProfileCompletionView: View {
         let completion: Double
-        
         var body: some View {
             VStack(alignment: .leading) {
                 Text("Profile Completion: \(Int(completion))%")
@@ -187,60 +284,69 @@ struct MyProfileView: View {
             .shadow(radius: 5)
         }
     }
-    
-    /// A carousel view for multiple profile images.
-    struct ImageCarouselView: View {
+
+    struct MediaGridView: View {
         let imageUrls: [String]
-        
+        let onTapAddOrEdit: (Int) -> Void
+        let onRemoveImage: (Int) -> Void
+
+        private let columns = [
+            GridItem(.flexible()),
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ]
+
         var body: some View {
-            TabView {
-                ForEach(imageUrls.prefix(10), id: \.self) { urlString in
-                    if let url = URL(string: urlString) {
-                        AsyncImage(url: url) { phase in
-                            if let image = phase.image {
-                                image.resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 300, height: 320)
-                                    .clipShape(RoundedRectangle(cornerRadius: 15))
-                                    .shadow(radius: 5)
-                            } else {
-                                Image(systemName: "photo")
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 300, height: 320)
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(0..<9) { index in
+                    ZStack(alignment: .topTrailing) {
+                        if index < imageUrls.count, let url = URL(string: imageUrls[index]) {
+                            AsyncImage(url: url) { phase in
+                                if let image = phase.image {
+                                    image.resizable()
+                                        .scaledToFill()
+                                        .frame(height: 100)
+                                        .clipped()
+                                        .cornerRadius(8)
+                                } else {
+                                    Image(systemName: "photo").resizable()
+                                }
+                            }
+                            .frame(height: 100)
+                            .clipped()
+                            .cornerRadius(8)
+                            .onTapGesture { onTapAddOrEdit(index) }
+                            Button(action: { onRemoveImage(index) }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.white)
+                                    .padding(6)
+                            }
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                            .offset(x: -4, y: 4)
+                        } else {
+                            ZStack {
+                                Rectangle()
+                                    .fill(AppTheme.cardBackground)
+                                    .cornerRadius(8)
+                                    .frame(height: 100)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 24))
                                     .foregroundColor(.gray)
                             }
+                            .onTapGesture { onTapAddOrEdit(index) }
                         }
                     }
                 }
             }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-            .frame(height: 340)
-            .padding(.horizontal)
+            .padding(.horizontal, 8)
         }
     }
-    
-    /// Fallback view for profile image if no multiple images exist.
-    struct ProfileImageFallbackView: View {
-        let action: () -> Void
-        
-        var body: some View {
-            Button(action: action) {
-                Image(systemName: "person.crop.circle")
-                    .resizable()
-                    .frame(width: 150, height: 150)
-                    .foregroundColor(.gray)
-                    .overlay(Circle().stroke(AppTheme.primaryColor, lineWidth: 4))
-            }
-        }
-    }
-    
-    /// A preview card showing key profile details.
+
     @ViewBuilder
     func ProfileCardPreviewSection(profile: UserModel?) -> some View {
         if let profile = profile {
             VStack(alignment: .leading, spacing: 8) {
-                // NEW FIELDS: Display firstName, lastName, dateOfBirth, and gender.
                 if let fn = profile.firstName, !fn.isEmpty,
                    let ln = profile.lastName, !ln.isEmpty {
                     Text("\(fn) \(ln)")
@@ -254,7 +360,6 @@ struct MyProfileView: View {
                     Text("Gender: \(g)")
                         .font(AppTheme.bodyFont)
                 }
-                // Existing details.
                 Text(profile.email)
                     .font(AppTheme.bodyFont)
                 if let grade = profile.gradeLevel {
@@ -297,66 +402,55 @@ struct MyProfileView: View {
             .padding(.horizontal)
         }
     }
-    
-    /// Inline editing section that combines new and existing profile fields.
+
     @ViewBuilder
     func InlineEditingSection() -> some View {
         VStack(alignment: .leading, spacing: 15) {
             Group {
-                // NEW FIELDS
                 TextField("First Name", text: $firstName)
                     .padding(AppTheme.defaultPadding)
                     .background(AppTheme.cardBackground)
                     .cornerRadius(AppTheme.defaultCornerRadius)
-                    .onChange(of: firstName) { _ in autoSaveProfile() }
-                
+                    .onChange(of: firstName) { _ in scheduleAutoSave() }
                 TextField("Last Name", text: $lastName)
                     .padding(AppTheme.defaultPadding)
                     .background(AppTheme.cardBackground)
                     .cornerRadius(AppTheme.defaultCornerRadius)
-                    .onChange(of: lastName) { _ in autoSaveProfile() }
-                
+                    .onChange(of: lastName) { _ in scheduleAutoSave() }
                 TextField("Date of Birth (YYYY-MM-DD)", text: $dateOfBirth)
                     .padding(AppTheme.defaultPadding)
                     .background(AppTheme.cardBackground)
                     .cornerRadius(AppTheme.defaultCornerRadius)
-                    .onChange(of: dateOfBirth) { _ in autoSaveProfile() }
-                
+                    .onChange(of: dateOfBirth) { _ in scheduleAutoSave() }
                 Picker("Gender", selection: $gender) {
                     Text("Male").tag("Male")
                     Text("Female").tag("Female")
                     Text("Other").tag("Other")
                 }
-                .onChange(of: gender) { _ in autoSaveProfile() }
                 .pickerStyle(SegmentedPickerStyle())
-                
-                // Existing fields
+                .onChange(of: gender) { _ in scheduleAutoSave() }
                 Picker("Grade Level", selection: $selectedGradeLevel) {
                     ForEach(GradeLevel.allCases) { level in
                         Text(level.rawValue).tag(level)
                     }
                 }
-                .onChange(of: selectedGradeLevel) { _ in autoSaveProfile() }
-                
+                .onChange(of: selectedGradeLevel) { _ in scheduleAutoSave() }
                 TextField("Major (e.g., Computer Science)", text: $major)
                     .padding(AppTheme.defaultPadding)
                     .background(AppTheme.cardBackground)
                     .cornerRadius(AppTheme.defaultCornerRadius)
-                    .onChange(of: major) { _ in autoSaveProfile() }
-                
+                    .onChange(of: major) { _ in scheduleAutoSave() }
                 TextField("College Name (e.g., Engineering)", text: $collegeName)
                     .padding(AppTheme.defaultPadding)
                     .background(AppTheme.cardBackground)
                     .cornerRadius(AppTheme.defaultCornerRadius)
-                    .onChange(of: collegeName) { _ in autoSaveProfile() }
-                
+                    .onChange(of: collegeName) { _ in scheduleAutoSave() }
                 Picker("Housing Status", selection: $selectedHousingStatus) {
                     ForEach(HousingStatus.allCases) { status in
                         Text(status.rawValue).tag(status)
                     }
                 }
-                .onChange(of: selectedHousingStatus) { _ in autoSaveProfile() }
-                
+                .onChange(of: selectedHousingStatus) { _ in scheduleAutoSave() }
                 if selectedHousingStatus == .apartment ||
                    selectedHousingStatus == .house ||
                    selectedHousingStatus == .subleasing ||
@@ -366,15 +460,13 @@ struct MyProfileView: View {
                             Text(duration.rawValue).tag(duration)
                         }
                     }
-                    .onChange(of: selectedLeaseDuration) { _ in autoSaveProfile() }
+                    .onChange(of: selectedLeaseDuration) { _ in scheduleAutoSave() }
                 }
-                
                 TextField("Budget Range (e.g., $500 - $1000)", text: $budgetRange)
                     .padding(AppTheme.defaultPadding)
                     .background(AppTheme.cardBackground)
                     .cornerRadius(AppTheme.defaultCornerRadius)
-                    .onChange(of: budgetRange) { _ in autoSaveProfile() }
-                
+                    .onChange(of: budgetRange) { _ in scheduleAutoSave() }
                 Picker("Cleanliness (1=Very Messy, 5=Very Tidy)", selection: $cleanliness) {
                     ForEach(1..<6) { number in
                         Text({
@@ -390,27 +482,23 @@ struct MyProfileView: View {
                         .tag(number)
                     }
                 }
-                .onChange(of: cleanliness) { _ in autoSaveProfile() }
-                
+                .onChange(of: cleanliness) { _ in scheduleAutoSave() }
                 Picker("Sleep Schedule", selection: $sleepSchedule) {
                     ForEach(sleepScheduleOptions, id: \.self) { option in
                         Text(option)
                     }
                 }
-                .onChange(of: sleepSchedule) { _ in autoSaveProfile() }
-                
+                .onChange(of: sleepSchedule) { _ in scheduleAutoSave() }
                 Toggle("Smoker", isOn: $smoker)
-                    .onChange(of: smoker) { _ in autoSaveProfile() }
-                
+                    .onChange(of: smoker) { _ in scheduleAutoSave() }
                 Toggle("Pet Friendly", isOn: $petFriendly)
-                    .onChange(of: petFriendly) { _ in autoSaveProfile() }
-                
+                    .onChange(of: petFriendly) { _ in scheduleAutoSave() }
                 TextField("Interests (comma-separated)", text: $interestsText)
                     .autocapitalization(.none)
                     .padding(AppTheme.defaultPadding)
                     .background(AppTheme.cardBackground)
                     .cornerRadius(AppTheme.defaultCornerRadius)
-                    .onChange(of: interestsText) { _ in autoSaveProfile() }
+                    .onChange(of: interestsText) { _ in scheduleAutoSave() }
             }
             .transition(.opacity.combined(with: .slide))
             .animation(.easeInOut(duration: 0.3), value: UUID())
@@ -420,55 +508,6 @@ struct MyProfileView: View {
         .cornerRadius(15)
         .shadow(radius: 5)
         .padding(.horizontal)
-    }
-    
-    /// Auto-save function that updates the user profile with both new and existing fields.
-    private func autoSaveProfile() {
-        guard var updatedProfile = viewModel.userProfile else {
-            print("No user profile loaded yet.")
-            return
-        }
-        
-        let interestsArray = interestsText
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-        
-        // NEW FIELDS update
-        updatedProfile.firstName = firstName
-        updatedProfile.lastName = lastName
-        updatedProfile.dateOfBirth = dateOfBirth
-        updatedProfile.gender = gender
-        
-        // Existing fields update
-        updatedProfile.gradeLevel = selectedGradeLevel.rawValue
-        updatedProfile.major = major
-        updatedProfile.collegeName = collegeName
-        updatedProfile.budgetRange = budgetRange
-        updatedProfile.cleanliness = cleanliness
-        updatedProfile.sleepSchedule = sleepSchedule
-        updatedProfile.smoker = smoker
-        updatedProfile.petFriendly = petFriendly
-        updatedProfile.interests = interestsArray
-        updatedProfile.housingStatus = selectedHousingStatus.rawValue
-        updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
-        
-        // Preserve the original createdAt value.
-        let originalCreatedAt = updatedProfile.createdAt
-        
-        viewModel.updateUserProfile(updatedProfile: updatedProfile) { result in
-            switch result {
-            case .success:
-                updatedProfile.createdAt = originalCreatedAt
-                print("Profile auto-saved successfully.")
-            case .failure(let error):
-                print("Error auto-saving profile: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    /// Minimal fallback user profile if none exists.
-    private func defaultUserProfile() -> UserModel {
-        UserModel(email: Auth.auth().currentUser?.email ?? "unknown@unknown.com", isEmailVerified: false)
     }
 }
 

@@ -1,40 +1,40 @@
 import SwiftUI
+import FirebaseAuth
 
 struct HomeView: View {
+    @StateObject private var viewModel = ProfileViewModel.shared
+    
     var body: some View {
         ZStack {
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             VStack(spacing: 20) {
+                // Title
                 Text("Welcome to CollegePads!")
                     .font(AppTheme.titleFont)
                     .foregroundColor(.primary)
                 
-                // Profile Icon: Displays the current user's profile picture.
-                NavigationLink(destination: MyProfileView()) {
-                                    if let profileImageUrl = ProfileViewModel.shared.userProfile?.profileImageUrl,
-                                       let url = URL(string: profileImageUrl) {
-                                        AsyncImage(url: url) { phase in
-                                            if let image = phase.image {
-                                                image
-                                                    .resizable()
-                                                    .aspectRatio(contentMode: .fill)
-                                                    .frame(width: 70, height: 70)
-                                                    .clipShape(Circle())
-                                                    .overlay(Circle().stroke(AppTheme.primaryColor, lineWidth: 2))
-                                            } else {
-                                                Image(systemName: "person.crop.circle")
-                                                    .resizable()
-                                                    .frame(width: 70, height: 70)
-                                            }
-                                        }
-                                    } else {
-                                        Image(systemName: "person.crop.circle")
-                                            .resizable()
-                                            .frame(width: 70, height: 70)
+                // If we have a user profile, display a ring around their image showing profile completion
+                if let profile = viewModel.userProfile {
+                    let completion = ProfileCompletionCalculator.calculateCompletion(for: profile)
+                    
+                    // NavigationLink wraps the ring so it’s clickable
+                    NavigationLink(destination: MyProfileView()) {
+                        ProfileCompletionRingView(
+                            completion: completion,
+                            imageUrl: profile.profileImageUrl
+                        )
+                        .frame(width: 120, height: 120)
                     }
+                    .padding()
+                    
+                } else {
+                    // Fallback if profile is not loaded yet
+                    Image(systemName: "person.crop.circle")
+                        .resizable()
+                        .frame(width: 70, height: 70)
+                        .padding()
                 }
-                .padding()
                 
                 // Navigation to Advanced Search
                 NavigationLink(destination: AdvancedFilterView()) {
@@ -69,13 +69,55 @@ struct HomeView: View {
                     .foregroundColor(.primary)
             }
         }
+        .onAppear {
+            // Ensure the user profile is loaded so we can show the ring & image
+            viewModel.loadUserProfile()
+        }
     }
 }
 
-struct HomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            HomeView()
+/// A reusable ring view that displays the user’s image in the center
+/// and a circular progress stroke around it representing profile completion (0–100).
+struct ProfileCompletionRingView: View {
+    let completion: Double      // 0..100
+    let imageUrl: String?       // Optional image URL
+    
+    var body: some View {
+        ZStack {
+            // Trimmed circle stroke from 0..completion
+            Circle()
+                .trim(from: 0, to: CGFloat(completion / 100))
+                .stroke(
+                    AppTheme.primaryColor,
+                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))  // Start from top
+                .opacity(0.5)
+            
+            // Center circle for user’s image
+            ZStack {
+                Circle()
+                    .fill(AppTheme.cardBackground)
+                
+                if let urlStr = imageUrl, let url = URL(string: urlStr) {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            Image(systemName: "person.crop.circle")
+                                .resizable()
+                        }
+                    }
+                    .clipShape(Circle())
+                } else {
+                    // Fallback if no URL
+                    Image(systemName: "person.crop.circle")
+                        .resizable()
+                }
+            }
+            .frame(width: 80, height: 80)
         }
     }
 }

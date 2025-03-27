@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import FirebaseAuth
 
 struct VerificationView: View {
     @StateObject private var viewModel = VerificationViewModel()
@@ -49,8 +51,9 @@ struct VerificationView: View {
             .navigationBarItems(trailing: Button("Cancel") {
                 presentationMode.wrappedValue.dismiss()
             })
+            // Use CustomImagePicker instead of the old picker.
             .sheet(isPresented: $showingImagePicker) {
-                ImagePicker(image: $selectedImage)
+                CustomImagePicker(image: $selectedImage)
             }
             .alert(item: Binding(
                 get: {

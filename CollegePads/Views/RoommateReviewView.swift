@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import FirebaseAuth
 
 struct RoommateReviewView: View {
     let matchID: String      // Provided by match context
@@ -128,8 +130,9 @@ struct RoommateReviewView: View {
                     .font(AppTheme.bodyFont)
                 }
             }
+            // Use CustomImagePicker instead of the old picker.
             .sheet(isPresented: $showingImagePicker) {
-                ImagePicker(image: $leaseImage)
+                CustomImagePicker(image: $leaseImage)
             }
             .alert(item: alertBinding) { alertError in
                 Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
