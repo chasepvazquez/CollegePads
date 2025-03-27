@@ -7,17 +7,17 @@ struct UserModel: Codable, Identifiable {
 
     // Basic Info
     var email: String
-    var createdAt: Date?           // Changed to optional
-    
+    var createdAt: Date?           // optional creation date
     var isEmailVerified: Bool
     
-    // NEW FIELDS
+    // NEW FIELD for “About Me”
+    var aboutMe: String?           // short bio/description
+    
+    // Name & Demographics
     var firstName: String?
     var lastName: String?
-    /// Stored as a string (yyyy-MM-dd) for simplicity.
     var dateOfBirth: String?
-    /// “Male”, “Female”, or “Other”
-    var gender: String?
+    var gender: String?            // "Male", "Female", or "Other"
     
     // College & Living Info
     var gradeLevel: String?
@@ -39,12 +39,12 @@ struct UserModel: Codable, Identifiable {
     var studyHabits: Int?
     var interests: [String]?
     
-    // Profile Picture & Location
-    var profileImageUrl: String?         // Legacy single image (fallback)
-    var profileImageUrls: [String]?        // Array for multiple images (max 10)
-    var location: GeoPoint?              // User location
+    // Profile Pictures & Location
+    var profileImageUrl: String?      // legacy single image
+    var profileImageUrls: [String]?   // array for multiple images
+    var location: GeoPoint?
     
-    // Verification Fields
+    // Verification
     var isVerified: Bool?
     var verificationImageUrl: String?
     
@@ -58,12 +58,11 @@ struct UserModel: Codable, Identifiable {
     init(
         email: String,
         isEmailVerified: Bool,
-        // NEW FIELDS
+        aboutMe: String? = nil,
         firstName: String? = nil,
         lastName: String? = nil,
         dateOfBirth: String? = nil,
         gender: String? = nil,
-        // Existing fields
         gradeLevel: String? = nil,
         major: String? = nil,
         collegeName: String? = nil,
@@ -90,16 +89,14 @@ struct UserModel: Codable, Identifiable {
     ) {
         self.email = email
         self.isEmailVerified = isEmailVerified
-        // Only set createdAt if it wasn't provided.
+        // If no createdAt was passed, use "now".
         self.createdAt = createdAt ?? Date()
         
-        // Assign new fields
+        self.aboutMe = aboutMe
         self.firstName = firstName
         self.lastName = lastName
         self.dateOfBirth = dateOfBirth
         self.gender = gender
-        
-        // Assign existing fields
         self.gradeLevel = gradeLevel
         self.major = major
         self.collegeName = collegeName

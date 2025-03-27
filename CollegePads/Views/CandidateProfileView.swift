@@ -4,11 +4,11 @@ struct CandidateProfileView: View {
     let candidateID: String
     @StateObject private var viewModel = CandidateProfileViewModel()
     @State private var showCompatibilityBreakdown = false
-    @State private var showComparison = false      // For profile comparison
-    @State private var showReportSheet = false       // For reporting user
-    @State private var showBlockAlert = false        // For blocking confirmation
-    @State private var showRatingSheet = false         // For rating roommate
-    @State private var showAgreementSheet = false      // For creating roommate agreement
+    @State private var showComparison = false
+    @State private var showReportSheet = false
+    @State private var showBlockAlert = false
+    @State private var showRatingSheet = false
+    @State private var showAgreementSheet = false
 
     @StateObject private var blockUserVM = BlockUserViewModel()
     
@@ -20,7 +20,7 @@ struct CandidateProfileView: View {
                 if let candidate = viewModel.candidate {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // MARK: - Profile Image Section
+                            // MARK: - Profile Image
                             ZStack(alignment: .topTrailing) {
                                 if let imageUrl = candidate.profileImageUrl, let url = URL(string: imageUrl) {
                                     AsyncImage(url: url) { phase in
@@ -32,10 +32,7 @@ struct CandidateProfileView: View {
                                                 .clipShape(Circle())
                                                 .overlay(Circle().stroke(AppTheme.primaryColor, lineWidth: 4))
                                                 .shadow(radius: 4)
-                                                .rotation3DEffect(
-                                                    .degrees(5),
-                                                    axis: (x: 0, y: 1, z: 0)
-                                                )
+                                                .rotation3DEffect(.degrees(5), axis: (x: 0, y: 1, z: 0))
                                                 .transition(.scale.combined(with: .opacity))
                                         } else {
                                             Image(systemName: "person.crop.circle")
@@ -43,13 +40,13 @@ struct CandidateProfileView: View {
                                                 .frame(width: 150, height: 150)
                                         }
                                     }
-                                    .animation(.easeInOut(duration: 0.3), value: candidate.profileImageUrl)
                                 } else {
                                     Image(systemName: "person.crop.circle")
                                         .resizable()
                                         .frame(width: 150, height: 150)
                                 }
                                 
+                                // Verified badge
                                 if let verified = candidate.isVerified, verified {
                                     Text("✓ Verified")
                                         .font(AppTheme.bodyFont)
@@ -61,27 +58,64 @@ struct CandidateProfileView: View {
                                         .transition(.move(edge: .top).combined(with: .opacity))
                                 }
                             }
+                            .padding(.top, 20)
                             
-                            // MARK: - Candidate Details Card
-                            VStack(alignment: .leading, spacing: 10) {
-                                // Instead of showing email, display candidate's full name.
-                                if let firstName = candidate.firstName, let lastName = candidate.lastName,
+                            // MARK: - ABOUT ME
+                            if let aboutMe = candidate.aboutMe, !aboutMe.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("ABOUT ME")
+                                        .font(.headline)
+                                    Text(aboutMe)
+                                        .font(AppTheme.bodyFont)
+                                }
+                                .padding()
+                                .background(AppTheme.cardBackground)
+                                .cornerRadius(AppTheme.defaultCornerRadius)
+                                .shadow(radius: 5)
+                            }
+                            
+                            // MARK: - BASICS
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("BASICS")
+                                    .font(.headline)
+                                
+                                // Full Name
+                                if let firstName = candidate.firstName,
+                                   let lastName = candidate.lastName,
                                    !firstName.isEmpty, !lastName.isEmpty {
                                     Text("\(firstName) \(lastName)")
-                                        .font(AppTheme.titleFont)
-                                } else {
-                                    Text("Name not provided")
-                                        .font(AppTheme.titleFont)
+                                        .font(AppTheme.bodyFont)
                                 }
-                                if let grade = candidate.gradeLevel {
+                                
+                                // DOB & Gender
+                                if let dob = candidate.dateOfBirth, !dob.isEmpty {
+                                    Text("DOB: \(dob)")
+                                        .font(AppTheme.bodyFont)
+                                }
+                                if let g = candidate.gender, !g.isEmpty {
+                                    Text("Gender: \(g)")
+                                        .font(AppTheme.bodyFont)
+                                }
+                            }
+                            .padding()
+                            .background(AppTheme.cardBackground)
+                            .cornerRadius(AppTheme.defaultCornerRadius)
+                            .shadow(radius: 5)
+
+                            // MARK: - ACADEMICS
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("ACADEMICS")
+                                    .font(.headline)
+                                
+                                if let grade = candidate.gradeLevel, !grade.isEmpty {
                                     Text("Grade: \(grade)")
                                         .font(AppTheme.bodyFont)
                                 }
-                                if let major = candidate.major {
+                                if let major = candidate.major, !major.isEmpty {
                                     Text("Major: \(major)")
                                         .font(AppTheme.bodyFont)
                                 }
-                                if let college = candidate.collegeName {
+                                if let college = candidate.collegeName, !college.isEmpty {
                                     Text("College: \(college)")
                                         .font(AppTheme.bodyFont)
                                 }
@@ -90,17 +124,13 @@ struct CandidateProfileView: View {
                             .background(AppTheme.cardBackground)
                             .cornerRadius(AppTheme.defaultCornerRadius)
                             .shadow(radius: 5)
-                            .transition(.move(edge: .leading))
-                            
-                            Divider()
-                            
-                            // MARK: - Additional Information Section
+
+                            // MARK: - HOUSING
                             VStack(alignment: .leading, spacing: 8) {
-                                if let dorm = candidate.dormType {
-                                    Text("Dorm Type: \(dorm)")
-                                        .font(AppTheme.bodyFont)
-                                }
-                                if let budget = candidate.budgetRange {
+                                Text("HOUSING")
+                                    .font(.headline)
+                                
+                                if let budget = candidate.budgetRange, !budget.isEmpty {
                                     Text("Budget Range: \(budget)")
                                         .font(AppTheme.bodyFont)
                                 }
@@ -108,12 +138,8 @@ struct CandidateProfileView: View {
                                     Text("Cleanliness: \(cleanliness)/5")
                                         .font(AppTheme.bodyFont)
                                 }
-                                if let sleep = candidate.sleepSchedule {
+                                if let sleep = candidate.sleepSchedule, !sleep.isEmpty {
                                     Text("Sleep Schedule: \(sleep)")
-                                        .font(AppTheme.bodyFont)
-                                }
-                                if let style = candidate.livingStyle {
-                                    Text("Living Style: \(style)")
                                         .font(AppTheme.bodyFont)
                                 }
                                 if let smoker = candidate.smoker {
@@ -124,23 +150,45 @@ struct CandidateProfileView: View {
                                     Text("Pet Friendly: \(petFriendly ? "Yes" : "No")")
                                         .font(AppTheme.bodyFont)
                                 }
+                                if let housing = candidate.housingStatus, !housing.isEmpty {
+                                    Text("Housing Status: \(housing)")
+                                        .font(AppTheme.bodyFont)
+                                }
+                                if let lease = candidate.leaseDuration, !lease.isEmpty {
+                                    Text("Lease Duration: \(lease)")
+                                        .font(AppTheme.bodyFont)
+                                }
                             }
                             .padding()
-                            .transition(.opacity)
+                            .background(AppTheme.cardBackground)
+                            .cornerRadius(AppTheme.defaultCornerRadius)
+                            .shadow(radius: 5)
                             
-                            Divider()
+                            // MARK: - INTERESTS
+                            if let candidateInterests = candidate.interests, !candidateInterests.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("INTERESTS")
+                                        .font(.headline)
+                                    Text(candidateInterests.joined(separator: ", "))
+                                        .font(AppTheme.bodyFont)
+                                }
+                                .padding()
+                                .background(AppTheme.cardBackground)
+                                .cornerRadius(AppTheme.defaultCornerRadius)
+                                .shadow(radius: 5)
+                            }
                             
-                            // MARK: - Common Interests Section
+                            // MARK: - Common Interests (Optional)
                             if let currentUser = ProfileViewModel.shared.userProfile,
                                let candidateInterests = candidate.interests,
                                let currentInterests = currentUser.interests {
                                 let lowercasedCurrent = currentInterests.map { $0.lowercased() }
-                                let commonInterests = candidateInterests.filter { lowercasedCurrent.contains($0.lowercased()) }
-                                if !commonInterests.isEmpty {
+                                let common = candidateInterests.filter { lowercasedCurrent.contains($0.lowercased()) }
+                                if !common.isEmpty {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("Common Interests:")
                                             .font(AppTheme.subtitleFont)
-                                        Text(commonInterests.joined(separator: ", "))
+                                        Text(common.joined(separator: ", "))
                                             .font(AppTheme.bodyFont)
                                             .foregroundColor(AppTheme.secondaryColor)
                                     }
@@ -148,21 +196,16 @@ struct CandidateProfileView: View {
                                     .background(AppTheme.cardBackground.opacity(0.8))
                                     .cornerRadius(AppTheme.defaultCornerRadius)
                                     .shadow(radius: 3)
-                                    .transition(.opacity)
                                 }
                             }
-                            
-                            Divider()
-                            
-                            // MARK: - Action Buttons Section
+
+                            // MARK: - Action Buttons
                             VStack(spacing: 16) {
-                                HStack(spacing: 16) {
-                                    Button(action: { showCompatibilityBreakdown = true }) {
-                                        Text("View Compatibility Breakdown")
-                                            .font(AppTheme.bodyFont)
-                                    }
-                                    .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
+                                Button(action: { showCompatibilityBreakdown = true }) {
+                                    Text("View Compatibility Breakdown")
+                                        .font(AppTheme.bodyFont)
                                 }
+                                .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                                 
                                 Button(action: { showComparison = true }) {
                                     Text("Compare with My Profile")
@@ -196,8 +239,9 @@ struct CandidateProfileView: View {
                                 }
                                 .buttonStyle(PrimaryButtonStyle(backgroundColor: AppTheme.primaryColor))
                             }
+                            .padding(.bottom, 20)
                         }
-                        .padding()
+                        .padding(.horizontal)
                     }
                 } else {
                     ProgressView("Loading Profile...")

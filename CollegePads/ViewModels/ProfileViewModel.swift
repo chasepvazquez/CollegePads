@@ -5,12 +5,11 @@ import FirebaseStorage
 import FirebaseFirestoreCombineSwift
 import Combine
 
-/// ViewModel that manages the user profile data stored in Firestore.
 class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
     
-    // Flag to suspend updates when needed (e.g., while image picker is active)
+    // Flag to suspend updates while picking images, etc.
     var suspendUpdates = false
 
     private let db = Firestore.firestore()
@@ -49,8 +48,6 @@ class ProfileViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     if !self.suspendUpdates {
                         self.userProfile = profile
-                    } else {
-                        print("ProfileViewModel: Updates are suspended.")
                     }
                 }
                 completion?(profile)
