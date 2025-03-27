@@ -5,27 +5,26 @@ import Combine
 struct FavoritesView: View {
     @State private var favorites: [UserModel] = []
     @State private var errorMessage: String?
-    @State private var cancellables = Set<AnyCancellable>()
     
     private let favoriteService = FavoriteService()
     
     var body: some View {
         NavigationView {
             List(favorites) { candidate in
-                Group {
-                    let candidateId = candidate.id ?? ""
-                    NavigationLink(destination: CandidateProfileView(candidateID: candidateId)) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(candidate.email)
+                NavigationLink(destination: ProfilePreviewView(user: candidate)) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        // Instead of showing candidate.email, display a name if available.
+                        if let firstName = candidate.firstName, let lastName = candidate.lastName {
+                            Text("\(firstName) \(lastName)")
                                 .font(AppTheme.bodyFont)
-                            if let dorm = candidate.dormType {
-                                Text("Dorm: \(dorm)")
-                                    .font(AppTheme.bodyFont)
-                            }
-                            if let budget = candidate.budgetRange {
-                                Text("Budget: \(budget)")
-                                    .font(AppTheme.bodyFont)
-                            }
+                        }
+                        if let dorm = candidate.dormType {
+                            Text("Dorm: \(dorm)")
+                                .font(AppTheme.bodyFont)
+                        }
+                        if let budget = candidate.budgetRange {
+                            Text("Budget: \(budget)")
+                                .font(AppTheme.bodyFont)
                         }
                     }
                 }

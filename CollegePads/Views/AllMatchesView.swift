@@ -9,18 +9,15 @@ struct AllMatchesView: View {
     
     var body: some View {
         ZStack {
-            // Global background gradient.
             AppTheme.backgroundGradient.ignoresSafeArea()
-            
-            // Remove inner NavigationView for consistent background.
             List(viewModel.matches) { match in
-                // Create participant text.
+                // Create a string of participant IDs (excluding the current user)
                 let participantText = match.participants.filter { $0 != viewModel.currentUserID }.joined(separator: ", ")
-                
-                NavigationLink(destination: CandidateProfileView(candidateID: candidateID(for: match))) {
+                NavigationLink(destination: UserPreviewLoaderView(candidateID: candidateID(for: match))) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Match with: \(participantText)")
                             .font(AppTheme.bodyFont)
+                            .foregroundColor(.primary)
                         Text("Matched on: \(match.createdAt, formatter: dateFormatter)")
                             .font(AppTheme.bodyFont)
                             .foregroundColor(AppTheme.secondaryColor)

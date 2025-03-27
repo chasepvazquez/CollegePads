@@ -1,11 +1,37 @@
 import SwiftUI
 
+enum ChatOption {
+    case rate
+    case agreement
+}
+
 struct ChatInputBar: View {
     @Binding var messageText: String
     var onSend: () -> Void
-
+    var onOptionSelected: (ChatOption) -> Void
+    
+    @State private var showOptions: Bool = false
+    
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
+            // Plus icon to open the options menu.
+            Button(action: {
+                showOptions = true
+            }) {
+                Image(systemName: "plus.circle")
+                    .font(.system(size: 24))
+                    .foregroundColor(AppTheme.primaryColor)
+            }
+            .confirmationDialog("Options", isPresented: $showOptions, titleVisibility: .visible) {
+                Button("Rate Roommate") {
+                    onOptionSelected(.rate)
+                }
+                Button("Create Agreement") {
+                    onOptionSelected(.agreement)
+                }
+                Button("Cancel", role: .cancel) { }
+            }
+            
             TextEditor(text: $messageText)
                 .frame(minHeight: 40, maxHeight: 100)
                 .padding(8)
@@ -36,9 +62,7 @@ struct ChatInputBar: View {
 
 struct ChatInputBar_Previews: PreviewProvider {
     static var previews: some View {
-        ChatInputBar(messageText: .constant("Type a message...")) {
-            print("Send tapped")
-        }
-        .previewLayout(.sizeThatFits)
+        ChatInputBar(messageText: .constant("Type a message..."), onSend: {}, onOptionSelected: { _ in })
+            .previewLayout(.sizeThatFits)
     }
 }

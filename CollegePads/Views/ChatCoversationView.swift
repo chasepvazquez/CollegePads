@@ -1,25 +1,37 @@
 import SwiftUI
 import FirebaseAuth
 
-/// A unified conversation view that displays messages, a chat input bar,
-/// and optionally the online status of the chat partner.
 struct ChatConversationView: View {
     @StateObject var viewModel: ChatConversationViewModel
-    /// Optionally, provide the chat partner's ID to show their online status.
     var chatPartnerID: String?
+    /// Optional match ID; only available after a match is made.
+    var matchID: String? = nil
     
     @State private var messageText: String = ""
+    @State private var showReviewSheet: Bool = false
+    @State private var showAgreementSheet: Bool = false
     
     var body: some View {
         ZStack {
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Messages list with auto-scroll
                 messagesScrollView
-                // Input bar at the bottom
-                ChatInputBar(messageText: $messageText, onSend: sendMessage)
-                    .padding(.bottom, 4)
+                
+                // New ChatInputBar now includes the plus-options button.
+                ChatInputBar(messageText: $messageText, onSend: sendMessage, onOptionSelected: { option in
+                    switch option {
+                    case .rate:
+                        if matchID != nil {
+                            showReviewSheet = true
+                        } // else: Optionally alert that this feature is not available until a match is made.
+                    case .agreement:
+                        if matchID != nil {
+                            showAgreementSheet = true
+                        }
+                    }
+                })
+                .padding(.bottom, 4)
             }
         }
         .toolbar { toolbarContent }
@@ -28,20 +40,33 @@ struct ChatConversationView: View {
             viewModel.markMessagesAsRead()
         }
         .alert(item: errorBinding, content: alertContent)
+        // Present RoommateReviewView if option selected and match exists.
+        .sheet(isPresented: $showReviewSheet) {
+            if let matchID = matchID, let partnerID = chatPartnerID {
+                RoommateReviewView(matchID: matchID, ratedUserID: partnerID)
+            } else {
+                Text("Roommate review is not available until a match is made.")
+            }
+        }
+        // Present AgreementView if option selected and match exists.
+        .sheet(isPresented: $showAgreementSheet) {
+            if let matchID = matchID, let partnerID = chatPartnerID,
+               let currentUserID = ProfileViewModel.shared.userProfile?.id {
+                AgreementView(matchID: matchID, userA: currentUserID, userB: partnerID)
+            } else {
+                Text("Agreement is not available until a match is made.")
+            }
+        }
     }
 }
 
-// MARK: - Subviews & Helpers
 extension ChatConversationView {
-    
-    /// The scrolling list of messages + typing indicator
     private var messagesScrollView: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(viewModel.messages) { msg in
-                        MessageBubble(message: msg,
-                                      isCurrentUser: msg.senderID == viewModel.currentUserID)
+                        MessageBubble(message: msg, isCurrentUser: msg.senderID == viewModel.currentUserID)
                             .id(msg.id)
                     }
                     if viewModel.isTyping {
@@ -63,7 +88,6 @@ extension ChatConversationView {
         }
     }
     
-    /// The custom toolbar (title + optional partner status)
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .principal) {
@@ -78,7 +102,6 @@ extension ChatConversationView {
         }
     }
     
-    /// Binding for the alert triggered by `viewModel.errorMessage`
     private var errorBinding: Binding<GenericAlertError?> {
         Binding(
             get: {
@@ -87,14 +110,10 @@ extension ChatConversationView {
                 }
                 return nil
             },
-            set: { _ in
-                // Clear the error once dismissed
-                viewModel.errorMessage = nil
-            }
+            set: { _ in viewModel.errorMessage = nil }
         )
     }
     
-    /// Creates the alert from a `GenericAlertError`
     private func alertContent(_ alertError: GenericAlertError) -> Alert {
         Alert(
             title: Text("Error"),
@@ -103,7 +122,6 @@ extension ChatConversationView {
         )
     }
     
-    /// Sends a message if it's non-empty
     private func sendMessage() {
         let trimmed = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -111,7 +129,6 @@ extension ChatConversationView {
         messageText = ""
     }
     
-    /// Scrolls to the last message in the list (animated)
     private func scrollToLastMessage(proxy: ScrollViewProxy) {
         if let lastMessage = viewModel.messages.last, let id = lastMessage.id {
             withAnimation {
@@ -121,13 +138,13 @@ extension ChatConversationView {
     }
 }
 
-// MARK: - Preview
 struct ChatConversationView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
             ChatConversationView(
                 viewModel: ChatConversationViewModel(chatID: "dummyChatID"),
-                chatPartnerID: "dummyPartnerID"
+                chatPartnerID: "dummyPartnerID",
+                matchID: "dummyMatchID"
             )
         }
     }
