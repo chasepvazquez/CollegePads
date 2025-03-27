@@ -175,6 +175,10 @@ struct ProfilePreviewView: View {
         .sheet(isPresented: $showReportSheet) {
             if let userID = user.id {
                 ReportUserView(reportedUserID: userID)
+                    .onDisappear {
+                        // Reset suspendUpdates so that the profile view resumes live updates.
+                        ProfileViewModel.shared.suspendUpdates = false
+                    }
             } else {
                 Text("No user ID found.")
             }
@@ -222,6 +226,8 @@ extension ProfilePreviewView {
                     .font(.title3)
             }
             Button(action: {
+                // Suspend profile updates so that the ReportUserView doesn't dismiss.
+                ProfileViewModel.shared.suspendUpdates = true
                 showReportSheet = true
             }) {
                 Image(systemName: "shield")
@@ -230,6 +236,7 @@ extension ProfilePreviewView {
             }
             .contextMenu {
                 Button("Report User") {
+                    ProfileViewModel.shared.suspendUpdates = true
                     showReportSheet = true
                 }
                 Button("Block User", role: .destructive) {

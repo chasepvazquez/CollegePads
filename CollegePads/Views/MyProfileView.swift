@@ -72,7 +72,7 @@ struct MyProfileView: View {
     // MARK: - Body
     var body: some View {
         ZStack {
-            // The background gradient at the top level.
+            // The background gradient is back at the top level.
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -134,14 +134,11 @@ struct MyProfileView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("ABOUT ME")
                                     .font(.headline)
-                                // This fixes the black background by hiding the default
-                                // scroll background and substituting AppTheme.cardBackground.
                                 TextEditor(text: $aboutMe)
-                                    .scrollContentBackground(.hidden)     // iOS 16+
-                                    .background(AppTheme.cardBackground)  // Your card color
-                                    .cornerRadius(AppTheme.defaultCornerRadius)
                                     .frame(minHeight: 100)
                                     .padding(6)
+                                    .background(AppTheme.cardBackground)
+                                    .cornerRadius(AppTheme.defaultCornerRadius)
                                     .onChange(of: aboutMe) { _ in scheduleAutoSave() }
                             }
                             .padding()

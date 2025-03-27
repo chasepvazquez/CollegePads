@@ -9,7 +9,7 @@ class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
     
-    // Flag to suspend updates while picking images, etc.
+    // Flag to suspend updates while modals (e.g., image picker or report view) are active.
     var suspendUpdates = false
 
     private let db = Firestore.firestore()
@@ -78,7 +78,9 @@ class ProfileViewModel: ObservableObject {
             do {
                 let profile = try snapshot.data(as: UserModel.self)
                 DispatchQueue.main.async {
-                    self.userProfile = profile
+                    if !self.suspendUpdates {
+                        self.userProfile = profile
+                    }
                 }
             } catch {
                 DispatchQueue.main.async {
