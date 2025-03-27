@@ -30,7 +30,11 @@ struct CombinedMatchesChatView: View {
                                 let candidateID = match.participants.first(where: {
                                     $0 != (matchesVM.currentUserID ?? "")
                                 }) ?? "unknown"
-                                MatchCardView(candidateID: candidateID)
+                                // When tapping a match, navigate to ChatConversationView.
+                                NavigationLink(destination: ChatConversationView(viewModel: ChatConversationViewModel(chatID: match.id),
+                                                                                 chatPartnerID: candidateID)) {
+                                    MatchCardView(candidateID: candidateID)
+                                }
                             }
                         }
                         .padding(.horizontal)

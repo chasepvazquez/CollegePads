@@ -1,20 +1,14 @@
-//
-//  ChatViewModel.swift
-//  CollegePads
-//
-//  Updated to include proper resource cleanup and a debounce mechanism for typing status updates.
-//  This ensures the chat view auto‐marks messages as read, handles errors gracefully, and minimizes unnecessary writes for typing status.
-
 import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
 import Combine
 import FirebaseAuth
 
-class ChatViewModel: ObservableObject {
+/// A combined view model for a single chat conversation.
+class ChatConversationViewModel: ObservableObject {
     @Published var messages: [MessageModel] = []
     @Published var errorMessage: String?
-    @Published var isTyping: Bool = false  // Local indicator for other user's typing status
+    @Published var isTyping: Bool = false  // Indicates if the other user is typing
     
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
@@ -36,7 +30,7 @@ class ChatViewModel: ObservableObject {
         typingTimer?.invalidate()
     }
     
-    /// Observes messages in real-time for this chat.
+    /// Observes messages in real time for this chat.
     func observeMessages() {
         db.collection("chats")
             .document(chatID)
@@ -123,7 +117,7 @@ class ChatViewModel: ObservableObject {
                 self.errorMessage = error.localizedDescription
             }
         }
-        // Reset typing status after sending the message.
+        // Reset typing status after sending.
         setTypingStatus(isTyping: false)
     }
     
@@ -150,13 +144,12 @@ class ChatViewModel: ObservableObject {
         }
     }
     
-    /// Call this method when the user is actively typing.
+    /// Call this when the user is actively typing.
     func userIsTyping() {
         // Immediately set typing status to true.
         setTypingStatus(isTyping: true)
-        // Invalidate the previous timer.
+        // Reset the timer.
         typingTimer?.invalidate()
-        // Start a new timer to reset typing status after 3 seconds of inactivity.
         typingTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { [weak self] _ in
             self?.setTypingStatus(isTyping: false)
         })

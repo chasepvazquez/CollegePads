@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// A deck of swipeable user cards, plus optional rewind and super-like buttons.
 struct SwipeDeckView: View {
     @StateObject private var viewModel = MatchingViewModel()
     @State private var currentIndex: Int = 0
@@ -7,9 +8,11 @@ struct SwipeDeckView: View {
     var body: some View {
         ZStack {
             if viewModel.potentialMatches.isEmpty {
-                Text("No more matches")
+                Text("No more potential matches")
                     .font(AppTheme.titleFont)
+                    .foregroundColor(.secondary)
             } else {
+                // Show each potential match card in reverse order so the top is the current card
                 ForEach(viewModel.potentialMatches.indices.reversed(), id: \.self) { index in
                     if index >= currentIndex {
                         let user = viewModel.potentialMatches[index]
@@ -18,37 +21,51 @@ struct SwipeDeckView: View {
                         }
                         .scaleEffect(scale(for: index))
                         .offset(y: offset(for: index))
-                        .allowsHitTesting(index == currentIndex)
+                        .allowsHitTesting(index == currentIndex) // Only top card is swipeable
                         .transition(.slide)
-                        .animation(.interactiveSpring(response: 0.5, dampingFraction: 0.7, blendDuration: 0.3), value: currentIndex)
+                        .animation(.interactiveSpring(
+                            response: 0.5,
+                            dampingFraction: 0.7,
+                            blendDuration: 0.3
+                        ), value: currentIndex)
                     }
                 }
             }
             
-            // Bottom control buttons: Rewind & Super Like
-            VStack {
-                Spacer()
-                HStack(spacing: 40) {
-                    Button(action: rewindSwipe) {
-                        Image(systemName: "gobackward")
-                            .font(.system(size: 32))
-                            .foregroundColor(currentIndex > 0 ? .blue : .gray)
-                    }
-                    .disabled(currentIndex == 0)
-                    
-                    Button(action: superLike) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 32))
-                            .foregroundColor(.yellow)
-                    }
-                }
-                .padding(.bottom, 30)
-            }
+            // Bottom row of buttons: Rewind & Super Like
+            bottomControls
         }
         .onAppear {
             viewModel.fetchPotentialMatches()
         }
     }
+    
+    // MARK: - Subviews
+    
+    private var bottomControls: some View {
+        VStack {
+            Spacer()
+            HStack(spacing: 40) {
+                // Rewind
+                Button(action: rewindSwipe) {
+                    Image(systemName: "gobackward")
+                        .font(.system(size: 32))
+                        .foregroundColor(currentIndex > 0 ? .blue : .gray)
+                }
+                .disabled(currentIndex == 0)
+                
+                // Super Like
+                Button(action: superLike) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(.yellow)
+                }
+            }
+            .padding(.bottom, 30)
+        }
+    }
+    
+    // MARK: - Swipe Logic
     
     private func handleSwipe(user: UserModel, direction: SwipeDirection) {
         if direction == .right {
@@ -78,12 +95,16 @@ struct SwipeDeckView: View {
         }
     }
     
+    // MARK: - Visual Helpers
+    
     private func scale(for index: Int) -> CGFloat {
-        return index == currentIndex ? 1.0 : 0.95
+        // Slightly shrink cards behind the top card
+        index == currentIndex ? 1.0 : 0.95
     }
     
     private func offset(for index: Int) -> CGFloat {
-        return CGFloat(index - currentIndex) * 10
+        // Stagger cards vertically behind the top
+        CGFloat(index - currentIndex) * 10
     }
 }
 

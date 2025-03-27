@@ -71,30 +71,31 @@ struct MyProfileView: View {
 
     // MARK: - Body
     var body: some View {
-        VStack(spacing: 0) {
-            // Title
-            HStack {
-                Text("My Profile")
-                    .font(AppTheme.titleFont)
-                    .foregroundColor(.primary)
-                Spacer()
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
+        ZStack {
+            // The background gradient at the top level.
+            AppTheme.backgroundGradient.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Title
+                HStack {
+                    Text("My Profile")
+                        .font(AppTheme.titleFont)
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
 
-            // Segmented Control
-            Picker("", selection: $isPreviewMode) {
-                Text("Edit").tag(false)
-                Text("Preview").tag(true)
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding(.horizontal)
-            .padding(.bottom, 8)
+                // Segmented Control
+                Picker("", selection: $isPreviewMode) {
+                    Text("Edit").tag(false)
+                    Text("Preview").tag(true)
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .padding(.horizontal)
+                .padding(.bottom, 8)
 
-            // Main Content
-            ZStack {
-                AppTheme.backgroundGradient.ignoresSafeArea()
-
+                // Main Content
                 if isPreviewMode {
                     if let profile = viewModel.userProfile {
                         ProfilePreviewView(user: profile)
@@ -133,11 +134,14 @@ struct MyProfileView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("ABOUT ME")
                                     .font(.headline)
+                                // This fixes the black background by hiding the default
+                                // scroll background and substituting AppTheme.cardBackground.
                                 TextEditor(text: $aboutMe)
+                                    .scrollContentBackground(.hidden)     // iOS 16+
+                                    .background(AppTheme.cardBackground)  // Your card color
+                                    .cornerRadius(AppTheme.defaultCornerRadius)
                                     .frame(minHeight: 100)
                                     .padding(6)
-                                    .background(AppTheme.cardBackground)
-                                    .cornerRadius(AppTheme.defaultCornerRadius)
                                     .onChange(of: aboutMe) { _ in scheduleAutoSave() }
                             }
                             .padding()

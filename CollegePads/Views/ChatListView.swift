@@ -20,7 +20,8 @@ struct ChatsListView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         List(viewModel.chats) { chat in
-                            NavigationLink(destination: ChatView(viewModel: ChatViewModel(chatID: chat.id))) {
+                            NavigationLink(destination: ChatConversationView(viewModel: ChatConversationViewModel(chatID: chat.id),
+                                                                               chatPartnerID: chat.participants.first { $0 != viewModel.currentUserID ?? "" })) {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Chat with: \(chat.participants.filter { $0 != viewModel.currentUserID ?? "" }.joined(separator: ", "))")
                                         .font(AppTheme.bodyFont)
