@@ -5,11 +5,14 @@ struct AdvancedFilterView: View {
     @StateObject private var viewModel = AdvancedFilterViewModel()
     @StateObject private var locationManager = LocationManager()
     
-    // Options for pickers.
-    let gradeLevels = ["Freshman", "Underclassmen", "Upperclassmen", "Graduate"]
+    // Options for other filters.
     let housingStatuses = ["Dorm Resident", "Apartment Resident", "House Owner/Renter", "Subleasing", "Looking for Roommate", "Looking for Lease", "Other"]
     let leaseDurations = ["Current Lease", "Short Term (<6 months)", "Medium Term (6-12 months)", "Long Term (1 year+)", "Future: Next Year", "Future: 2+ Years", "Not Applicable"]
     let preferredGenders = ["Any", "Male", "Female", "Other"]
+    
+    // New: Use the shared GradeLevel enum from MyProfileView.
+    @State private var selectedGradeLevel: MyProfileView.GradeLevel = .freshman
+    // Remove the old local gradeLevels array.
     
     @State private var localFilterMode: FilterMode = .university
     @State private var universities: [String] = []
@@ -30,9 +33,11 @@ struct AdvancedFilterView: View {
     
     var body: some View {
         ZStack {
+            // Use the proper theme background
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             List {
+                // Filtering Mode Section
                 Section {
                     Picker("Filter Mode", selection: $localFilterMode) {
                         ForEach(FilterMode.allCases) { mode in
@@ -53,14 +58,18 @@ struct AdvancedFilterView: View {
                     Text("Filtering Mode").font(AppTheme.subtitleFont)
                 }
                 
+                // Filter Criteria Section
                 Section {
-                    Picker("Grade Group", selection: $viewModel.filterGradeGroup) {
-                        Text("All").tag("")
-                        ForEach(gradeLevels, id: \.self) { level in
-                            Text(level).tag(level)
+                    // Grade Group Picker using the shared enum.
+                    Picker("Grade Group", selection: $selectedGradeLevel) {
+                        ForEach(MyProfileView.GradeLevel.allCases) { level in
+                            Text(level.rawValue).tag(level)
                         }
                     }
-                    .onChange(of: viewModel.filterGradeGroup) { _ in autoApplyAndSave() }
+                    .onChange(of: selectedGradeLevel) { newLevel in
+                        viewModel.filterGradeGroup = newLevel.rawValue
+                        autoApplyAndSave()
+                    }
                     
                     Picker("Housing Status", selection: $viewModel.filterHousingStatus) {
                         Text("All").tag("")
@@ -114,21 +123,26 @@ struct AdvancedFilterView: View {
                     Text("Filter Criteria").font(AppTheme.subtitleFont)
                 }
                 
+                // Filtered Users Section
                 if !viewModel.filteredUsers.isEmpty {
                     Section {
                         ForEach(viewModel.filteredUsers) { user in
                             VStack(alignment: .leading) {
                                 if let firstName = user.firstName, let lastName = user.lastName,
                                    !firstName.isEmpty && !lastName.isEmpty {
-                                    Text("\(firstName) \(lastName)").font(AppTheme.titleFont)
+                                    Text("\(firstName) \(lastName)")
+                                        .font(AppTheme.titleFont)
                                 } else {
-                                    Text("Name not provided").font(AppTheme.titleFont)
+                                    Text("Name not provided")
+                                        .font(AppTheme.titleFont)
                                 }
                                 if let grade = user.gradeLevel {
-                                    Text("Grade: \(grade)").font(AppTheme.bodyFont)
+                                    Text("Grade: \(grade)")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 if let housing = user.housingStatus {
-                                    Text("Housing: \(housing)").font(AppTheme.bodyFont)
+                                    Text("Housing: \(housing)")
+                                        .font(AppTheme.bodyFont)
                                 }
                                 if let interests = user.interests {
                                     Text("Interests: \(interests.joined(separator: ", "))")
@@ -149,6 +163,9 @@ struct AdvancedFilterView: View {
                     }
                 }
             }
+            // Apply the proper themed background.
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.backgroundGradient)
             .listStyle(InsetGroupedListStyle())
             .font(AppTheme.bodyFont)
             .alert(item: alertBinding) { alertError in
@@ -168,7 +185,7 @@ struct AdvancedFilterView: View {
             viewModel.loadFiltersFromUserDoc {
                 viewModel.applyFilters(currentLocation: locationManager.currentLocation)
             }
-            // Load the valid universities asynchronously.
+            // Asynchronously load and cache valid college names.
             UniversityDataProvider.shared.loadUniversities { colleges in
                 self.universities = colleges
                 print("AdvancedFilterView loaded \(colleges.count) colleges.")

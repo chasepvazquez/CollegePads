@@ -10,7 +10,7 @@ struct UserModel: Codable, Identifiable {
     var createdAt: Date?           // optional creation date
     var isEmailVerified: Bool
     
-    // NEW FIELD for “About Me”
+    // "About Me"
     var aboutMe: String?           // short bio/description
     
     // Name & Demographics
@@ -51,9 +51,21 @@ struct UserModel: Codable, Identifiable {
     // Blocked Users
     var blockedUserIDs: [String]?
     
-    // Housing Details
+    // Housing Details (Profile Info)
     var housingStatus: String?
     var leaseDuration: String?
+    
+    // Advanced Filter Settings (for filtering purposes)
+    var filterDormType: String?
+    var filterHousingStatus: String?
+    var filterCollegeName: String?
+    var filterBudgetRange: String?
+    var filterGradeGroup: String?
+    var filterInterests: String?
+    var filterMaxDistance: Double?
+    var filterPreferredGender: String?
+    var maxAgeDifference: Double?
+    var filterMode: String?   // stored as a string (e.g. "university" or "distance")
     
     init(
         email: String,
@@ -85,6 +97,17 @@ struct UserModel: Codable, Identifiable {
         blockedUserIDs: [String]? = nil,
         housingStatus: String? = nil,
         leaseDuration: String? = nil,
+        // Advanced filter settings with default nil values
+        filterDormType: String? = nil,
+        filterHousingStatus: String? = nil,
+        filterCollegeName: String? = nil,
+        filterBudgetRange: String? = nil,
+        filterGradeGroup: String? = nil,
+        filterInterests: String? = nil,
+        filterMaxDistance: Double? = nil,
+        filterPreferredGender: String? = nil,
+        maxAgeDifference: Double? = nil,
+        filterMode: String? = nil,
         createdAt: Date? = nil
     ) {
         self.email = email
@@ -100,6 +123,7 @@ struct UserModel: Codable, Identifiable {
         self.gradeLevel = gradeLevel
         self.major = major
         self.collegeName = collegeName
+        
         self.dormType = dormType
         self.preferredDorm = preferredDorm
         self.budgetRange = budgetRange
@@ -108,16 +132,32 @@ struct UserModel: Codable, Identifiable {
         self.smoker = smoker
         self.petFriendly = petFriendly
         self.livingStyle = livingStyle
+        
         self.socialLevel = socialLevel
         self.studyHabits = studyHabits
         self.interests = interests
+        
         self.profileImageUrl = profileImageUrl
         self.profileImageUrls = profileImageUrls
         self.location = location
+        
         self.isVerified = isVerified
         self.verificationImageUrl = verificationImageUrl
         self.blockedUserIDs = blockedUserIDs
+        
         self.housingStatus = housingStatus
         self.leaseDuration = leaseDuration
+        
+        // Advanced filter settings
+        self.filterDormType = filterDormType
+        self.filterHousingStatus = filterHousingStatus
+        self.filterCollegeName = filterCollegeName
+        self.filterBudgetRange = filterBudgetRange
+        self.filterGradeGroup = filterGradeGroup
+        self.filterInterests = filterInterests
+        self.filterMaxDistance = filterMaxDistance
+        self.filterPreferredGender = filterPreferredGender
+        self.maxAgeDifference = maxAgeDifference
+        self.filterMode = filterMode
     }
 }
