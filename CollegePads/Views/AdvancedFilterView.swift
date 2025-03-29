@@ -12,6 +12,11 @@ struct AdvancedFilterView: View {
     // New options for Preferred Gender filter.
     let preferredGenders = ["Any", "Male", "Female", "Other"]
     
+    // New: Filtering mode segmented control (university vs. distance).
+    @State private var localFilterMode: FilterMode = .university
+    // New: List of universities loaded from CSV.
+    @State private var universities: [String] = []
+    
     // Alert binding.
     private var alertBinding: Binding<GenericAlertError?> {
         Binding<GenericAlertError?>(
@@ -32,6 +37,29 @@ struct AdvancedFilterView: View {
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             List {
+                // New Section: Filter Mode
+                Section {
+                    Picker("Filter Mode", selection: $localFilterMode) {
+                        ForEach(FilterMode.allCases) { mode in
+                            Text(mode == .university ? "By College" : "By Distance").tag(mode)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .onChange(of: localFilterMode) { newMode in
+                        viewModel.filterMode = newMode
+                        // When switching modes, clear the unused filter.
+                        if newMode == .university {
+                            viewModel.maxDistance = 50.0 // set a non-restrictive default if needed
+                        } else {
+                            viewModel.filterCollegeName = ""
+                        }
+                        autoApplyAndSave()
+                    }
+                } header: {
+                    Text("Filtering Mode")
+                        .font(AppTheme.subtitleFont)
+                }
+                
                 // SECTION 1: Filter Criteria
                 Section {
                     // Grade Group Picker
@@ -74,13 +102,27 @@ struct AdvancedFilterView: View {
                             autoApplyAndSave()
                         }
                     
-                    // Maximum Distance Slider
-                    VStack(alignment: .leading) {
-                        Text("Max Distance: \(Int(viewModel.maxDistance)) km")
-                        Slider(value: $viewModel.maxDistance, in: 1...50, step: 1)
-                            .onChange(of: viewModel.maxDistance) { _ in
-                                autoApplyAndSave()
+                    // Conditionally show either the University Picker or the Distance Slider.
+                    if localFilterMode == .university {
+                        // University Picker populated from the CSV.
+                        Picker("College", selection: $viewModel.filterCollegeName) {
+                            Text("All").tag("")
+                            ForEach(universities, id: \.self) { uni in
+                                Text(uni).tag(uni)
                             }
+                        }
+                        .onChange(of: viewModel.filterCollegeName) { _ in
+                            autoApplyAndSave()
+                        }
+                    } else {
+                        // Maximum Distance Slider
+                        VStack(alignment: .leading) {
+                            Text("Max Distance: \(Int(viewModel.maxDistance)) km")
+                            Slider(value: $viewModel.maxDistance, in: 1...50, step: 1)
+                                .onChange(of: viewModel.maxDistance) { _ in
+                                    autoApplyAndSave()
+                                }
+                        }
                     }
                     
                     // Preferred Roommate Gender Picker
@@ -148,7 +190,6 @@ struct AdvancedFilterView: View {
                     }
                 }
             }
-            //.scrollContentBackground(.hidden)
             .listStyle(InsetGroupedListStyle())
             .font(AppTheme.bodyFont)
             .alert(item: alertBinding) { alertError in
@@ -165,9 +206,55 @@ struct AdvancedFilterView: View {
             }
         }
         .onAppear {
+            // Load any previously saved filters.
             viewModel.loadFiltersFromUserDoc {
                 viewModel.applyFilters(currentLocation: locationManager.currentLocation)
             }
+            // Load the CSV from the app bundle.
+            self.universities = loadUniversities()
+        }
+    }
+    
+    /// Loads the CSV file bundled in the app and parses out the list of university names.
+    /// Assumes that the CSV has a header row and one column named "INSTNM" (or containing "institution").
+    private func loadUniversities() -> [String] {
+        guard let url = Bundle.main.url(forResource: "Most-Recent-Cohorts-Institution", withExtension: "csv") else {
+            print("CSV file not found")
+            return []
+        }
+        do {
+            let content = try String(contentsOf: url)
+            var lines = content.components(separatedBy: "\n")
+            guard let headerLine = lines.first else { return [] }
+            let headers = headerLine.components(separatedBy: ",")
+            // Look for the column header that holds the institution name.
+            let universityNameIndex: Int?
+            if let idx = headers.firstIndex(where: { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "instnm" }) {
+                universityNameIndex = idx
+            } else if let idx = headers.firstIndex(where: { $0.lowercased().contains("institution") }) {
+                universityNameIndex = idx
+            } else {
+                print("Institution name column not found in CSV")
+                return []
+            }
+            let index = universityNameIndex!
+            // Parse the remaining lines.
+            var unis = [String]()
+            for line in lines.dropFirst() {
+                // Ignore empty lines.
+                if line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { continue }
+                let fields = line.components(separatedBy: ",")
+                if fields.count > index {
+                    let name = fields[index].trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !name.isEmpty {
+                        unis.append(name)
+                    }
+                }
+            }
+            return unis.sorted()
+        } catch {
+            print("Error reading CSV: \(error.localizedDescription)")
+            return []
         }
     }
     

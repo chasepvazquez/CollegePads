@@ -1,8 +1,6 @@
 import SwiftUI
 
 /// A unified preview that merges CandidateProfileView features into the original swipeable layout.
-/// - Displays user images in a TabView (horizontal swipe) with minimal preview snippets.
-/// - Shows a top-right overlay with a shield icon (Report/Block) and a checkmark if verified.
 struct ProfilePreviewView: View {
     let user: UserModel
     
@@ -17,22 +15,21 @@ struct ProfilePreviewView: View {
     // Approximate Tinder ratio (3:4 or 4:5).
     private let cardAspectRatio: CGFloat = 0.75
     
-    // A minimal set of snippet pairs to display across slides.
+    // MARK: - Info Snippets
+    //
+    // Removed the name from the snippet, so we can always show the name in bold
+    // at the bottom overlay. The snippet now holds only the rest of the info.
     private var infoSnippets: [[String]] {
-        let ageString = (calculateAge(from: user.dateOfBirth).map { "\($0)" }) ?? "?"
+        let ageString = (calculateAge(from: user.dateOfBirth).map { "Age: \($0)" }) ?? "Age: ?"
         let about = (user.aboutMe?.isEmpty == false) ? user.aboutMe! : nil
         let interests = (user.interests?.isEmpty == false) ? user.interests!.joined(separator: ", ") : nil
         
         var snippets: [[String]] = []
         
-        // Slide 1: Name + Age.
-        if let fn = user.firstName, let ln = user.lastName, !fn.isEmpty, !ln.isEmpty {
-            snippets.append(["\(fn) \(ln)", "Age: \(ageString)"])
-        } else {
-            snippets.append(["Age: \(ageString)"])
-        }
+        // Slide 1: Age
+        snippets.append([ageString])
         
-        // Slide 2: Major + College.
+        // Slide 2: Major + College
         if let major = user.major, !major.isEmpty,
            let college = user.collegeName, !college.isEmpty {
             snippets.append(["Major: \(major)", "College: \(college)"])
@@ -42,7 +39,7 @@ struct ProfilePreviewView: View {
             snippets.append(["College: \(college)"])
         }
         
-        // Slide 3: Dorm + Budget.
+        // Slide 3: Dorm + Budget
         if let dorm = user.dormType, !dorm.isEmpty,
            let budget = user.budgetRange, !budget.isEmpty {
             snippets.append(["Dorm Type: \(dorm)", "Budget: \(budget)"])
@@ -52,7 +49,7 @@ struct ProfilePreviewView: View {
             snippets.append(["Budget: \(budget)"])
         }
         
-        // Slide 4: Cleanliness + Sleep.
+        // Slide 4: Cleanliness + Sleep
         if let cleanliness = user.cleanliness,
            let schedule = user.sleepSchedule, !schedule.isEmpty {
             snippets.append(["Cleanliness: \(cleanliness)/5", "Sleep: \(schedule)"])
@@ -62,7 +59,7 @@ struct ProfilePreviewView: View {
             snippets.append(["Sleep: \(schedule)"])
         }
         
-        // Slide 5: Smoker + Pets.
+        // Slide 5: Smoker + Pets
         if let smoker = user.smoker,
            let pet = user.petFriendly {
             snippets.append(["Smoker: \(smoker ? "Yes" : "No")", "Pets: \(pet ? "Yes" : "No")"])
@@ -72,12 +69,12 @@ struct ProfilePreviewView: View {
             snippets.append(["Pets: \(pet ? "Yes" : "No")"])
         }
         
-        // Slide 6: About Me.
+        // Slide 6: About Me
         if let about = about, !about.isEmpty {
             snippets.append(["About Me:", about])
         }
         
-        // Slide 7: Interests.
+        // Slide 7: Interests
         if let interests = interests, !interests.isEmpty {
             snippets.append(["Interests:", interests])
         }
@@ -85,76 +82,21 @@ struct ProfilePreviewView: View {
         return snippets
     }
     
-    // The number of slides is the minimum of the number of images and snippet groups.
     private var slideCount: Int {
         let imageCount = user.profileImageUrls?.count ?? 0
         return min(imageCount, infoSnippets.count)
     }
     
+    // MARK: - Body
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack {
             if let images = user.profileImageUrls, !images.isEmpty {
-                if slideCount > 0 {
-                    TabView(selection: $currentIndex) {
-                        ForEach(0..<slideCount) { idx in
-                            // Single slide with image + snippet overlay.
-                            ZStack(alignment: .bottomLeading) {
-                                // Background image.
-                                if let urlString = images[safe: idx],
-                                   let url = URL(string: urlString) {
-                                    AsyncImage(url: url) { phase in
-                                        switch phase {
-                                        case .empty:
-                                            ProgressView()
-                                        case .success(let image):
-                                            GeometryReader { geo in
-                                                image
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: geo.size.width, height: geo.size.height)
-                                                    .clipped()
-                                            }
-                                        case .failure:
-                                            Color.gray
-                                        @unknown default:
-                                            Color.gray
-                                        }
-                                    }
-                                } else {
-                                    Color.gray
-                                }
-                                
-                                // Text overlay for snippet.
-                                VStack(alignment: .leading, spacing: 6) {
-                                    ForEach(infoSnippets[idx], id: \.self) { line in
-                                        Text(line)
-                                            .font(AppTheme.bodyFont)
-                                            .lineLimit(2)
-                                    }
-                                }
-                                .padding()
-                                .foregroundColor(.white)
-                                .shadow(radius: 5)
-                            }
-                            .tag(idx)
-                        }
-                    }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-                    .aspectRatio(cardAspectRatio, contentMode: .fit)
-                    .cornerRadius(15)
-                    .shadow(radius: 5)
-                    .padding()
-                } else {
-                    fallbackImageTabView(images: images)
-                }
+                cardView(with: images)
             } else {
                 Text("No images to preview")
                     .font(AppTheme.bodyFont)
                     .foregroundColor(.gray)
             }
-            
-            // Top-right overlay: Verification check + shield icon.
-            topRightOverlay
         }
         .alert(item: Binding(
             get: {
@@ -175,21 +117,162 @@ struct ProfilePreviewView: View {
         .sheet(isPresented: $showReportSheet) {
             if let userID = user.id {
                 ReportUserView(reportedUserID: userID)
-                    .onDisappear {
-                        // Reset suspendUpdates so that the profile view resumes live updates.
-                        ProfileViewModel.shared.suspendUpdates = false
-                    }
             } else {
                 Text("No user ID found.")
             }
         }
     }
+    
+    /// The card view that contains the images (or TabView) and its overlays.
+    private func cardView(with images: [String]) -> some View {
+        Group {
+            if slideCount > 0 {
+                ZStack {
+                    TabView(selection: $currentIndex) {
+                        ForEach(0..<slideCount, id: \.self) { idx in
+                            ZStack {
+                                backgroundImage(for: images[safe: idx])
+                                bottomOverlay(index: idx)
+                            }
+                            .tag(idx)
+                        }
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    
+                    // Page indicator: same top padding as icons, centered horizontally.
+                    pageIndicator
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 12)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                    
+                    // Verification/report icons: unchanged, pinned top-right with 12 padding.
+                    HStack(spacing: 8) {
+                        if user.isVerified == true {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundColor(.green)
+                                .font(.title3)
+                        }
+                        Button(action: {
+                            showReportSheet = true
+                        }) {
+                            Image(systemName: "shield")
+                                .foregroundColor(.white)
+                                .font(.title3)
+                        }
+                        .contextMenu {
+                            Button("Report User") {
+                                showReportSheet = true
+                            }
+                            Button("Block User", role: .destructive) {
+                                showBlockAlert = true
+                            }
+                        }
+                    }
+                    .padding([.top, .trailing], 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                }
+                .aspectRatio(cardAspectRatio, contentMode: .fit)
+                .cornerRadius(15)
+                .shadow(radius: 5)
+                .padding()
+            } else {
+                // Fallback: if snippet count doesn't match image count, use a simple TabView.
+                fallbackImageTabView(images: images)
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    .aspectRatio(cardAspectRatio, contentMode: .fit)
+                    .cornerRadius(15)
+                    .shadow(radius: 5)
+                    .padding()
+            }
+        }
+    }
 }
 
+// MARK: - Subviews & Helpers
 extension ProfilePreviewView {
+    
+    /// Custom dot indicator to display the current slide.
+    private var pageIndicator: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<slideCount, id: \.self) { index in
+                Circle()
+                    .fill(index == currentIndex ? Color.white : Color.white.opacity(0.3))
+                    .frame(width: 8, height: 8)
+            }
+        }
+    }
+    
+    /// Bottom overlay that displays the user's name in bold on every slide,
+    /// plus the snippet lines for the current slide in normal (unbolded) text.
+    @ViewBuilder
+    private func bottomOverlay(index: Int) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            LinearGradient(
+                gradient: Gradient(colors: [Color.clear, Color.black.opacity(0.6)]),
+                startPoint: .center,
+                endPoint: .bottom
+            )
+            .allowsHitTesting(false)
+            
+            VStack(alignment: .leading, spacing: 6) {
+                // Always show the name in bold.
+                let fullName = [user.firstName, user.lastName]
+                    .compactMap { $0 }
+                    .joined(separator: " ")
+                
+                if !fullName.isEmpty {
+                    Text(fullName)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.8), radius: 1, x: 0, y: 1)
+                }
+                
+                // Show the snippet lines unbolded.
+                let snippet = infoSnippets[index]
+                ForEach(snippet, id: \.self) { line in
+                    Text(line)
+                        .font(.system(size: 18))
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.8), radius: 1, x: 0, y: 1)
+                        .lineLimit(nil)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 36)
+        }
+    }
+    
+    /// Background image for each slide.
+    @ViewBuilder
+    private func backgroundImage(for urlString: String?) -> some View {
+        if let urlStr = urlString, let url = URL(string: urlStr) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .empty:
+                    ProgressView()
+                case .success(let image):
+                    GeometryReader { geo in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: geo.size.width, height: geo.size.height)
+                            .clipped()
+                    }
+                case .failure:
+                    Color.gray
+                @unknown default:
+                    Color.gray
+                }
+            }
+        } else {
+            Color.gray
+        }
+    }
+    
+    /// Fallback for mismatch between snippet count and image count.
     private func fallbackImageTabView(images: [String]) -> some View {
         TabView {
-            ForEach(0..<images.count) { index in
+            ForEach(0..<images.count, id: \.self) { index in
                 if let url = URL(string: images[index]) {
                     AsyncImage(url: url) { phase in
                         switch phase {
@@ -211,42 +294,9 @@ extension ProfilePreviewView {
                 }
             }
         }
-        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-        .aspectRatio(cardAspectRatio, contentMode: .fit)
-        .cornerRadius(15)
-        .shadow(radius: 5)
-        .padding()
     }
     
-    private var topRightOverlay: some View {
-        HStack(spacing: 10) {
-            if user.isVerified == true {
-                Image(systemName: "checkmark.seal.fill")
-                    .foregroundColor(.green)
-                    .font(.title3)
-            }
-            Button(action: {
-                // Suspend profile updates so that the ReportUserView doesn't dismiss.
-                ProfileViewModel.shared.suspendUpdates = true
-                showReportSheet = true
-            }) {
-                Image(systemName: "shield")
-                    .foregroundColor(.white)
-                    .font(.title3)
-            }
-            .contextMenu {
-                Button("Report User") {
-                    ProfileViewModel.shared.suspendUpdates = true
-                    showReportSheet = true
-                }
-                Button("Block User", role: .destructive) {
-                    showBlockAlert = true
-                }
-            }
-        }
-        .padding()
-    }
-    
+    /// The action sheet for blocking a user.
     private var blockActionSheet: ActionSheet {
         ActionSheet(
             title: Text("Block User"),
@@ -287,6 +337,7 @@ extension ProfilePreviewView {
     }
 }
 
+// MARK: - Array Safe Subscript
 fileprivate extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
@@ -299,18 +350,18 @@ struct ProfilePreviewView_Previews: PreviewProvider {
             email: "test@edu",
             isEmailVerified: true,
             aboutMe: "I love coding, coffee, and late-night debugging!",
-            firstName: "Taylor",
-            lastName: "Johnson",
-            dateOfBirth: "1999-08-12",
+            firstName: "Chase",
+            lastName: "Vazquez",
+            dateOfBirth: "2004-09-09",
             major: "Computer Science",
-            collegeName: "Engineering",
+            collegeName: "CLA",
             dormType: "On-Campus",
             budgetRange: "$500-$1000",
-            cleanliness: 4,
+            cleanliness: 5,
             sleepSchedule: "Flexible",
             smoker: false,
             petFriendly: true,
-            interests: ["Gaming", "Movies", "Hiking"],
+            interests: ["Photography", "Music", "Sports"],
             profileImageUrls: [
                 "https://picsum.photos/id/1025/400/600",
                 "https://picsum.photos/id/1035/400/600",
@@ -318,6 +369,7 @@ struct ProfilePreviewView_Previews: PreviewProvider {
             ],
             isVerified: true
         )
+        
         return NavigationView {
             ProfilePreviewView(user: sampleUser)
         }

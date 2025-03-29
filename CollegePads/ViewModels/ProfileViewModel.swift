@@ -8,10 +8,8 @@ import Combine
 class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
+    @Published var didLoadProfile: Bool = false  // New flag to track if profile is loaded
     
-    // Flag to suspend updates while modals (e.g., image picker or report view) are active.
-    var suspendUpdates = false
-
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
     
@@ -23,15 +21,27 @@ class ProfileViewModel: ObservableObject {
     
     /// Loads the currently authenticated user's profile from Firestore.
     func loadUserProfile(completion: ((UserModel?) -> Void)? = nil) {
+        // If already loaded, skip the fetch.
+        if didLoadProfile {
+            print("[ProfileViewModel] loadUserProfile: Already loaded, skipping fetch.")
+            completion?(userProfile)
+            return
+        }
+        
         guard let uid = userID else {
-            self.errorMessage = "User not authenticated"
+            DispatchQueue.main.async {
+                self.errorMessage = "User not authenticated"
+                print("[ProfileViewModel] loadUserProfile: User not authenticated")
+            }
             completion?(nil)
             return
         }
+        print("[ProfileViewModel] loadUserProfile: Fetching profile for uid: \(uid)")
         db.collection("users").document(uid).getDocument { snapshot, error in
             if let error = error {
                 DispatchQueue.main.async {
                     self.errorMessage = error.localizedDescription
+                    print("[ProfileViewModel] loadUserProfile error: \(error.localizedDescription)")
                 }
                 completion?(nil)
                 return
@@ -39,6 +49,7 @@ class ProfileViewModel: ObservableObject {
             guard let snapshot = snapshot, snapshot.exists else {
                 DispatchQueue.main.async {
                     self.errorMessage = "User profile does not exist"
+                    print("[ProfileViewModel] loadUserProfile: Profile does not exist")
                 }
                 completion?(nil)
                 return
@@ -46,14 +57,15 @@ class ProfileViewModel: ObservableObject {
             do {
                 let profile = try snapshot.data(as: UserModel.self)
                 DispatchQueue.main.async {
-                    if !self.suspendUpdates {
-                        self.userProfile = profile
-                    }
+                    self.userProfile = profile
+                    self.didLoadProfile = true  // Mark as loaded
+                    print("[ProfileViewModel] loadUserProfile: Successfully loaded profile: \(profile)")
                 }
                 completion?(profile)
             } catch {
                 DispatchQueue.main.async {
                     self.errorMessage = error.localizedDescription
+                    print("[ProfileViewModel] loadUserProfile: Decoding error: \(error.localizedDescription)")
                 }
                 completion?(nil)
             }
@@ -62,29 +74,32 @@ class ProfileViewModel: ObservableObject {
     
     /// Loads any user's profile by candidateID from Firestore.
     func loadUserProfile(with candidateID: String) {
+        print("[ProfileViewModel] loadUserProfile(with:) for candidateID: \(candidateID)")
         db.collection("users").document(candidateID).getDocument { snapshot, error in
             if let error = error {
                 DispatchQueue.main.async {
                     self.errorMessage = error.localizedDescription
+                    print("[ProfileViewModel] loadUserProfile(with:) error: \(error.localizedDescription)")
                 }
                 return
             }
             guard let snapshot = snapshot, snapshot.exists else {
                 DispatchQueue.main.async {
                     self.errorMessage = "User profile not found"
+                    print("[ProfileViewModel] loadUserProfile(with:): Profile not found")
                 }
                 return
             }
             do {
                 let profile = try snapshot.data(as: UserModel.self)
                 DispatchQueue.main.async {
-                    if !self.suspendUpdates {
-                        self.userProfile = profile
-                    }
+                    self.userProfile = profile
+                    print("[ProfileViewModel] loadUserProfile(with:): Successfully loaded profile: \(profile)")
                 }
             } catch {
                 DispatchQueue.main.async {
                     self.errorMessage = error.localizedDescription
+                    print("[ProfileViewModel] loadUserProfile(with:): Decoding error: \(error.localizedDescription)")
                 }
             }
         }
@@ -93,27 +108,31 @@ class ProfileViewModel: ObservableObject {
     /// Updates the current user's profile in Firestore.
     func updateUserProfile(updatedProfile: UserModel, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = userID else {
+            print("[ProfileViewModel] updateUserProfile: User not authenticated")
             completion(.failure(NSError(domain: "ProfileUpdate", code: 0,
                                         userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])))
             return
         }
+        print("[ProfileViewModel] updateUserProfile: Updating profile for uid: \(uid)")
         do {
             try db.collection("users").document(uid).setData(from: updatedProfile) { error in
                 if let error = error {
-                    completion(.failure(error))
+                    DispatchQueue.main.async {
+                        print("[ProfileViewModel] updateUserProfile error: \(error.localizedDescription)")
+                        completion(.failure(error))
+                    }
                 } else {
                     DispatchQueue.main.async {
                         var newProfile = updatedProfile
-                        // Explicitly assign the uid as the profile's id.
                         newProfile.id = uid
-                        if !self.suspendUpdates {
-                            self.userProfile = newProfile
-                        }
+                        self.userProfile = newProfile
+                        print("[ProfileViewModel] updateUserProfile: Successfully updated profile: \(newProfile)")
+                        completion(.success(()))
                     }
-                    completion(.success(()))
                 }
             }
         } catch {
+            print("[ProfileViewModel] updateUserProfile: Exception caught: \(error.localizedDescription)")
             completion(.failure(error))
         }
     }
@@ -122,6 +141,7 @@ class ProfileViewModel: ObservableObject {
     func uploadProfileImage(image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
         guard let uid = userID,
               let imageData = image.jpegData(compressionQuality: 0.8) else {
+            print("[ProfileViewModel] uploadProfileImage: Invalid user or image data.")
             completion(.failure(NSError(domain: "UploadError", code: 0,
                                         userInfo: [NSLocalizedDescriptionKey: "Invalid user or image data."])))
             return
@@ -131,15 +151,19 @@ class ProfileViewModel: ObservableObject {
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
         
+        print("[ProfileViewModel] uploadProfileImage: Uploading image for uid: \(uid)")
         storageRef.putData(imageData, metadata: metadata) { _, error in
             if let error = error {
+                print("[ProfileViewModel] uploadProfileImage: Error uploading image: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
             }
             storageRef.downloadURL { url, error in
                 if let error = error {
+                    print("[ProfileViewModel] uploadProfileImage: Error getting download URL: \(error.localizedDescription)")
                     completion(.failure(error))
                 } else if let downloadURL = url?.absoluteString {
+                    print("[ProfileViewModel] uploadProfileImage: Successfully uploaded image. URL: \(downloadURL)")
                     completion(.success(downloadURL))
                 }
             }
@@ -151,6 +175,7 @@ class ProfileViewModel: ObservableObject {
         if var blocked = userProfile?.blockedUserIDs {
             blocked.removeAll { $0 == uid }
             userProfile?.blockedUserIDs = blocked
+            print("[ProfileViewModel] removeBlockedUser: Removed blocked user with uid: \(uid)")
         }
     }
     

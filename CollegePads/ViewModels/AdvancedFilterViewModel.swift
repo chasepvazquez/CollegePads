@@ -5,19 +5,31 @@ import Combine
 import CoreLocation
 import FirebaseAuth
 
+// New enum for filtering mode.
+enum FilterMode: String, CaseIterable, Identifiable {
+    case university
+    case distance
+    var id: String { self.rawValue }
+}
+
 class AdvancedFilterViewModel: ObservableObject {
     // Filter fields
     @Published var filterDormType: String = ""
     @Published var filterHousingStatus: String = ""
+    // This property now serves as the selected college (if filtering by college)
     @Published var filterCollegeName: String = ""
     @Published var filterBudgetRange: String = ""
     @Published var filterGradeGroup: String = ""
     @Published var filterInterests: String = ""
+    // Only used when filtering by distance
     @Published var maxDistance: Double = 10.0 // in kilometers
-    
+
     // NEW: Additional filter properties for gender and age difference.
     @Published var filterPreferredGender: String = ""
     @Published var maxAgeDifference: Double = 0.0
+
+    // New: Filter mode – either by university or by distance.
+    @Published var filterMode: FilterMode = .university
     
     // Filter results and errors
     @Published var filteredUsers: [UserModel] = []
@@ -27,7 +39,7 @@ class AdvancedFilterViewModel: ObservableObject {
     private let db = Firestore.firestore()
     
     /// Main method to apply filters by querying Firestore and further refining the results.
-    /// - Parameter currentLocation: The user's current location (optional).
+    /// If filtering by college, we ignore distance.
     func applyFilters(currentLocation: CLLocation?) {
         var query: Query = db.collection("users")
         
@@ -38,7 +50,8 @@ class AdvancedFilterViewModel: ObservableObject {
         if !filterHousingStatus.isEmpty {
             query = query.whereField("housingStatus", isEqualTo: filterHousingStatus)
         }
-        if !filterCollegeName.isEmpty {
+        // Only add this Firestore query when filtering by college.
+        if filterMode == .university && !filterCollegeName.isEmpty {
             query = query.whereField("collegeName", isEqualTo: filterCollegeName)
         }
         if !filterBudgetRange.isEmpty {
@@ -91,20 +104,22 @@ class AdvancedFilterViewModel: ObservableObject {
                     interestsFiltered = gradeFiltered
                 }
                 
-                // 5. Filter by distance
-                let locationFiltered: [UserModel]
-                if let currentLocation = currentLocation {
-                    locationFiltered = interestsFiltered.filter { user in
+                // 5. Filter by distance only if not filtering by college.
+                let finalFiltered: [UserModel]
+                if self.filterMode == .university && !self.filterCollegeName.isEmpty {
+                    finalFiltered = interestsFiltered
+                } else if self.filterMode == .distance, let currentLocation = currentLocation {
+                    finalFiltered = interestsFiltered.filter { user in
                         guard let geoPoint = user.location else { return true }
                         let userLocation = CLLocation(latitude: geoPoint.latitude, longitude: geoPoint.longitude)
                         let distance = currentLocation.distance(from: userLocation) / 1000.0
                         return distance <= self.maxDistance
                     }
                 } else {
-                    locationFiltered = interestsFiltered
+                    finalFiltered = interestsFiltered
                 }
                 
-                return locationFiltered
+                return finalFiltered
             }
             .sink { completion in
                 if case let .failure(error) = completion {
@@ -134,7 +149,8 @@ class AdvancedFilterViewModel: ObservableObject {
             "filterInterests": filterInterests,
             "filterMaxDistance": maxDistance,
             "filterPreferredGender": filterPreferredGender,
-            "maxAgeDifference": maxAgeDifference
+            "maxAgeDifference": maxAgeDifference,
+            "filterMode": filterMode.rawValue
         ]
         
         docRef.setData(data, merge: true) { error in
@@ -175,6 +191,10 @@ class AdvancedFilterViewModel: ObservableObject {
                 self.maxDistance = data["filterMaxDistance"] as? Double ?? 10.0
                 self.filterPreferredGender = data["filterPreferredGender"] as? String ?? ""
                 self.maxAgeDifference = data["maxAgeDifference"] as? Double ?? 0.0
+                if let modeString = data["filterMode"] as? String,
+                   let mode = FilterMode(rawValue: modeString) {
+                    self.filterMode = mode
+                }
             }
         }
     }

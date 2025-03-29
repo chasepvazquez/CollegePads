@@ -70,8 +70,10 @@ struct HomeView: View {
             }
         }
         .onAppear {
-            // Ensure the user profile is loaded so we can show the ring & image
-            viewModel.loadUserProfile()
+            // Load the profile only if it's not already loaded.
+            if viewModel.userProfile == nil {
+                viewModel.loadUserProfile()
+            }
         }
     }
 }

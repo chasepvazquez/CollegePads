@@ -34,6 +34,15 @@ struct MyProfileView: View {
 
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
 
+    // MARK: - A simple dictionary to map cleanliness levels to descriptions.
+    private let cleanlinessDescriptions: [Int: String] = [
+        1: "Very Messy",
+        2: "Messy",
+        3: "Average",
+        4: "Tidy",
+        5: "Very Tidy"
+    ]
+    
     // Debouncer for Auto-Save
     @State private var autoSaveWorkItem: DispatchWorkItem?
 
@@ -61,8 +70,8 @@ struct MyProfileView: View {
     enum LeaseDuration: String, CaseIterable, Identifiable {
         case current = "Current Lease"
         case shortTerm = "Short Term (<6 months)"
-        case mediumTerm = "Medium Term (6-12 months)"
-        case longTerm = "Long Term (1 year+)"
+        case mediumTerm = "6-12 months"
+        case longTerm = "1 year+"
         case futureNextYear = "Future: Next Year"
         case futureTwoPlus = "Future: 2+ Years"
         case notApplicable = "Not Applicable"
@@ -72,7 +81,6 @@ struct MyProfileView: View {
     // MARK: - Body
     var body: some View {
         ZStack {
-            // The background gradient is back at the top level.
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -122,7 +130,6 @@ struct MyProfileView: View {
                                     tappedImageIndex = index
                                     newProfileImage = nil
                                     isPickerActive = true
-                                    viewModel.suspendUpdates = true
                                     showingPhotoPicker = true
                                 },
                                 onRemoveImage: { index in
@@ -135,10 +142,11 @@ struct MyProfileView: View {
                                 Text("ABOUT ME")
                                     .font(.headline)
                                 TextEditor(text: $aboutMe)
-                                    .frame(minHeight: 100)
-                                    .padding(6)
+                                    .scrollContentBackground(.hidden)
                                     .background(AppTheme.cardBackground)
                                     .cornerRadius(AppTheme.defaultCornerRadius)
+                                    .frame(minHeight: 100)
+                                    .padding(6)
                                     .onChange(of: aboutMe) { _ in scheduleAutoSave() }
                             }
                             .padding()
@@ -214,18 +222,23 @@ struct MyProfileView: View {
                                     }
 
                                     LabeledField(label: "Budget Range", text: $budgetRange)
-                                    Picker("Cleanliness (1=Messy, 5=Tidy)", selection: $cleanliness) {
+
+                                    // Cleanliness Picker referencing the dictionary
+                                    Picker("Cleanliness", selection: $cleanliness) {
                                         ForEach(1..<6) { number in
-                                            Text("\(number)").tag(number)
+                                            let desc = cleanlinessDescriptions[number] ?? ""
+                                            Text("\(number) - \(desc)").tag(number)
                                         }
                                     }
                                     .onChange(of: cleanliness) { _ in scheduleAutoSave() }
+
                                     Picker("Sleep Schedule", selection: $sleepSchedule) {
                                         ForEach(sleepScheduleOptions, id: \.self) { option in
                                             Text(option)
                                         }
                                     }
                                     .onChange(of: sleepSchedule) { _ in scheduleAutoSave() }
+
                                     Toggle("Smoker", isOn: $smoker)
                                         .onChange(of: smoker) { _ in scheduleAutoSave() }
                                     Toggle("Pet Friendly", isOn: $petFriendly)
@@ -259,12 +272,12 @@ struct MyProfileView: View {
             }
         }
         .onAppear {
-            viewModel.loadUserProfile()
-        }
-        // Debounce external updates
-        .onReceive(viewModel.$userProfile.debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)) { profile in
-            if !isPickerActive, let profile = profile {
-                populateLocalFields(from: profile)
+            // Load profile once when the view appears
+            if viewModel.userProfile == nil {
+                viewModel.loadUserProfile()
+            } else {
+                // If profile already exists, populate local fields immediately.
+                populateLocalFields(from: viewModel.userProfile!)
             }
         }
         // Photo picker
@@ -397,7 +410,6 @@ struct MyProfileView: View {
             DispatchQueue.main.async {
                 showingPhotoPicker = false
                 isPickerActive = false
-                viewModel.suspendUpdates = false
                 newProfileImage = nil
             }
         }
