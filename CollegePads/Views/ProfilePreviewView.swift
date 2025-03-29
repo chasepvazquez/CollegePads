@@ -17,8 +17,8 @@ struct ProfilePreviewView: View {
     
     // MARK: - Info Snippets
     //
-    // Removed the name from the snippet, so we can always show the name in bold
-    // at the bottom overlay. The snippet now holds only the rest of the info.
+    // Removed the name from the snippet, so we can always show the name in bold at the bottom overlay.
+    // The snippet now holds only the rest of the info.
     private var infoSnippets: [[String]] {
         let ageString = (calculateAge(from: user.dateOfBirth).map { "Age: \($0)" }) ?? "Age: ?"
         var snippets: [[String]] = []
@@ -78,9 +78,26 @@ struct ProfilePreviewView: View {
         return snippets
     }
     
+    /// The total number of images uploaded.
+    private var imageCount: Int {
+        return user.profileImageUrls?.count ?? 0
+    }
+    
+    /// A computed array of info snippets matching the number of images.
+    /// If there are more images than info snippets, the extra slides show only the user's full name.
+    private var finalSnippets: [[String]] {
+        let count = imageCount
+        var snippets = infoSnippets
+        let fullName = [user.firstName, user.lastName].compactMap { $0 }.joined(separator: " ")
+        while snippets.count < count {
+            snippets.append([fullName])
+        }
+        return snippets
+    }
+    
+    /// Use all uploaded images as slides.
     private var slideCount: Int {
-        let imageCount = user.profileImageUrls?.count ?? 0
-        return min(imageCount, infoSnippets.count)
+        return imageCount
     }
     
     // MARK: - Body
@@ -172,7 +189,6 @@ struct ProfilePreviewView: View {
                 .shadow(radius: 5)
                 .padding()
             } else {
-                // Fallback: if snippet count doesn't match image count, use a simple TabView.
                 fallbackImageTabView(images: images)
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                     .aspectRatio(cardAspectRatio, contentMode: .fit)
@@ -199,7 +215,7 @@ extension ProfilePreviewView {
     }
     
     /// Bottom overlay that displays the user's name in bold on every slide,
-    /// plus the snippet lines for the current slide in normal (unbolded) text.
+    /// plus the snippet lines (if available) in normal (unbolded) text.
     @ViewBuilder
     private func bottomOverlay(index: Int) -> some View {
         ZStack(alignment: .bottomLeading) {
@@ -215,7 +231,6 @@ extension ProfilePreviewView {
                 let fullName = [user.firstName, user.lastName]
                     .compactMap { $0 }
                     .joined(separator: " ")
-                
                 if !fullName.isEmpty {
                     Text(fullName)
                         .font(.system(size: 22, weight: .bold))
@@ -223,8 +238,8 @@ extension ProfilePreviewView {
                         .shadow(color: .black.opacity(0.8), radius: 1, x: 0, y: 1)
                 }
                 
-                // Show the snippet lines unbolded.
-                let snippet = infoSnippets[index]
+                // Use finalSnippets for this slide.
+                let snippet = finalSnippets[index]
                 ForEach(snippet, id: \.self) { line in
                     Text(line)
                         .font(.system(size: 18))
@@ -361,7 +376,13 @@ struct ProfilePreviewView_Previews: PreviewProvider {
             profileImageUrls: [
                 "https://picsum.photos/id/1025/400/600",
                 "https://picsum.photos/id/1035/400/600",
-                "https://picsum.photos/id/1037/400/600"
+                "https://picsum.photos/id/1037/400/600",
+                "https://picsum.photos/id/1040/400/600",
+                "https://picsum.photos/id/1041/400/600",
+                "https://picsum.photos/id/1042/400/600",
+                "https://picsum.photos/id/1043/400/600",
+                "https://picsum.photos/id/1044/400/600",
+                "https://picsum.photos/id/1045/400/600"
             ],
             isVerified: true
         )
