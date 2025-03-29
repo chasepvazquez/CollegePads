@@ -32,6 +32,10 @@ struct MyProfileView: View {
     @State private var selectedHousingStatus: HousingStatus = .dorm
     @State private var selectedLeaseDuration: LeaseDuration = .notApplicable
 
+    // New state for college validation:
+    @State private var validColleges: [String] = []
+    @State private var localErrorMessage: String?
+
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
 
     // MARK: - A simple dictionary to map cleanliness levels to descriptions.
@@ -189,7 +193,21 @@ struct MyProfileView: View {
                                     .onChange(of: selectedGradeLevel) { _ in scheduleAutoSave() }
 
                                     LabeledField(label: "Major", text: $major)
+                                    // College Name Field with Validation
                                     LabeledField(label: "College Name", text: $collegeName)
+                                        .onChange(of: collegeName) { newValue in
+                                            if !newValue.isEmpty && !validColleges.contains(newValue) {
+                                                localErrorMessage = "Please enter a valid college from the list."
+                                            } else {
+                                                localErrorMessage = nil
+                                            }
+                                            scheduleAutoSave()
+                                        }
+                                    if let error = localErrorMessage {
+                                        Text(error)
+                                            .foregroundColor(.red)
+                                            .font(.caption)
+                                    }
                                 }
                             }
                             .padding()
@@ -223,7 +241,6 @@ struct MyProfileView: View {
 
                                     LabeledField(label: "Budget Range", text: $budgetRange)
 
-                                    // Cleanliness Picker referencing the dictionary
                                     Picker("Cleanliness", selection: $cleanliness) {
                                         ForEach(1..<6) { number in
                                             let desc = cleanlinessDescriptions[number] ?? ""
@@ -272,15 +289,16 @@ struct MyProfileView: View {
             }
         }
         .onAppear {
-            // Load profile once when the view appears
             if viewModel.userProfile == nil {
                 viewModel.loadUserProfile()
             } else {
-                // If profile already exists, populate local fields immediately.
                 populateLocalFields(from: viewModel.userProfile!)
             }
+            // Asynchronously load and cache valid college names
+            UniversityDataProvider.shared.loadUniversities { colleges in
+                self.validColleges = colleges
+            }
         }
-        // Photo picker
         .sheet(isPresented: $showingPhotoPicker) {
             CustomImagePicker(image: $newProfileImage)
         }
@@ -368,7 +386,6 @@ struct MyProfileView: View {
                             .background(Color.black.opacity(0.6))
                             .clipShape(Circle())
                             .offset(x: -4, y: 4)
-
                         } else {
                             ZStack {
                                 Rectangle()
@@ -445,14 +462,6 @@ struct MyProfileView: View {
         selectedLeaseDuration = LeaseDuration(rawValue: profile.leaseDuration ?? "") ?? .notApplicable
     }
 
-    // MARK: - Fallback
-    private func defaultUserProfile() -> UserModel {
-        UserModel(
-            email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
-            isEmailVerified: false
-        )
-    }
-
     // MARK: - Debounced Auto-Save
     private func scheduleAutoSave() {
         autoSaveWorkItem?.cancel()
@@ -492,5 +501,19 @@ struct MyProfileView: View {
                 break
             }
         }
+    }
+
+    // MARK: - Fallback
+    private func defaultUserProfile() -> UserModel {
+        UserModel(
+            email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
+            isEmailVerified: false
+        )
+    }
+}
+
+struct MyProfileView_Previews: PreviewProvider {
+    static var previews: some View {
+        MyProfileView()
     }
 }

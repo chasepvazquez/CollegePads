@@ -21,25 +21,21 @@ struct ProfilePreviewView: View {
     // at the bottom overlay. The snippet now holds only the rest of the info.
     private var infoSnippets: [[String]] {
         let ageString = (calculateAge(from: user.dateOfBirth).map { "Age: \($0)" }) ?? "Age: ?"
-        let about = (user.aboutMe?.isEmpty == false) ? user.aboutMe! : nil
-        let interests = (user.interests?.isEmpty == false) ? user.interests!.joined(separator: ", ") : nil
-        
         var snippets: [[String]] = []
         
-        // Slide 1: Age
-        snippets.append([ageString])
-        
-        // Slide 2: Major + College
-        if let major = user.major, !major.isEmpty,
-           let college = user.collegeName, !college.isEmpty {
-            snippets.append(["Major: \(major)", "College: \(college)"])
-        } else if let major = user.major, !major.isEmpty {
-            snippets.append(["Major: \(major)"])
-        } else if let college = user.collegeName, !college.isEmpty {
-            snippets.append(["College: \(college)"])
+        // Slide 1: If a college exists, show it above age.
+        if let college = user.collegeName, !college.isEmpty {
+            snippets.append(["College: \(college)", ageString])
+        } else {
+            snippets.append([ageString])
         }
         
-        // Slide 3: Dorm + Budget
+        // Slide 2: Major (if available)
+        if let major = user.major, !major.isEmpty {
+            snippets.append(["Major: \(major)"])
+        }
+        
+        // Slide 3: Dorm Type + Budget
         if let dorm = user.dormType, !dorm.isEmpty,
            let budget = user.budgetRange, !budget.isEmpty {
             snippets.append(["Dorm Type: \(dorm)", "Budget: \(budget)"])
@@ -70,13 +66,13 @@ struct ProfilePreviewView: View {
         }
         
         // Slide 6: About Me
-        if let about = about, !about.isEmpty {
+        if let about = user.aboutMe, !about.isEmpty {
             snippets.append(["About Me:", about])
         }
         
         // Slide 7: Interests
-        if let interests = interests, !interests.isEmpty {
-            snippets.append(["Interests:", interests])
+        if let interests = user.interests, !interests.isEmpty {
+            snippets.append(["Interests:", interests.joined(separator: ", ")])
         }
         
         return snippets
