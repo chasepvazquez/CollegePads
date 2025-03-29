@@ -22,7 +22,7 @@ struct MyProfileView: View {
     @State private var gender = "Other"
     @State private var selectedGradeLevel: GradeLevel = .freshman
     @State private var major = ""
-    @State private var collegeName = ""
+    @State private var collegeName = ""  // Now set via a Picker.
     @State private var budgetRange = ""
     @State private var cleanliness = 3
     @State private var sleepSchedule = "Flexible"
@@ -32,9 +32,8 @@ struct MyProfileView: View {
     @State private var selectedHousingStatus: HousingStatus = .dorm
     @State private var selectedLeaseDuration: LeaseDuration = .notApplicable
 
-    // New state for college validation:
+    // New state: List of valid colleges loaded from CSV.
     @State private var validColleges: [String] = []
-    @State private var localErrorMessage: String?
 
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
 
@@ -193,21 +192,14 @@ struct MyProfileView: View {
                                     .onChange(of: selectedGradeLevel) { _ in scheduleAutoSave() }
 
                                     LabeledField(label: "Major", text: $major)
-                                    // College Name Field with Validation
-                                    LabeledField(label: "College Name", text: $collegeName)
-                                        .onChange(of: collegeName) { newValue in
-                                            if !newValue.isEmpty && !validColleges.contains(newValue) {
-                                                localErrorMessage = "Please enter a valid college from the list."
-                                            } else {
-                                                localErrorMessage = nil
-                                            }
-                                            scheduleAutoSave()
+                                    // Replace text field with a Picker for College selection.
+                                    Picker("College", selection: $collegeName) {
+                                        Text("Select a College").tag("")
+                                        ForEach(validColleges, id: \.self) { college in
+                                            Text(college).tag(college)
                                         }
-                                    if let error = localErrorMessage {
-                                        Text(error)
-                                            .foregroundColor(.red)
-                                            .font(.caption)
                                     }
+                                    .onChange(of: collegeName) { _ in scheduleAutoSave() }
                                 }
                             }
                             .padding()
@@ -294,7 +286,7 @@ struct MyProfileView: View {
             } else {
                 populateLocalFields(from: viewModel.userProfile!)
             }
-            // Asynchronously load and cache valid college names
+            // Asynchronously load and cache valid college names.
             UniversityDataProvider.shared.loadUniversities { colleges in
                 self.validColleges = colleges
             }
