@@ -2,6 +2,272 @@ import SwiftUI
 import PhotosUI
 import FirebaseAuth
 
+// MARK: - Quiz Data Structure
+struct QuizQuestion: Identifiable {
+    let id = UUID()
+    let question: String
+    let options: [String]
+}
+
+// MARK: - Going Out Quiz Questions
+let goingOutQuizQuestions: [QuizQuestion] = [
+    QuizQuestion(
+        question: "You can find me...",
+        options: ["Dancing 💃", "Socializing 🗣️"]
+    ),
+    QuizQuestion(
+        question: "I like to...",
+        options: ["Dress Up 👗", "Dress Down 👕"]
+    ),
+    QuizQuestion(
+        question: "I tend to arrive...",
+        options: ["Early ⏰", "Fashionably Late 🕒"]
+    ),
+    QuizQuestion(
+        question: "My exit strategy looks like...",
+        options: ["Say Bye First 👋", "Disappear 🕶️"]
+    )
+]
+
+// MARK: - Weekends Quiz Questions
+let weekendsQuizQuestions: [QuizQuestion] = [
+    QuizQuestion(
+        question: "Weekends are for...",
+        options: ["Recharging 😴", "Socializing 🥳"]
+    ),
+    QuizQuestion(
+        question: "Saturday night looks like...",
+        options: ["Cozy nights in 🏡", "Fun nights out 🎊"]
+    ),
+    QuizQuestion(
+        question: "A typical Sunday looks like...",
+        options: ["Self care 💆", "Sunday fun day 🎈"]
+    )
+]
+
+// MARK: - My Phone Quiz Questions
+let myPhoneQuizQuestions: [QuizQuestion] = [
+    QuizQuestion(
+        question: "I'm the kind of person who...",
+        options: ["Replies quickly ⚡", "Forgets to reply 💤"]
+    ),
+    QuizQuestion(
+        question: "I prefer receiving...",
+        options: ["Text messages 📱", "Phone calls 📞"]
+    ),
+    QuizQuestion(
+        question: "My phone is always...",
+        options: ["Fully charged 🔋", "Low on battery 🪫"]
+    )
+]
+
+// MARK: - Generic QuizView
+struct QuizView: View {
+    let quizTitle: String
+    let quizQuestions: [QuizQuestion]
+    let onComplete: ([String]) -> Void
+
+    @State private var currentQuestionIndex = 0
+    @State private var selectedAnswers: [String] = []
+
+    var body: some View {
+        Group {
+            if currentQuestionIndex < quizQuestions.count {
+                VStack(spacing: 20) {
+                    Text(quizTitle)
+                        .font(AppTheme.titleFont)
+                        .padding(.top)
+                    
+                    Text(quizQuestions[currentQuestionIndex].question)
+                        .font(AppTheme.subtitleFont)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    ForEach(quizQuestions[currentQuestionIndex].options, id: \.self) { option in
+                        Button(action: {
+                            selectedAnswers.append(option)
+                            if currentQuestionIndex < quizQuestions.count - 1 {
+                                withAnimation {
+                                    currentQuestionIndex += 1
+                                }
+                            } else {
+                                onComplete(selectedAnswers)
+                            }
+                        }) {
+                            Text(option)
+                                .font(AppTheme.bodyFont)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(AppTheme.primaryColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(AppTheme.defaultCornerRadius)
+                        }
+                        .padding(.horizontal)
+                    }
+                    
+                    Spacer()
+                }
+                .padding()
+            } else {
+                EmptyView()
+            }
+        }
+    }
+}
+
+// MARK: - Combined Quizzes Section (for MyProfileView)
+struct CombinedQuizzesSection: View {
+    // State variables for each quiz's answers and presentation flags
+    @State private var goingOutQuizAnswers: [String] = []
+    @State private var weekendsQuizAnswers: [String] = []
+    @State private var myPhoneQuizAnswers: [String] = []
+    
+    @State private var showingGoingOutQuiz = false
+    @State private var showingWeekendsQuiz = false
+    @State private var showingMyPhoneQuiz = false
+
+    var body: some View {
+        VStack(spacing: 24) {
+            // Going Out Quiz Sub-section
+            VStack(alignment: .leading, spacing: 12) {
+                Text("GOING OUT QUIZ")
+                    .font(AppTheme.subtitleFont)
+                    .foregroundColor(AppTheme.primaryColor)
+                
+                if goingOutQuizAnswers.isEmpty {
+                    Text("Not taken yet")
+                        .font(AppTheme.bodyFont)
+                        .foregroundColor(.gray)
+                } else {
+                    ForEach(goingOutQuizAnswers, id: \.self) { answer in
+                        Text(answer)
+                            .font(AppTheme.bodyFont)
+                            .foregroundColor(.primary)
+                    }
+                }
+                
+                Button(action: { showingGoingOutQuiz = true }) {
+                    Text(goingOutQuizAnswers.isEmpty ? "Take Quiz" : "Retake Quiz")
+                        .font(AppTheme.bodyFont)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(AppTheme.primaryColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(AppTheme.defaultCornerRadius)
+                }
+            }
+            .padding(AppTheme.defaultPadding)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.defaultCornerRadius)
+                    .fill(AppTheme.cardBackground.opacity(0.8))
+            )
+            .shadow(radius: 5)
+            
+            // Weekends Quiz Sub-section
+            VStack(alignment: .leading, spacing: 12) {
+                Text("WEEKENDS QUIZ")
+                    .font(AppTheme.subtitleFont)
+                    .foregroundColor(AppTheme.primaryColor)
+                
+                if weekendsQuizAnswers.isEmpty {
+                    Text("Not taken yet")
+                        .font(AppTheme.bodyFont)
+                        .foregroundColor(.gray)
+                } else {
+                    ForEach(weekendsQuizAnswers, id: \.self) { answer in
+                        Text(answer)
+                            .font(AppTheme.bodyFont)
+                            .foregroundColor(.primary)
+                    }
+                }
+                
+                Button(action: { showingWeekendsQuiz = true }) {
+                    Text(weekendsQuizAnswers.isEmpty ? "Take Quiz" : "Retake Quiz")
+                        .font(AppTheme.bodyFont)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(AppTheme.primaryColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(AppTheme.defaultCornerRadius)
+                }
+            }
+            .padding(AppTheme.defaultPadding)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.defaultCornerRadius)
+                    .fill(AppTheme.cardBackground.opacity(0.8))
+            )
+            .shadow(radius: 5)
+            
+            // My Phone Quiz Sub-section
+            VStack(alignment: .leading, spacing: 12) {
+                Text("+ MY PHONE QUIZ")
+                    .font(AppTheme.subtitleFont)
+                    .foregroundColor(AppTheme.primaryColor)
+                
+                if myPhoneQuizAnswers.isEmpty {
+                    Text("Not taken yet")
+                        .font(AppTheme.bodyFont)
+                        .foregroundColor(.gray)
+                } else {
+                    ForEach(myPhoneQuizAnswers, id: \.self) { answer in
+                        Text(answer)
+                            .font(AppTheme.bodyFont)
+                            .foregroundColor(.primary)
+                    }
+                }
+                
+                Button(action: { showingMyPhoneQuiz = true }) {
+                    Text(myPhoneQuizAnswers.isEmpty ? "Take Quiz" : "Retake Quiz")
+                        .font(AppTheme.bodyFont)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(AppTheme.primaryColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(AppTheme.defaultCornerRadius)
+                }
+            }
+            .padding(AppTheme.defaultPadding)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.defaultCornerRadius)
+                    .fill(AppTheme.cardBackground.opacity(0.8))
+            )
+            .shadow(radius: 5)
+        }
+        // MARK: - Sheet Modals for Quizzes
+        .sheet(isPresented: $showingGoingOutQuiz) {
+            QuizView(
+                quizTitle: "Going Out Quiz",
+                quizQuestions: goingOutQuizQuestions,
+                onComplete: { answers in
+                    self.goingOutQuizAnswers = answers
+                    showingGoingOutQuiz = false
+                }
+            )
+        }
+        .sheet(isPresented: $showingWeekendsQuiz) {
+            QuizView(
+                quizTitle: "Weekends Quiz",
+                quizQuestions: weekendsQuizQuestions,
+                onComplete: { answers in
+                    self.weekendsQuizAnswers = answers
+                    showingWeekendsQuiz = false
+                }
+            )
+        }
+        .sheet(isPresented: $showingMyPhoneQuiz) {
+            QuizView(
+                quizTitle: "+ My Phone Quiz",
+                quizQuestions: myPhoneQuizQuestions,
+                onComplete: { answers in
+                    self.myPhoneQuizAnswers = answers
+                    showingMyPhoneQuiz = false
+                }
+            )
+        }
+    }
+}
+
+// MARK: - MyProfileView
 struct MyProfileView: View {
     @StateObject private var viewModel = ProfileViewModel.shared
 
@@ -49,6 +315,7 @@ struct MyProfileView: View {
     // MARK: - Quiz State (New Quizzes)
     @State private var goingOutQuizAnswers: [String] = []
     @State private var weekendQuizAnswers: [String] = []
+    @State private var phoneQuizAnswers: [String] = []  // New state for "+ My Phone" quiz
 
     // MARK: - Options
     private let petOptions = [
@@ -188,8 +455,7 @@ struct MyProfileView: View {
                             lifestyleSection
                             
                             // NEW: Quiz Sections (Placed directly underneath Lifestyle)
-                            GoingOutQuizView(answers: $goingOutQuizAnswers)
-                            WeekendQuizView(answers: $weekendQuizAnswers)
+                            CombinedQuizzesSection()
                             
                             interestsSection
                         }
@@ -468,101 +734,6 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // MARK: - QUIZ Sections
-    // Going Out Quiz
-    struct GoingOutQuizView: View {
-        @Binding var answers: [String]
-        @State private var currentQuestionIndex = 0
-        
-        private let questions: [Question] = [
-            Question(text: "How often do you go out?", options: ["Rarely", "Sometimes", "Often", "Very Often"]),
-            Question(text: "Preferred venue for going out?", options: ["Casual Bar", "Club", "Restaurant", "Outdoor"])
-        ]
-        
-        var body: some View {
-            VStack(alignment: .leading, spacing: 16) {
-                if currentQuestionIndex < questions.count {
-                    Text("Going Out Quiz")
-                        .font(AppTheme.titleFont)
-                        .padding(.bottom, 8)
-                    Text(questions[currentQuestionIndex].text)
-                        .font(AppTheme.bodyFont)
-                    ForEach(questions[currentQuestionIndex].options, id: \.self) { option in
-                        Button(action: {
-                            answers.append(option)
-                            withAnimation {
-                                currentQuestionIndex += 1
-                            }
-                        }) {
-                            Text(option)
-                                .font(AppTheme.bodyFont)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(AppTheme.accentColor)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                        }
-                    }
-                } else {
-                    Text("Going Out Quiz Completed")
-                        .font(AppTheme.bodyFont)
-                        .foregroundColor(.green)
-                }
-            }
-            .padding()
-            .background(AppTheme.cardBackground.opacity(0.8))
-            .cornerRadius(15)
-            .shadow(radius: 5)
-        }
-    }
-    
-    // Weekend Quiz
-    struct WeekendQuizView: View {
-        @Binding var answers: [String]
-        @State private var currentQuestionIndex = 0
-        
-        private let questions: [Question] = [
-            Question(text: "What's your typical weekend vibe?", options: ["Stay in", "Hang out with friends", "Adventure", "Party"]),
-            Question(text: "How do you plan your weekends?", options: ["Spontaneous", "Well-planned", "Depends on mood", "Mixed"])
-        ]
-        
-        var body: some View {
-            VStack(alignment: .leading, spacing: 16) {
-                if currentQuestionIndex < questions.count {
-                    Text("Weekend Quiz")
-                        .font(AppTheme.titleFont)
-                        .padding(.bottom, 8)
-                    Text(questions[currentQuestionIndex].text)
-                        .font(AppTheme.bodyFont)
-                    ForEach(questions[currentQuestionIndex].options, id: \.self) { option in
-                        Button(action: {
-                            answers.append(option)
-                            withAnimation {
-                                currentQuestionIndex += 1
-                            }
-                        }) {
-                            Text(option)
-                                .font(AppTheme.bodyFont)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(AppTheme.accentColor)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                        }
-                    }
-                } else {
-                    Text("Weekend Quiz Completed")
-                        .font(AppTheme.bodyFont)
-                        .foregroundColor(.green)
-                }
-            }
-            .padding()
-            .background(AppTheme.cardBackground.opacity(0.8))
-            .cornerRadius(15)
-            .shadow(radius: 5)
-        }
-    }
-    
     // MARK: - INTERESTS Section
     private var interestsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -747,6 +918,7 @@ struct MyProfileView: View {
         // Quiz Answers
         goingOutQuizAnswers = profile.goingOutQuizAnswers ?? []
         weekendQuizAnswers = profile.weekendQuizAnswers ?? []
+        phoneQuizAnswers = profile.phoneQuizAnswers ?? []
     }
     
     // MARK: - Debounced Auto-Save
@@ -794,6 +966,7 @@ struct MyProfileView: View {
         // Save Quiz Answers
         updatedProfile.goingOutQuizAnswers = goingOutQuizAnswers
         updatedProfile.weekendQuizAnswers = weekendQuizAnswers
+        updatedProfile.phoneQuizAnswers = phoneQuizAnswers
         
         let originalCreatedAt = updatedProfile.createdAt
         viewModel.updateUserProfile(updatedProfile: updatedProfile) { result in
@@ -915,100 +1088,8 @@ struct FlowLayout: View {
     }
 }
 
-// MARK: - Quiz Support Structures
+// MARK: - Quiz Support Structure
 struct Question {
     let text: String
     let options: [String]
-}
-
-struct GoingOutQuizView: View {
-    @Binding var answers: [String]
-    @State private var currentQuestionIndex = 0
-    
-    private let questions: [Question] = [
-        Question(text: "How often do you go out?", options: ["Rarely", "Sometimes", "Often", "Very Often"]),
-        Question(text: "Preferred venue for going out?", options: ["Casual Bar", "Club", "Restaurant", "Outdoor"])
-    ]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if currentQuestionIndex < questions.count {
-                Text("Going Out Quiz")
-                    .font(AppTheme.titleFont)
-                    .padding(.bottom, 8)
-                Text(questions[currentQuestionIndex].text)
-                    .font(AppTheme.bodyFont)
-                ForEach(questions[currentQuestionIndex].options, id: \.self) { option in
-                    Button(action: {
-                        answers.append(option)
-                        withAnimation {
-                            currentQuestionIndex += 1
-                        }
-                    }) {
-                        Text(option)
-                            .font(AppTheme.bodyFont)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(AppTheme.accentColor)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                }
-            } else {
-                Text("Going Out Quiz Completed")
-                    .font(AppTheme.bodyFont)
-                    .foregroundColor(.green)
-            }
-        }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
-    }
-}
-
-struct WeekendQuizView: View {
-    @Binding var answers: [String]
-    @State private var currentQuestionIndex = 0
-    
-    private let questions: [Question] = [
-        Question(text: "What's your typical weekend vibe?", options: ["Stay in", "Hang out with friends", "Adventure", "Party"]),
-        Question(text: "How do you plan your weekends?", options: ["Spontaneous", "Well-planned", "Depends on mood", "Mixed"])
-    ]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if currentQuestionIndex < questions.count {
-                Text("Weekend Quiz")
-                    .font(AppTheme.titleFont)
-                    .padding(.bottom, 8)
-                Text(questions[currentQuestionIndex].text)
-                    .font(AppTheme.bodyFont)
-                ForEach(questions[currentQuestionIndex].options, id: \.self) { option in
-                    Button(action: {
-                        answers.append(option)
-                        withAnimation {
-                            currentQuestionIndex += 1
-                        }
-                    }) {
-                        Text(option)
-                            .font(AppTheme.bodyFont)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(AppTheme.accentColor)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                }
-            } else {
-                Text("Weekend Quiz Completed")
-                    .font(AppTheme.bodyFont)
-                    .foregroundColor(.green)
-            }
-        }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
-    }
 }
