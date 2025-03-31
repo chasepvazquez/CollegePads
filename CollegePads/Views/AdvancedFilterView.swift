@@ -10,12 +10,13 @@ struct AdvancedFilterView: View {
     let leaseDurations = ["Current Lease", "Short Term (<6 months)", "Medium Term (6-12 months)", "Long Term (1 year+)", "Future: Next Year", "Future: 2+ Years", "Not Applicable"]
     let preferredGenders = ["Any", "Male", "Female", "Other"]
     
-    // New: Use the shared GradeLevel enum from MyProfileView.
+    // Use the shared GradeLevel enum from MyProfileView.
     @State private var selectedGradeLevel: MyProfileView.GradeLevel = .freshman
-    // Remove the old local gradeLevels array.
-    
     @State private var localFilterMode: FilterMode = .university
-    @State private var universities: [String] = []
+    
+    // NEW: College search state
+    @State private var collegeSearchQuery: String = ""
+    @State private var filteredColleges: [String] = []
     
     private var alertBinding: Binding<GenericAlertError?> {
         Binding<GenericAlertError?>(
@@ -33,7 +34,6 @@ struct AdvancedFilterView: View {
     
     var body: some View {
         ZStack {
-            // Use the proper theme background
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             List {
@@ -60,7 +60,7 @@ struct AdvancedFilterView: View {
                 
                 // Filter Criteria Section
                 Section {
-                    // Grade Group Picker using the shared enum.
+                    // Grade Group Picker
                     Picker("Grade Group", selection: $selectedGradeLevel) {
                         ForEach(MyProfileView.GradeLevel.allCases) { level in
                             Text(level.rawValue).tag(level)
@@ -92,13 +92,37 @@ struct AdvancedFilterView: View {
                         .onChange(of: viewModel.filterInterests) { _ in autoApplyAndSave() }
                     
                     if localFilterMode == .university {
-                        Picker("College", selection: $viewModel.filterCollegeName) {
-                            Text("All").tag("")
-                            ForEach(universities, id: \.self) { uni in
-                                Text(uni).tag(uni)
+                        // Inline College Search for Advanced Filters
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("College")
+                                .foregroundColor(.secondary)
+                            TextField("Search College", text: $collegeSearchQuery)
+                                .padding(8)
+                                .background(AppTheme.cardBackground)
+                                .cornerRadius(8)
+                                .onChange(of: collegeSearchQuery) { newValue in
+                                    filteredColleges = UniversityDataProvider.shared.searchUniversities(query: newValue)
+                                }
+                            if !filteredColleges.isEmpty {
+                                ScrollView(.vertical) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        ForEach(filteredColleges, id: \.self) { uni in
+                                            Text(uni)
+                                                .padding(8)
+                                                .onTapGesture {
+                                                    viewModel.filterCollegeName = uni
+                                                    collegeSearchQuery = uni
+                                                    filteredColleges = []
+                                                    autoApplyAndSave()
+                                                }
+                                        }
+                                    }
+                                }
+                                .frame(maxHeight: 150)
+                                .background(AppTheme.cardBackground.opacity(0.8))
+                                .cornerRadius(8)
                             }
                         }
-                        .onChange(of: viewModel.filterCollegeName) { _ in autoApplyAndSave() }
                     } else {
                         VStack(alignment: .leading) {
                             Text("Max Distance: \(Int(viewModel.maxDistance)) km")
@@ -163,7 +187,6 @@ struct AdvancedFilterView: View {
                     }
                 }
             }
-            // Apply the proper themed background.
             .scrollContentBackground(.hidden)
             .background(AppTheme.backgroundGradient)
             .listStyle(InsetGroupedListStyle())
@@ -185,9 +208,9 @@ struct AdvancedFilterView: View {
             viewModel.loadFiltersFromUserDoc {
                 viewModel.applyFilters(currentLocation: locationManager.currentLocation)
             }
-            // Asynchronously load and cache valid college names.
             UniversityDataProvider.shared.loadUniversities { colleges in
-                self.universities = colleges
+                // Optionally initialize filtered list.
+                filteredColleges = colleges
                 print("AdvancedFilterView loaded \(colleges.count) colleges.")
             }
         }

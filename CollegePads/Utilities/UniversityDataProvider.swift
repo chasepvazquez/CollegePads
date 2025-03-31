@@ -10,12 +10,10 @@ final class UniversityDataProvider {
     /// Loads the CSV from the app bundle asynchronously and caches the results.
     func loadUniversities(completion: @escaping ([String]) -> Void) {
         if isLoaded {
-            print("Universities already loaded, returning cached list.")
             completion(universities)
         } else {
             DispatchQueue.global(qos: .background).async {
                 guard let url = Bundle.main.url(forResource: "Most-Recent-Cohorts-Institution", withExtension: "csv") else {
-                    print("CSV file not found in bundle!")
                     DispatchQueue.main.async { completion([]) }
                     return
                 }
@@ -23,7 +21,6 @@ final class UniversityDataProvider {
                     let content = try String(contentsOf: url)
                     let lines = content.components(separatedBy: "\n")
                     guard let headerLine = lines.first else {
-                        print("CSV header not found.")
                         DispatchQueue.main.async { completion([]) }
                         return
                     }
@@ -32,7 +29,6 @@ final class UniversityDataProvider {
                     guard let idx = headers.firstIndex(where: {
                         $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "INSTNM"
                     }) else {
-                        print("Header 'INSTNM' not found in CSV: \(headers)")
                         DispatchQueue.main.async { completion([]) }
                         return
                     }
@@ -49,19 +45,26 @@ final class UniversityDataProvider {
                         }
                     }
                     let sortedColleges = Array(collegeSet).sorted()
-                    print("Loaded \(sortedColleges.count) unique colleges.")
                     self.universities = sortedColleges
                     self.isLoaded = true
                     DispatchQueue.main.async {
                         completion(sortedColleges)
                     }
                 } catch {
-                    print("Error reading CSV: \(error.localizedDescription)")
                     DispatchQueue.main.async {
                         completion([])
                     }
                 }
             }
+        }
+    }
+    
+    /// Searches the cached list of universities using the given query.
+    func searchUniversities(query: String) -> [String] {
+        if query.isEmpty {
+            return universities
+        } else {
+            return universities.filter { $0.lowercased().contains(query.lowercased()) }
         }
     }
 }

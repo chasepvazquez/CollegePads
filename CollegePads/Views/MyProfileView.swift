@@ -20,9 +20,13 @@ struct MyProfileView: View {
     @State private var lastName = ""
     @State private var dateOfBirth = ""
     @State private var gender = "Other"
+    @State private var selectedHeight = ""
+    
     @State private var selectedGradeLevel: GradeLevel = .freshman
     @State private var major = ""
-    @State private var collegeName = ""  // Now set via a Picker.
+    @State private var collegeName = ""
+    @State private var collegeSearchQuery: String = ""
+    @State private var filteredColleges: [String] = []
     @State private var budgetRange = ""
     @State private var cleanliness = 3
     @State private var sleepSchedule = "Flexible"
@@ -32,12 +36,65 @@ struct MyProfileView: View {
     @State private var selectedHousingStatus: HousingStatus = .dorm
     @State private var selectedLeaseDuration: LeaseDuration = .notApplicable
 
-    // New state: List of valid colleges loaded from CSV.
+    // MARK: - Lifestyle State
+    @State private var selectedPets: [String] = []
+    @State private var selectedDrinking: String = ""
+    @State private var selectedSmoking: String = ""
+    @State private var selectedCannabis: String = ""
+    @State private var selectedWorkout: String = ""
+    @State private var selectedDietaryPreferences: [String] = []
+    @State private var selectedSocialMedia: String = ""
+    @State private var selectedSleepingHabits: String = ""
+
+    // MARK: - Options
+    private let petOptions = [
+        "Dog", "Cat", "Reptile", "Amphibian", "Bird", "Fish",
+        "Don't have but love others", "Turtle", "Hamster", "Rabbit",
+        "Pet-free", "Want a pet", "Allergic to pets"
+    ]
+    private let drinkingOptions = [
+        "Not for me", "Sober", "Sober curious",
+        "On special occasions", "Socially on weekends", "Most nights"
+    ]
+    private let smokingOptions = [
+        "Non-smoker", "Smoker", "Smoker when drinking", "Trying to quit"
+    ]
+    private let cannabisOptions = [
+        "Yes", "Occasionally", "Socially", "Never"
+    ]
+    private let workoutOptions = [
+        "Everyday", "Often", "Sometimes", "Never"
+    ]
+    private let dietaryOptions = [
+        "Vegan", "Vegetarian", "Pescatarian", "Kosher", "Halal",
+        "Carnivore", "Omnivore", "Other"
+    ]
+    private let socialMediaOptions = [
+        "Influencer status", "Socially active", "Off the grid", "Passive scroller"
+    ]
+    private let sleepingHabitsOptions = [
+        "Early bird", "Night owl", "In a spectrum"
+    ]
+
+    // NEW: Height Options (3'0" up to 8'0")
+    private let heightOptions: [String] = {
+        var result: [String] = []
+        for ft in 3...8 {
+            for inch in 0...11 {
+                // For 8 ft, only 8'0" is valid
+                if ft == 8 && inch > 0 { break }
+                result.append("\(ft)'\(inch)\"")
+            }
+        }
+        return result
+    }()
+
+    // New: for college search
     @State private var validColleges: [String] = []
 
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
 
-    // MARK: - A simple dictionary to map cleanliness levels to descriptions.
+    // Cleanliness descriptions
     private let cleanlinessDescriptions: [Int: String] = [
         1: "Very Messy",
         2: "Messy",
@@ -87,24 +144,8 @@ struct MyProfileView: View {
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Title
-                HStack {
-                    Text("My Profile")
-                        .font(AppTheme.titleFont)
-                        .foregroundColor(.primary)
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.top, 8)
-
-                // Segmented Control
-                Picker("", selection: $isPreviewMode) {
-                    Text("Edit").tag(false)
-                    Text("Preview").tag(true)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                // Header
+                headerSection
 
                 // Main Content
                 if isPreviewMode {
@@ -115,18 +156,19 @@ struct MyProfileView: View {
                         Text("Loading preview...")
                             .font(AppTheme.bodyFont)
                             .foregroundColor(.primary)
+                            .padding()
                     }
                 } else {
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 20) {
-                            // Profile Completion Bar
+                        VStack(spacing: 24) {
+                            // 1) Profile Completion
                             if let profile = viewModel.userProfile {
                                 ProfileCompletionView(
                                     completion: ProfileCompletionCalculator.calculateCompletion(for: profile)
                                 )
                             }
 
-                            // 3x3 Image Grid
+                            // 2) Photo Grid
                             MediaGridView(
                                 imageUrls: viewModel.userProfile?.profileImageUrls ?? [],
                                 onTapAddOrEdit: { index in
@@ -140,142 +182,26 @@ struct MyProfileView: View {
                                 }
                             )
 
-                            // ABOUT ME
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("ABOUT ME")
-                                    .font(.headline)
-                                TextEditor(text: $aboutMe)
-                                    .scrollContentBackground(.hidden)
-                                    .background(AppTheme.cardBackground)
-                                    .cornerRadius(AppTheme.defaultCornerRadius)
-                                    .frame(minHeight: 100)
-                                    .padding(6)
-                                    .onChange(of: aboutMe) { _ in scheduleAutoSave() }
-                            }
-                            .padding()
-                            .background(AppTheme.cardBackground.opacity(0.8))
-                            .cornerRadius(15)
-                            .shadow(radius: 5)
+                            // 3) ABOUT ME
+                            aboutMeSection
 
-                            // BASICS
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("BASICS")
-                                    .font(.headline)
-                                Group {
-                                    LabeledField(label: "First Name", text: $firstName)
-                                    LabeledField(label: "Last Name", text: $lastName)
-                                    LabeledField(label: "Date of Birth (YYYY-MM-DD)", text: $dateOfBirth)
-                                    Picker("Gender", selection: $gender) {
-                                        Text("Male").tag("Male")
-                                        Text("Female").tag("Female")
-                                        Text("Other").tag("Other")
-                                    }
-                                    .pickerStyle(SegmentedPickerStyle())
-                                    .onChange(of: gender) { _ in scheduleAutoSave() }
-                                }
-                            }
-                            .padding()
-                            .background(AppTheme.cardBackground.opacity(0.8))
-                            .cornerRadius(15)
-                            .shadow(radius: 5)
+                            // 4) BASICS
+                            basicsSection
 
-                            // ACADEMICS
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("ACADEMICS")
-                                    .font(.headline)
-                                Group {
-                                    Picker("Grade Level", selection: $selectedGradeLevel) {
-                                        ForEach(GradeLevel.allCases) { level in
-                                            Text(level.rawValue).tag(level)
-                                        }
-                                    }
-                                    .onChange(of: selectedGradeLevel) { _ in scheduleAutoSave() }
+                            // 5) ACADEMICS
+                            academicsSection
 
-                                    LabeledField(label: "Major", text: $major)
-                                    // Replace text field with a Picker for College selection.
-                                    Picker("College", selection: $collegeName) {
-                                        Text("Select a College").tag("")
-                                        ForEach(validColleges, id: \.self) { college in
-                                            Text(college).tag(college)
-                                        }
-                                    }
-                                    .onChange(of: collegeName) { _ in scheduleAutoSave() }
-                                }
-                            }
-                            .padding()
-                            .background(AppTheme.cardBackground.opacity(0.8))
-                            .cornerRadius(15)
-                            .shadow(radius: 5)
+                            // 6) HOUSING
+                            housingSection
 
-                            // HOUSING
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("HOUSING")
-                                    .font(.headline)
-                                Group {
-                                    Picker("Housing Status", selection: $selectedHousingStatus) {
-                                        ForEach(HousingStatus.allCases) { status in
-                                            Text(status.rawValue).tag(status)
-                                        }
-                                    }
-                                    .onChange(of: selectedHousingStatus) { _ in scheduleAutoSave() }
+                            // 7) LIFESTYLE
+                            lifestyleSection
 
-                                    if selectedHousingStatus == .apartment ||
-                                       selectedHousingStatus == .house ||
-                                       selectedHousingStatus == .subleasing ||
-                                       selectedHousingStatus == .lookingForLease {
-                                        Picker("Lease Duration", selection: $selectedLeaseDuration) {
-                                            ForEach(LeaseDuration.allCases) { duration in
-                                                Text(duration.rawValue).tag(duration)
-                                            }
-                                        }
-                                        .onChange(of: selectedLeaseDuration) { _ in scheduleAutoSave() }
-                                    }
-
-                                    LabeledField(label: "Budget Range", text: $budgetRange)
-
-                                    Picker("Cleanliness", selection: $cleanliness) {
-                                        ForEach(1..<6) { number in
-                                            let desc = cleanlinessDescriptions[number] ?? ""
-                                            Text("\(number) - \(desc)").tag(number)
-                                        }
-                                    }
-                                    .onChange(of: cleanliness) { _ in scheduleAutoSave() }
-
-                                    Picker("Sleep Schedule", selection: $sleepSchedule) {
-                                        ForEach(sleepScheduleOptions, id: \.self) { option in
-                                            Text(option)
-                                        }
-                                    }
-                                    .onChange(of: sleepSchedule) { _ in scheduleAutoSave() }
-
-                                    Toggle("Smoker", isOn: $smoker)
-                                        .onChange(of: smoker) { _ in scheduleAutoSave() }
-                                    Toggle("Pet Friendly", isOn: $petFriendly)
-                                        .onChange(of: petFriendly) { _ in scheduleAutoSave() }
-                                }
-                            }
-                            .padding()
-                            .background(AppTheme.cardBackground.opacity(0.8))
-                            .cornerRadius(15)
-                            .shadow(radius: 5)
-
-                            // INTERESTS
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("INTERESTS")
-                                    .font(.headline)
-                                TextField("Interests (comma-separated)", text: $interestsText)
-                                    .autocapitalization(.none)
-                                    .padding(AppTheme.defaultPadding)
-                                    .background(AppTheme.cardBackground)
-                                    .cornerRadius(AppTheme.defaultCornerRadius)
-                                    .onChange(of: interestsText) { _ in scheduleAutoSave() }
-                            }
-                            .padding()
-                            .background(AppTheme.cardBackground.opacity(0.8))
-                            .cornerRadius(15)
-                            .shadow(radius: 5)
+                            // 8) INTERESTS
+                            interestsSection
                         }
-                        .padding()
+                        .padding(.horizontal)
+                        .padding(.bottom, 30)
                     }
                 }
             }
@@ -283,10 +209,10 @@ struct MyProfileView: View {
         .onAppear {
             if viewModel.userProfile == nil {
                 viewModel.loadUserProfile()
-            } else {
-                populateLocalFields(from: viewModel.userProfile!)
+            } else if let existingProfile = viewModel.userProfile {
+                populateLocalFields(from: existingProfile)
             }
-            // Asynchronously load and cache valid college names.
+            // Load all colleges (for search)
             UniversityDataProvider.shared.loadUniversities { colleges in
                 self.validColleges = colleges
             }
@@ -299,6 +225,304 @@ struct MyProfileView: View {
                 handlePhotoSelected()
             }
         }
+    }
+
+    // MARK: - Header
+    private var headerSection: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Text("My Profile")
+                    .font(AppTheme.titleFont)
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+
+            Picker("", selection: $isPreviewMode) {
+                Text("Edit").tag(false)
+                Text("Preview").tag(true)
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+        }
+    }
+
+    // MARK: - ABOUT ME
+    private var aboutMeSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("ABOUT ME")
+                .font(.headline)
+            TextEditor(text: $aboutMe)
+                .scrollContentBackground(.hidden)
+                .background(AppTheme.cardBackground)
+                .cornerRadius(AppTheme.defaultCornerRadius)
+                .frame(minHeight: 100)
+                .padding(6)
+                .onChange(of: aboutMe) { _ in scheduleAutoSave() }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.8))
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
+
+    // MARK: - BASICS
+    private var basicsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("BASICS")
+                .font(.headline)
+            Group {
+                LabeledField(label: "First Name", text: $firstName)
+                LabeledField(label: "Last Name", text: $lastName)
+                LabeledField(label: "Date of Birth (YYYY-MM-DD)", text: $dateOfBirth)
+                
+                // Gender
+                Picker("Gender", selection: $gender) {
+                    Text("Male").tag("Male")
+                    Text("Female").tag("Female")
+                    Text("Other").tag("Other")
+                }
+                .pickerStyle(SegmentedPickerStyle())
+                .onChange(of: gender) { _ in scheduleAutoSave() }
+                
+                // NEW: Height
+                Picker("Height", selection: $selectedHeight) {
+                    Text("Select Height").tag("")
+                    ForEach(heightOptions, id: \.self) { h in
+                        Text(h).tag(h)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: selectedHeight) { _ in scheduleAutoSave() }
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.8))
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
+
+    // MARK: - ACADEMICS
+    private var academicsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("ACADEMICS")
+                .font(.headline)
+            
+            // Grade Level
+            Picker("Grade Level", selection: $selectedGradeLevel) {
+                ForEach(GradeLevel.allCases) { level in
+                    Text(level.rawValue).tag(level)
+                }
+            }
+            .onChange(of: selectedGradeLevel) { _ in scheduleAutoSave() }
+
+            LabeledField(label: "Major", text: $major)
+            
+            // Inline College Search
+            VStack(alignment: .leading, spacing: 4) {
+                Text("College")
+                    .foregroundColor(.secondary)
+                TextField("Search College", text: $collegeSearchQuery)
+                    .padding(8)
+                    .background(AppTheme.cardBackground)
+                    .cornerRadius(8)
+                    .onChange(of: collegeSearchQuery) { newValue in
+                        filteredColleges = UniversityDataProvider.shared.searchUniversities(query: newValue)
+                    }
+                if !filteredColleges.isEmpty {
+                    ScrollView(.vertical) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(filteredColleges, id: \.self) { college in
+                                Text(college)
+                                    .padding(8)
+                                    .onTapGesture {
+                                        collegeName = college
+                                        collegeSearchQuery = college
+                                        filteredColleges = []
+                                        scheduleAutoSave()
+                                    }
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 150)
+                    .background(AppTheme.cardBackground.opacity(0.8))
+                    .cornerRadius(8)
+                }
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.8))
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
+
+
+
+    // MARK: - HOUSING
+    private var housingSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("HOUSING")
+                .font(.headline)
+            Group {
+                Picker("Housing Status", selection: $selectedHousingStatus) {
+                    ForEach(HousingStatus.allCases) { status in
+                        Text(status.rawValue).tag(status)
+                    }
+                }
+                .onChange(of: selectedHousingStatus) { _ in scheduleAutoSave() }
+
+                // Lease Duration only if relevant
+                if selectedHousingStatus == .apartment ||
+                   selectedHousingStatus == .house ||
+                   selectedHousingStatus == .subleasing ||
+                   selectedHousingStatus == .lookingForLease {
+                    Picker("Lease Duration", selection: $selectedLeaseDuration) {
+                        ForEach(LeaseDuration.allCases) { duration in
+                            Text(duration.rawValue).tag(duration)
+                        }
+                    }
+                    .onChange(of: selectedLeaseDuration) { _ in scheduleAutoSave() }
+                }
+
+                LabeledField(label: "Budget Range", text: $budgetRange)
+
+                Picker("Cleanliness", selection: $cleanliness) {
+                    ForEach(1..<6) { number in
+                        let desc = cleanlinessDescriptions[number] ?? ""
+                        Text("\(number) - \(desc)").tag(number)
+                    }
+                }
+                .onChange(of: cleanliness) { _ in scheduleAutoSave() }
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.8))
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
+
+    // MARK: - LIFESTYLE
+    private var lifestyleSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("LIFESTYLE")
+                .font(.headline)
+                .padding(.bottom, 4)
+
+            // Pets (Multi-select)
+            Text("Do you have any pets?")
+                .font(AppTheme.bodyFont)
+            MultiSelectChipView(
+                options: petOptions,
+                selectedItems: $selectedPets,
+                onSelectionChanged: { scheduleAutoSave() }
+            )
+            .padding(.bottom, 8)
+
+            // Drinking
+            Text("How often do you drink?")
+                .font(AppTheme.bodyFont)
+            Picker("Drinking", selection: $selectedDrinking) {
+                ForEach(drinkingOptions, id: \.self) { option in
+                    Text(option).tag(option)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: selectedDrinking) { _ in scheduleAutoSave() }
+            .padding(.bottom, 8)
+
+            // Smoking
+            Text("How often do you smoke?")
+                .font(AppTheme.bodyFont)
+            Picker("Smoking", selection: $selectedSmoking) {
+                ForEach(smokingOptions, id: \.self) { option in
+                    Text(option).tag(option)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: selectedSmoking) { _ in scheduleAutoSave() }
+            .padding(.bottom, 8)
+
+            // 420
+            Text("Are you 420 friendly?")
+                .font(AppTheme.bodyFont)
+            Picker("Cannabis", selection: $selectedCannabis) {
+                ForEach(cannabisOptions, id: \.self) { option in
+                    Text(option).tag(option)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: selectedCannabis) { _ in scheduleAutoSave() }
+            .padding(.bottom, 8)
+
+            // Workout
+            Text("Do you workout?")
+                .font(AppTheme.bodyFont)
+            Picker("Workout", selection: $selectedWorkout) {
+                ForEach(workoutOptions, id: \.self) { option in
+                    Text(option).tag(option)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: selectedWorkout) { _ in scheduleAutoSave() }
+            .padding(.bottom, 8)
+
+            // Dietary
+            Text("What are your dietary preferences?")
+                .font(AppTheme.bodyFont)
+            MultiSelectChipView(
+                options: dietaryOptions,
+                selectedItems: $selectedDietaryPreferences,
+                onSelectionChanged: { scheduleAutoSave() }
+            )
+            .padding(.bottom, 8)
+
+            // Social Media
+            Text("How active are you on social media?")
+                .font(AppTheme.bodyFont)
+            Picker("Social Media", selection: $selectedSocialMedia) {
+                ForEach(socialMediaOptions, id: \.self) { option in
+                    Text(option).tag(option)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: selectedSocialMedia) { _ in scheduleAutoSave() }
+            .padding(.bottom, 8)
+
+            // Sleeping
+            Text("What are your sleeping habits?")
+                .font(AppTheme.bodyFont)
+            Picker("Sleeping Habits", selection: $selectedSleepingHabits) {
+                ForEach(sleepingHabitsOptions, id: \.self) { option in
+                    Text(option).tag(option)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: selectedSleepingHabits) { _ in scheduleAutoSave() }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.8))
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
+
+    // MARK: - INTERESTS
+    private var interestsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("INTERESTS")
+                .font(.headline)
+            TextField("Interests (comma-separated)", text: $interestsText)
+                .autocapitalization(.none)
+                .padding(AppTheme.defaultPadding)
+                .background(AppTheme.cardBackground)
+                .cornerRadius(AppTheme.defaultCornerRadius)
+                .onChange(of: interestsText) { _ in scheduleAutoSave() }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.8))
+        .cornerRadius(15)
+        .shadow(radius: 5)
     }
 
     // MARK: - Custom Labeled TextField
@@ -441,6 +665,10 @@ struct MyProfileView: View {
         lastName = profile.lastName ?? ""
         dateOfBirth = profile.dateOfBirth ?? ""
         gender = profile.gender ?? "Other"
+        
+        // NEW: Height
+        selectedHeight = profile.height ?? ""
+        
         major = profile.major ?? ""
         collegeName = profile.collegeName ?? ""
         budgetRange = profile.budgetRange ?? ""
@@ -452,6 +680,16 @@ struct MyProfileView: View {
         selectedGradeLevel = GradeLevel(rawValue: profile.gradeLevel ?? "") ?? .freshman
         selectedHousingStatus = HousingStatus(rawValue: profile.housingStatus ?? "") ?? .dorm
         selectedLeaseDuration = LeaseDuration(rawValue: profile.leaseDuration ?? "") ?? .notApplicable
+
+        // Lifestyle
+        selectedPets = profile.pets ?? []
+        selectedDrinking = profile.drinking ?? ""
+        selectedSmoking = profile.smoking ?? ""
+        selectedCannabis = profile.cannabis ?? ""
+        selectedWorkout = profile.workout ?? ""
+        selectedDietaryPreferences = profile.dietaryPreferences ?? []
+        selectedSocialMedia = profile.socialMedia ?? ""
+        selectedSleepingHabits = profile.sleepingHabits ?? ""
     }
 
     // MARK: - Debounced Auto-Save
@@ -463,6 +701,7 @@ struct MyProfileView: View {
 
     private func autoSaveProfile() {
         guard !isPickerActive, var updatedProfile = viewModel.userProfile else { return }
+        
         let interestsArray = interestsText
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -472,6 +711,10 @@ struct MyProfileView: View {
         updatedProfile.lastName = lastName
         updatedProfile.dateOfBirth = dateOfBirth
         updatedProfile.gender = gender
+        
+        // Save Height
+        updatedProfile.height = selectedHeight
+        
         updatedProfile.gradeLevel = selectedGradeLevel.rawValue
         updatedProfile.major = major
         updatedProfile.collegeName = collegeName
@@ -483,6 +726,16 @@ struct MyProfileView: View {
         updatedProfile.interests = interestsArray
         updatedProfile.housingStatus = selectedHousingStatus.rawValue
         updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
+
+        // Save Lifestyle fields
+        updatedProfile.pets = selectedPets
+        updatedProfile.drinking = selectedDrinking
+        updatedProfile.smoking = selectedSmoking
+        updatedProfile.cannabis = selectedCannabis
+        updatedProfile.workout = selectedWorkout
+        updatedProfile.dietaryPreferences = selectedDietaryPreferences
+        updatedProfile.socialMedia = selectedSocialMedia
+        updatedProfile.sleepingHabits = selectedSleepingHabits
 
         let originalCreatedAt = updatedProfile.createdAt
         viewModel.updateUserProfile(updatedProfile: updatedProfile) { result in
@@ -504,8 +757,107 @@ struct MyProfileView: View {
     }
 }
 
-struct MyProfileView_Previews: PreviewProvider {
-    static var previews: some View {
-        MyProfileView()
+// MARK: - MultiSelectChipView (For Pets & Dietary Preferences)
+struct MultiSelectChipView: View {
+    let options: [String]
+    @Binding var selectedItems: [String]
+    var onSelectionChanged: () -> Void = {}
+
+    var body: some View {
+        FlowLayout(options, selectedItems: $selectedItems, onSelectionChanged: onSelectionChanged)
+            .padding(6)
+            .background(Color.clear)
+    }
+}
+
+// MARK: - FlowLayout for multi-select chips
+struct FlowLayout: View {
+    let data: [String]
+    @Binding var selectedItems: [String]
+    var onSelectionChanged: () -> Void
+
+    @State private var totalHeight: CGFloat = .zero
+
+    init(_ data: [String],
+         selectedItems: Binding<[String]>,
+         onSelectionChanged: @escaping () -> Void) {
+        self.data = data
+        self._selectedItems = selectedItems
+        self.onSelectionChanged = onSelectionChanged
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            self.content(in: geo)
+        }
+        .frame(minHeight: totalHeight)
+    }
+
+    private func content(in g: GeometryProxy) -> some View {
+        var widthAccumulator: CGFloat = 0
+        var rows: [RowItem] = []
+        var currentRow = RowItem()
+
+        for text in data {
+            let chipSize = chipSize(for: text)
+            // If it doesn't fit on this row, move to the next
+            if widthAccumulator + chipSize.width > g.size.width {
+                rows.append(currentRow)
+                currentRow = RowItem()
+                widthAccumulator = 0
+            }
+            currentRow.items.append(text)
+            widthAccumulator += chipSize.width
+        }
+        // Append the last row
+        if !currentRow.items.isEmpty {
+            rows.append(currentRow)
+        }
+
+        // Estimate total height
+        DispatchQueue.main.async {
+            self.totalHeight = CGFloat(rows.count) * 40
+        }
+
+        return VStack(alignment: .leading, spacing: 8) {
+            ForEach(rows.indices, id: \.self) { rowIndex in
+                HStack(spacing: 8) {
+                    ForEach(rows[rowIndex].items, id: \.self) { item in
+                        chipView(item)
+                    }
+                }
+            }
+        }
+    }
+
+    private func chipSize(for text: String) -> CGSize {
+        let padding: CGFloat = 44 // approximate horizontal + chip margins
+        let font = UIFont.systemFont(ofSize: 14)
+        let attributes = [NSAttributedString.Key.font: font]
+        let textSize = (text as NSString).size(withAttributes: attributes)
+        return CGSize(width: textSize.width + padding, height: 36)
+    }
+
+    private func chipView(_ item: String) -> some View {
+        let isSelected = selectedItems.contains(item)
+        return Text(item)
+            .font(.system(size: 14))
+            .foregroundColor(isSelected ? .white : .primary)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .background(isSelected ? AppTheme.accentColor : AppTheme.cardBackground)
+            .cornerRadius(16)
+            .onTapGesture {
+                if isSelected {
+                    selectedItems.removeAll { $0 == item }
+                } else {
+                    selectedItems.append(item)
+                }
+                onSelectionChanged()
+            }
+    }
+
+    struct RowItem {
+        var items: [String] = []
     }
 }

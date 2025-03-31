@@ -2,7 +2,6 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
 
-// Grouped advanced filter settings.
 struct FilterSettings: Codable {
     var dormType: String?
     var housingStatus: String?
@@ -30,11 +29,12 @@ struct UserModel: Codable, Identifiable {
     var lastName: String?
     var dateOfBirth: String?
     var gender: String?            // "Male", "Female", or "Other"
+    var height: String?            // NEW: Height as a string (e.g., "5'9")
     
     // Academic Info
     var gradeLevel: String?
     var major: String?
-    var collegeName: String?
+    var collegeName: String?       // Selected via search
     
     // Roommate Preferences
     var dormType: String?
@@ -70,6 +70,16 @@ struct UserModel: Codable, Identifiable {
     // Advanced Filter Settings (grouped together)
     var filterSettings: FilterSettings?
     
+    // NEW: Lifestyle fields (matching Tinder’s categories)
+    var pets: [String]?
+    var drinking: String?
+    var smoking: String?
+    var cannabis: String?
+    var workout: String?
+    var dietaryPreferences: [String]?
+    var socialMedia: String?
+    var sleepingHabits: String?
+    
     init(
         email: String,
         isEmailVerified: Bool,
@@ -78,6 +88,7 @@ struct UserModel: Codable, Identifiable {
         lastName: String? = nil,
         dateOfBirth: String? = nil,
         gender: String? = nil,
+        height: String? = nil,               // NEW
         gradeLevel: String? = nil,
         major: String? = nil,
         collegeName: String? = nil,
@@ -101,7 +112,15 @@ struct UserModel: Codable, Identifiable {
         housingStatus: String? = nil,
         leaseDuration: String? = nil,
         filterSettings: FilterSettings? = nil,
-        createdAt: Date? = nil
+        createdAt: Date? = nil,
+        pets: [String]? = nil,
+        drinking: String? = nil,
+        smoking: String? = nil,
+        cannabis: String? = nil,
+        workout: String? = nil,
+        dietaryPreferences: [String]? = nil,
+        socialMedia: String? = nil,
+        sleepingHabits: String? = nil
     ) {
         self.email = email
         self.isEmailVerified = isEmailVerified
@@ -112,7 +131,7 @@ struct UserModel: Codable, Identifiable {
         self.lastName = lastName
         self.dateOfBirth = dateOfBirth
         self.gender = gender
-        
+        self.height = height                      // NEW
         self.gradeLevel = gradeLevel
         self.major = major
         self.collegeName = collegeName
@@ -142,5 +161,15 @@ struct UserModel: Codable, Identifiable {
         self.leaseDuration = leaseDuration
         
         self.filterSettings = filterSettings
+        
+        // NEW: Lifestyle fields
+        self.pets = pets
+        self.drinking = drinking
+        self.smoking = smoking
+        self.cannabis = cannabis
+        self.workout = workout
+        self.dietaryPreferences = dietaryPreferences
+        self.socialMedia = socialMedia
+        self.sleepingHabits = sleepingHabits
     }
 }
