@@ -8,7 +8,7 @@ import Combine
 class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
-    @Published var didLoadProfile: Bool = false  // New flag to track if profile is loaded
+    @Published var didLoadProfile: Bool = false  // Flag to track if profile is loaded
     
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
@@ -21,7 +21,6 @@ class ProfileViewModel: ObservableObject {
     
     /// Loads the currently authenticated user's profile from Firestore.
     func loadUserProfile(completion: ((UserModel?) -> Void)? = nil) {
-        // If already loaded, skip the fetch.
         if didLoadProfile {
             print("[ProfileViewModel] loadUserProfile: Already loaded, skipping fetch.")
             completion?(userProfile)
@@ -115,22 +114,23 @@ class ProfileViewModel: ObservableObject {
         }
         print("[ProfileViewModel] updateUserProfile: Updating profile for uid: \(uid)")
         do {
-            try db.collection("users").document(uid).setData(from: updatedProfile) { error in
-                if let error = error {
-                    DispatchQueue.main.async {
-                        print("[ProfileViewModel] updateUserProfile error: \(error.localizedDescription)")
-                        completion(.failure(error))
-                    }
-                } else {
-                    DispatchQueue.main.async {
-                        var newProfile = updatedProfile
-                        newProfile.id = uid
-                        self.userProfile = newProfile
-                        print("[ProfileViewModel] updateUserProfile: Successfully updated profile: \(newProfile)")
-                        completion(.success(()))
+            try db.collection("users").document(uid)
+                .setData(from: updatedProfile, merge: true) { error in
+                    if let error = error {
+                        DispatchQueue.main.async {
+                            print("[ProfileViewModel] updateUserProfile error: \(error.localizedDescription)")
+                            completion(.failure(error))
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            var newProfile = updatedProfile
+                            newProfile.id = uid
+                            self.userProfile = newProfile
+                            print("[ProfileViewModel] updateUserProfile: Successfully updated profile: \(newProfile)")
+                            completion(.success(()))
+                        }
                     }
                 }
-            }
         } catch {
             print("[ProfileViewModel] updateUserProfile: Exception caught: \(error.localizedDescription)")
             completion(.failure(error))

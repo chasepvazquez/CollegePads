@@ -1,17 +1,10 @@
-//
-//  MatchesDashboardViewModel.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date]
-//
-
 import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
 import FirebaseAuth
 import Combine
 
-struct MatchItem: Identifiable {
+struct MatchItem: Identifiable, Codable {
     let id: String
     let participants: [String]
     let createdAt: Date

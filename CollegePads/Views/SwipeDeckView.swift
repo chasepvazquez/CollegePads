@@ -1,52 +1,70 @@
 import SwiftUI
+import CoreLocation
 
-/// A deck of swipeable user cards, plus optional rewind and super-like buttons.
+/// A deck of swipeable user cards with rewind and super-like buttons.
 struct SwipeDeckView: View {
     @StateObject private var viewModel = MatchingViewModel()
     @State private var currentIndex: Int = 0
+    @State private var showFilter: Bool = false
     
     var body: some View {
         ZStack {
+            AppTheme.backgroundGradient.ignoresSafeArea()
+            
             if viewModel.potentialMatches.isEmpty {
                 Text("No more potential matches")
                     .font(AppTheme.titleFont)
                     .foregroundColor(.secondary)
             } else {
-                // Show each potential match card in reverse order so the top is the current card
                 ForEach(viewModel.potentialMatches.indices.reversed(), id: \.self) { index in
                     if index >= currentIndex {
-                        let user = viewModel.potentialMatches[index]
-                        SwipeCardView(user: user) { swipedUser, direction in
+                        let candidate = viewModel.potentialMatches[index]
+                        SwipeCardView(user: candidate) { swipedUser, direction in
                             handleSwipe(user: swipedUser, direction: direction)
                         }
                         .scaleEffect(scale(for: index))
                         .offset(y: offset(for: index))
-                        .allowsHitTesting(index == currentIndex) // Only top card is swipeable
+                        .allowsHitTesting(index == currentIndex)
                         .transition(.slide)
-                        .animation(.interactiveSpring(
-                            response: 0.5,
-                            dampingFraction: 0.7,
-                            blendDuration: 0.3
-                        ), value: currentIndex)
+                        .animation(.interactiveSpring(response: 0.5,
+                                                      dampingFraction: 0.7,
+                                                      blendDuration: 0.3),
+                                   value: currentIndex)
                     }
                 }
             }
             
-            // Bottom row of buttons: Rewind & Super Like
             bottomControls
+            
+            // Filter Icon Button overlay
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        showFilter = true
+                    }) {
+                        Image(systemName: "line.horizontal.3.decrease.circle")
+                            .font(.system(size: 24))
+                            .padding()
+                    }
+                }
+                Spacer()
+            }
         }
         .onAppear {
             viewModel.fetchPotentialMatches()
         }
+        .sheet(isPresented: $showFilter) {
+            AdvancedFilterView()
+        }
     }
     
-    // MARK: - Subviews
-    
+    // MARK: - Bottom Controls
     private var bottomControls: some View {
         VStack {
             Spacer()
             HStack(spacing: 40) {
-                // Rewind
+                // Rewind Button
                 Button(action: rewindSwipe) {
                     Image(systemName: "gobackward")
                         .font(.system(size: 32))
@@ -54,7 +72,7 @@ struct SwipeDeckView: View {
                 }
                 .disabled(currentIndex == 0)
                 
-                // Super Like
+                // Super Like Button
                 Button(action: superLike) {
                     Image(systemName: "star.fill")
                         .font(.system(size: 32))
@@ -66,7 +84,6 @@ struct SwipeDeckView: View {
     }
     
     // MARK: - Swipe Logic
-    
     private func handleSwipe(user: UserModel, direction: SwipeDirection) {
         if direction == .right {
             viewModel.swipeRight(on: user)
@@ -96,14 +113,11 @@ struct SwipeDeckView: View {
     }
     
     // MARK: - Visual Helpers
-    
     private func scale(for index: Int) -> CGFloat {
-        // Slightly shrink cards behind the top card
         index == currentIndex ? 1.0 : 0.95
     }
     
     private func offset(for index: Int) -> CGFloat {
-        // Stagger cards vertically behind the top
         CGFloat(index - currentIndex) * 10
     }
 }

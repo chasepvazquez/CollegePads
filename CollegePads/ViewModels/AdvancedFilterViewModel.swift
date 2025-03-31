@@ -16,19 +16,18 @@ class AdvancedFilterViewModel: ObservableObject {
     // Filter fields
     @Published var filterDormType: String = ""
     @Published var filterHousingStatus: String = ""
-    // This property now serves as the selected college (if filtering by college)
     @Published var filterCollegeName: String = ""
     @Published var filterBudgetRange: String = ""
     @Published var filterGradeGroup: String = ""
     @Published var filterInterests: String = ""
     // Only used when filtering by distance
-    @Published var maxDistance: Double = 10.0 // in kilometers
+    @Published var maxDistance: Double = 10.0
 
-    // NEW: Additional filter properties for gender and age difference.
+    // Additional filter properties for gender and age difference.
     @Published var filterPreferredGender: String = ""
     @Published var maxAgeDifference: Double = 0.0
 
-    // New: Filter mode – either by university or by distance.
+    // Filter mode – either by university or by distance.
     @Published var filterMode: FilterMode = .university
     
     // Filter results and errors
@@ -43,14 +42,12 @@ class AdvancedFilterViewModel: ObservableObject {
     func applyFilters(currentLocation: CLLocation?) {
         var query: Query = db.collection("users")
         
-        // 1. Apply direct Firestore queries for certain fields.
         if !filterDormType.isEmpty {
             query = query.whereField("dormType", isEqualTo: filterDormType)
         }
         if !filterHousingStatus.isEmpty {
             query = query.whereField("housingStatus", isEqualTo: filterHousingStatus)
         }
-        // Only add this Firestore query when filtering by college.
         if filterMode == .university && !filterCollegeName.isEmpty {
             query = query.whereField("collegeName", isEqualTo: filterCollegeName)
         }
@@ -58,14 +55,13 @@ class AdvancedFilterViewModel: ObservableObject {
             query = query.whereField("budgetRange", isEqualTo: filterBudgetRange)
         }
         
-        // 2. Use Firestore's Combine publisher to fetch matching documents.
         query
             .snapshotPublisher()
             .map { snapshot -> [UserModel] in
                 snapshot.documents.compactMap { try? $0.data(as: UserModel.self) }
             }
             .map { users in
-                // 3. Filter by grade group
+                // Filter by grade group
                 let gradeFiltered: [UserModel]
                 if !self.filterGradeGroup.isEmpty {
                     gradeFiltered = users.filter { user in
@@ -88,13 +84,12 @@ class AdvancedFilterViewModel: ObservableObject {
                     gradeFiltered = users
                 }
                 
-                // 4. Filter by interests
+                // Filter by interests
                 let interestsFiltered: [UserModel]
                 if !self.filterInterests.isEmpty {
                     let keywords = self.filterInterests
                         .split(separator: ",")
                         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-                    
                     interestsFiltered = gradeFiltered.filter { user in
                         guard let userInterests = user.interests else { return false }
                         let lowerUserInterests = userInterests.map { $0.lowercased() }
@@ -104,7 +99,7 @@ class AdvancedFilterViewModel: ObservableObject {
                     interestsFiltered = gradeFiltered
                 }
                 
-                // 5. Filter by distance only if not filtering by college.
+                // Filter by distance only if not filtering by college.
                 let finalFiltered: [UserModel]
                 if self.filterMode == .university && !self.filterCollegeName.isEmpty {
                     finalFiltered = interestsFiltered
@@ -140,39 +135,45 @@ class AdvancedFilterViewModel: ObservableObject {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let docRef = db.collection("users").document(uid)
         
-        let data: [String: Any] = [
+        // Build the data dictionary.
+        var data: [String: Any] = [
             "filterDormType": filterDormType,
             "filterHousingStatus": filterHousingStatus,
             "filterCollegeName": filterCollegeName,
             "filterBudgetRange": filterBudgetRange,
             "filterGradeGroup": filterGradeGroup,
             "filterInterests": filterInterests,
-            "filterMaxDistance": maxDistance,
             "filterPreferredGender": filterPreferredGender,
             "maxAgeDifference": maxAgeDifference,
             "filterMode": filterMode.rawValue
         ]
+        // Only store maxDistance if filtering by distance.
+        if filterMode == .distance {
+            data["filterMaxDistance"] = maxDistance
+        } else {
+            data["filterMaxDistance"] = FieldValue.delete()
+        }
         
         docRef.setData(data, merge: true) { error in
             if let error = error {
                 DispatchQueue.main.async {
                     self.errorMessage = "Failed to save filters: \(error.localizedDescription)"
                 }
+            } else {
+                print("Filters saved successfully.")
             }
         }
     }
     
-    /// Loads previously saved filter fields from the Firestore user document, if any.
+    /// Loads previously saved filter fields from the Firestore user document.
     func loadFiltersFromUserDoc(completion: @escaping () -> Void = {}) {
         guard let uid = Auth.auth().currentUser?.uid else {
             completion()
             return
         }
         let docRef = db.collection("users").document(uid)
-        
         docRef.getDocument { snapshot, error in
             defer { completion() }
-            
             if let error = error {
                 DispatchQueue.main.async {
                     self.errorMessage = "Failed to load filters: \(error.localizedDescription)"
@@ -180,7 +181,6 @@ class AdvancedFilterViewModel: ObservableObject {
                 return
             }
             guard let data = snapshot?.data() else { return }
-            
             DispatchQueue.main.async {
                 self.filterDormType = data["filterDormType"] as? String ?? ""
                 self.filterHousingStatus = data["filterHousingStatus"] as? String ?? ""

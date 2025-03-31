@@ -2,24 +2,36 @@ import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
 
+// Grouped advanced filter settings.
+struct FilterSettings: Codable {
+    var dormType: String?
+    var housingStatus: String?
+    var collegeName: String?
+    var budgetRange: String?
+    var gradeGroup: String?
+    var interests: String?
+    var maxDistance: Double?
+    var preferredGender: String?
+    var maxAgeDifference: Double?
+    var mode: String?   // "university" or "distance"
+}
+
 struct UserModel: Codable, Identifiable {
     @DocumentID var id: String?
-
+    
     // Basic Info
     var email: String
     var createdAt: Date?           // optional creation date
     var isEmailVerified: Bool
     
-    // "About Me"
-    var aboutMe: String?           // short bio/description
-    
-    // Name & Demographics
+    // Personal Info
+    var aboutMe: String?
     var firstName: String?
     var lastName: String?
     var dateOfBirth: String?
     var gender: String?            // "Male", "Female", or "Other"
     
-    // College & Living Info
+    // Academic Info
     var gradeLevel: String?
     var major: String?
     var collegeName: String?
@@ -34,12 +46,12 @@ struct UserModel: Codable, Identifiable {
     var petFriendly: Bool?
     var livingStyle: String?
     
-    // Quiz & Interests
+    // Interests
     var socialLevel: Int?
     var studyHabits: Int?
     var interests: [String]?
     
-    // Profile Pictures & Location
+    // Media & Location
     var profileImageUrl: String?      // legacy single image
     var profileImageUrls: [String]?   // array for multiple images
     var location: GeoPoint?
@@ -51,21 +63,12 @@ struct UserModel: Codable, Identifiable {
     // Blocked Users
     var blockedUserIDs: [String]?
     
-    // Housing Details (Profile Info)
+    // Housing Details
     var housingStatus: String?
     var leaseDuration: String?
     
-    // Advanced Filter Settings (for filtering purposes)
-    var filterDormType: String?
-    var filterHousingStatus: String?
-    var filterCollegeName: String?
-    var filterBudgetRange: String?
-    var filterGradeGroup: String?
-    var filterInterests: String?
-    var filterMaxDistance: Double?
-    var filterPreferredGender: String?
-    var maxAgeDifference: Double?
-    var filterMode: String?   // stored as a string (e.g. "university" or "distance")
+    // Advanced Filter Settings (grouped together)
+    var filterSettings: FilterSettings?
     
     init(
         email: String,
@@ -97,22 +100,11 @@ struct UserModel: Codable, Identifiable {
         blockedUserIDs: [String]? = nil,
         housingStatus: String? = nil,
         leaseDuration: String? = nil,
-        // Advanced filter settings with default nil values
-        filterDormType: String? = nil,
-        filterHousingStatus: String? = nil,
-        filterCollegeName: String? = nil,
-        filterBudgetRange: String? = nil,
-        filterGradeGroup: String? = nil,
-        filterInterests: String? = nil,
-        filterMaxDistance: Double? = nil,
-        filterPreferredGender: String? = nil,
-        maxAgeDifference: Double? = nil,
-        filterMode: String? = nil,
+        filterSettings: FilterSettings? = nil,
         createdAt: Date? = nil
     ) {
         self.email = email
         self.isEmailVerified = isEmailVerified
-        // If no createdAt was passed, use "now".
         self.createdAt = createdAt ?? Date()
         
         self.aboutMe = aboutMe
@@ -120,6 +112,7 @@ struct UserModel: Codable, Identifiable {
         self.lastName = lastName
         self.dateOfBirth = dateOfBirth
         self.gender = gender
+        
         self.gradeLevel = gradeLevel
         self.major = major
         self.collegeName = collegeName
@@ -148,16 +141,6 @@ struct UserModel: Codable, Identifiable {
         self.housingStatus = housingStatus
         self.leaseDuration = leaseDuration
         
-        // Advanced filter settings
-        self.filterDormType = filterDormType
-        self.filterHousingStatus = filterHousingStatus
-        self.filterCollegeName = filterCollegeName
-        self.filterBudgetRange = filterBudgetRange
-        self.filterGradeGroup = filterGradeGroup
-        self.filterInterests = filterInterests
-        self.filterMaxDistance = filterMaxDistance
-        self.filterPreferredGender = filterPreferredGender
-        self.maxAgeDifference = maxAgeDifference
-        self.filterMode = filterMode
+        self.filterSettings = filterSettings
     }
 }

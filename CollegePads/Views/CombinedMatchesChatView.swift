@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseFirestore
 
 struct CombinedMatchesChatView: View {
     @StateObject private var matchesVM = MatchesDashboardViewModel()
@@ -9,7 +10,6 @@ struct CombinedMatchesChatView: View {
         NavigationView {
             ZStack {
                 AppTheme.backgroundGradient.ignoresSafeArea()
-                
                 VStack(spacing: 0) {
                     // Top Matches Bar
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -27,13 +27,14 @@ struct CombinedMatchesChatView: View {
                             }
                             
                             ForEach(matchesVM.matches) { match in
-                                let candidateID = match.participants.first(where: {
-                                    $0 != (matchesVM.currentUserID ?? "")
-                                }) ?? "unknown"
-                                // When tapping a match, navigate to ChatConversationView.
-                                NavigationLink(destination: ChatConversationView(viewModel: ChatConversationViewModel(chatID: match.id),
-                                                                                 chatPartnerID: candidateID)) {
-                                    MatchCardView(candidateID: candidateID)
+                                let candidateID = candidateID(for: match)
+                                NavigationLink(
+                                    destination: ChatConversationView(
+                                        viewModel: ChatConversationViewModel(chatID: match.id),
+                                        chatPartnerID: candidateID)
+                                ) {
+                                    // Use the unified SwipeCardView that loads candidate info using candidateID.
+                                    SwipeCardView(candidateID: candidateID)
                                 }
                             }
                         }
@@ -63,6 +64,11 @@ struct CombinedMatchesChatView: View {
                 }
             }
         }
+    }
+    
+    /// Helper to extract the candidateID from a MatchItem.
+    private func candidateID(for match: MatchItem) -> String {
+        return match.participants.first(where: { $0 != (matchesVM.currentUserID ?? "") }) ?? "unknown"
     }
 }
 

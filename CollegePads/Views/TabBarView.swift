@@ -4,7 +4,7 @@ struct TabBarView: View {
     var body: some View {
         TabView {
             // Swipe Tab.
-            MatchingView()
+            SwipeDeckView()
                 .tabItem {
                     Image(systemName: "flame.fill")
                     Text("Swipe")
