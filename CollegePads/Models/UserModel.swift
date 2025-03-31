@@ -80,6 +80,10 @@ struct UserModel: Codable, Identifiable {
     var socialMedia: String?
     var sleepingHabits: String?
     
+    // NEW: Quiz Answers
+    var goingOutQuizAnswers: [String]?
+    var weekendQuizAnswers: [String]?
+    
     init(
         email: String,
         isEmailVerified: Bool,
@@ -120,7 +124,9 @@ struct UserModel: Codable, Identifiable {
         workout: String? = nil,
         dietaryPreferences: [String]? = nil,
         socialMedia: String? = nil,
-        sleepingHabits: String? = nil
+        sleepingHabits: String? = nil,
+        goingOutQuizAnswers: [String]? = nil,   // NEW
+        weekendQuizAnswers: [String]? = nil       // NEW
     ) {
         self.email = email
         self.isEmailVerified = isEmailVerified
@@ -171,5 +177,9 @@ struct UserModel: Codable, Identifiable {
         self.dietaryPreferences = dietaryPreferences
         self.socialMedia = socialMedia
         self.sleepingHabits = sleepingHabits
+        
+        // NEW: Quiz Answers
+        self.goingOutQuizAnswers = goingOutQuizAnswers
+        self.weekendQuizAnswers = weekendQuizAnswers
     }
 }

@@ -45,6 +45,10 @@ struct MyProfileView: View {
     @State private var selectedDietaryPreferences: [String] = []
     @State private var selectedSocialMedia: String = ""
     @State private var selectedSleepingHabits: String = ""
+    
+    // MARK: - Quiz State (New Quizzes)
+    @State private var goingOutQuizAnswers: [String] = []
+    @State private var weekendQuizAnswers: [String] = []
 
     // MARK: - Options
     private let petOptions = [
@@ -75,25 +79,24 @@ struct MyProfileView: View {
     private let sleepingHabitsOptions = [
         "Early bird", "Night owl", "In a spectrum"
     ]
-
+    
     // NEW: Height Options (3'0" up to 8'0")
     private let heightOptions: [String] = {
         var result: [String] = []
         for ft in 3...8 {
             for inch in 0...11 {
-                // For 8 ft, only 8'0" is valid
                 if ft == 8 && inch > 0 { break }
                 result.append("\(ft)'\(inch)\"")
             }
         }
         return result
     }()
-
+    
     // New: for college search
     @State private var validColleges: [String] = []
-
+    
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
-
+    
     // Cleanliness descriptions
     private let cleanlinessDescriptions: [Int: String] = [
         1: "Very Messy",
@@ -105,7 +108,7 @@ struct MyProfileView: View {
     
     // Debouncer for Auto-Save
     @State private var autoSaveWorkItem: DispatchWorkItem?
-
+    
     // MARK: - Enumerations
     enum GradeLevel: String, CaseIterable, Identifiable {
         case freshman = "Freshman"
@@ -137,17 +140,15 @@ struct MyProfileView: View {
         case notApplicable = "Not Applicable"
         var id: String { self.rawValue }
     }
-
+    
     // MARK: - Body
     var body: some View {
         ZStack {
             AppTheme.backgroundGradient.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Header
                 headerSection
-
-                // Main Content
+                
                 if isPreviewMode {
                     if let profile = viewModel.userProfile {
                         ProfilePreviewView(user: profile)
@@ -161,14 +162,12 @@ struct MyProfileView: View {
                 } else {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 24) {
-                            // 1) Profile Completion
                             if let profile = viewModel.userProfile {
                                 ProfileCompletionView(
                                     completion: ProfileCompletionCalculator.calculateCompletion(for: profile)
                                 )
                             }
-
-                            // 2) Photo Grid
+                            
                             MediaGridView(
                                 imageUrls: viewModel.userProfile?.profileImageUrls ?? [],
                                 onTapAddOrEdit: { index in
@@ -181,23 +180,17 @@ struct MyProfileView: View {
                                     removeImage(at: index)
                                 }
                             )
-
-                            // 3) ABOUT ME
+                            
                             aboutMeSection
-
-                            // 4) BASICS
                             basicsSection
-
-                            // 5) ACADEMICS
                             academicsSection
-
-                            // 6) HOUSING
                             housingSection
-
-                            // 7) LIFESTYLE
                             lifestyleSection
-
-                            // 8) INTERESTS
+                            
+                            // NEW: Quiz Sections (Placed directly underneath Lifestyle)
+                            GoingOutQuizView(answers: $goingOutQuizAnswers)
+                            WeekendQuizView(answers: $weekendQuizAnswers)
+                            
                             interestsSection
                         }
                         .padding(.horizontal)
@@ -212,7 +205,6 @@ struct MyProfileView: View {
             } else if let existingProfile = viewModel.userProfile {
                 populateLocalFields(from: existingProfile)
             }
-            // Load all colleges (for search)
             UniversityDataProvider.shared.loadUniversities { colleges in
                 self.validColleges = colleges
             }
@@ -226,8 +218,8 @@ struct MyProfileView: View {
             }
         }
     }
-
-    // MARK: - Header
+    
+    // MARK: - Header Section
     private var headerSection: some View {
         VStack(spacing: 8) {
             HStack {
@@ -238,7 +230,7 @@ struct MyProfileView: View {
             }
             .padding(.horizontal)
             .padding(.top, 8)
-
+            
             Picker("", selection: $isPreviewMode) {
                 Text("Edit").tag(false)
                 Text("Preview").tag(true)
@@ -248,8 +240,8 @@ struct MyProfileView: View {
             .padding(.bottom, 8)
         }
     }
-
-    // MARK: - ABOUT ME
+    
+    // MARK: - ABOUT ME Section
     private var aboutMeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("ABOUT ME")
@@ -267,8 +259,8 @@ struct MyProfileView: View {
         .cornerRadius(15)
         .shadow(radius: 5)
     }
-
-    // MARK: - BASICS
+    
+    // MARK: - BASICS Section
     private var basicsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("BASICS")
@@ -277,8 +269,6 @@ struct MyProfileView: View {
                 LabeledField(label: "First Name", text: $firstName)
                 LabeledField(label: "Last Name", text: $lastName)
                 LabeledField(label: "Date of Birth (YYYY-MM-DD)", text: $dateOfBirth)
-                
-                // Gender
                 Picker("Gender", selection: $gender) {
                     Text("Male").tag("Male")
                     Text("Female").tag("Female")
@@ -286,8 +276,6 @@ struct MyProfileView: View {
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .onChange(of: gender) { _ in scheduleAutoSave() }
-                
-                // NEW: Height
                 Picker("Height", selection: $selectedHeight) {
                     Text("Select Height").tag("")
                     ForEach(heightOptions, id: \.self) { h in
@@ -303,24 +291,19 @@ struct MyProfileView: View {
         .cornerRadius(15)
         .shadow(radius: 5)
     }
-
-    // MARK: - ACADEMICS
+    
+    // MARK: - ACADEMICS Section
     private var academicsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("ACADEMICS")
                 .font(.headline)
-            
-            // Grade Level
             Picker("Grade Level", selection: $selectedGradeLevel) {
                 ForEach(GradeLevel.allCases) { level in
                     Text(level.rawValue).tag(level)
                 }
             }
             .onChange(of: selectedGradeLevel) { _ in scheduleAutoSave() }
-
             LabeledField(label: "Major", text: $major)
-            
-            // Inline College Search
             VStack(alignment: .leading, spacing: 4) {
                 Text("College")
                     .foregroundColor(.secondary)
@@ -357,10 +340,8 @@ struct MyProfileView: View {
         .cornerRadius(15)
         .shadow(radius: 5)
     }
-
-
-
-    // MARK: - HOUSING
+    
+    // MARK: - HOUSING Section
     private var housingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("HOUSING")
@@ -372,8 +353,6 @@ struct MyProfileView: View {
                     }
                 }
                 .onChange(of: selectedHousingStatus) { _ in scheduleAutoSave() }
-
-                // Lease Duration only if relevant
                 if selectedHousingStatus == .apartment ||
                    selectedHousingStatus == .house ||
                    selectedHousingStatus == .subleasing ||
@@ -385,9 +364,7 @@ struct MyProfileView: View {
                     }
                     .onChange(of: selectedLeaseDuration) { _ in scheduleAutoSave() }
                 }
-
                 LabeledField(label: "Budget Range", text: $budgetRange)
-
                 Picker("Cleanliness", selection: $cleanliness) {
                     ForEach(1..<6) { number in
                         let desc = cleanlinessDescriptions[number] ?? ""
@@ -402,15 +379,13 @@ struct MyProfileView: View {
         .cornerRadius(15)
         .shadow(radius: 5)
     }
-
-    // MARK: - LIFESTYLE
+    
+    // MARK: - LIFESTYLE Section
     private var lifestyleSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("LIFESTYLE")
                 .font(.headline)
                 .padding(.bottom, 4)
-
-            // Pets (Multi-select)
             Text("Do you have any pets?")
                 .font(AppTheme.bodyFont)
             MultiSelectChipView(
@@ -419,8 +394,6 @@ struct MyProfileView: View {
                 onSelectionChanged: { scheduleAutoSave() }
             )
             .padding(.bottom, 8)
-
-            // Drinking
             Text("How often do you drink?")
                 .font(AppTheme.bodyFont)
             Picker("Drinking", selection: $selectedDrinking) {
@@ -431,8 +404,6 @@ struct MyProfileView: View {
             .pickerStyle(.menu)
             .onChange(of: selectedDrinking) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
-
-            // Smoking
             Text("How often do you smoke?")
                 .font(AppTheme.bodyFont)
             Picker("Smoking", selection: $selectedSmoking) {
@@ -443,8 +414,6 @@ struct MyProfileView: View {
             .pickerStyle(.menu)
             .onChange(of: selectedSmoking) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
-
-            // 420
             Text("Are you 420 friendly?")
                 .font(AppTheme.bodyFont)
             Picker("Cannabis", selection: $selectedCannabis) {
@@ -455,8 +424,6 @@ struct MyProfileView: View {
             .pickerStyle(.menu)
             .onChange(of: selectedCannabis) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
-
-            // Workout
             Text("Do you workout?")
                 .font(AppTheme.bodyFont)
             Picker("Workout", selection: $selectedWorkout) {
@@ -467,8 +434,6 @@ struct MyProfileView: View {
             .pickerStyle(.menu)
             .onChange(of: selectedWorkout) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
-
-            // Dietary
             Text("What are your dietary preferences?")
                 .font(AppTheme.bodyFont)
             MultiSelectChipView(
@@ -477,8 +442,6 @@ struct MyProfileView: View {
                 onSelectionChanged: { scheduleAutoSave() }
             )
             .padding(.bottom, 8)
-
-            // Social Media
             Text("How active are you on social media?")
                 .font(AppTheme.bodyFont)
             Picker("Social Media", selection: $selectedSocialMedia) {
@@ -489,8 +452,6 @@ struct MyProfileView: View {
             .pickerStyle(.menu)
             .onChange(of: selectedSocialMedia) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
-
-            // Sleeping
             Text("What are your sleeping habits?")
                 .font(AppTheme.bodyFont)
             Picker("Sleeping Habits", selection: $selectedSleepingHabits) {
@@ -506,8 +467,103 @@ struct MyProfileView: View {
         .cornerRadius(15)
         .shadow(radius: 5)
     }
-
-    // MARK: - INTERESTS
+    
+    // MARK: - QUIZ Sections
+    // Going Out Quiz
+    struct GoingOutQuizView: View {
+        @Binding var answers: [String]
+        @State private var currentQuestionIndex = 0
+        
+        private let questions: [Question] = [
+            Question(text: "How often do you go out?", options: ["Rarely", "Sometimes", "Often", "Very Often"]),
+            Question(text: "Preferred venue for going out?", options: ["Casual Bar", "Club", "Restaurant", "Outdoor"])
+        ]
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 16) {
+                if currentQuestionIndex < questions.count {
+                    Text("Going Out Quiz")
+                        .font(AppTheme.titleFont)
+                        .padding(.bottom, 8)
+                    Text(questions[currentQuestionIndex].text)
+                        .font(AppTheme.bodyFont)
+                    ForEach(questions[currentQuestionIndex].options, id: \.self) { option in
+                        Button(action: {
+                            answers.append(option)
+                            withAnimation {
+                                currentQuestionIndex += 1
+                            }
+                        }) {
+                            Text(option)
+                                .font(AppTheme.bodyFont)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(AppTheme.accentColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                    }
+                } else {
+                    Text("Going Out Quiz Completed")
+                        .font(AppTheme.bodyFont)
+                        .foregroundColor(.green)
+                }
+            }
+            .padding()
+            .background(AppTheme.cardBackground.opacity(0.8))
+            .cornerRadius(15)
+            .shadow(radius: 5)
+        }
+    }
+    
+    // Weekend Quiz
+    struct WeekendQuizView: View {
+        @Binding var answers: [String]
+        @State private var currentQuestionIndex = 0
+        
+        private let questions: [Question] = [
+            Question(text: "What's your typical weekend vibe?", options: ["Stay in", "Hang out with friends", "Adventure", "Party"]),
+            Question(text: "How do you plan your weekends?", options: ["Spontaneous", "Well-planned", "Depends on mood", "Mixed"])
+        ]
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 16) {
+                if currentQuestionIndex < questions.count {
+                    Text("Weekend Quiz")
+                        .font(AppTheme.titleFont)
+                        .padding(.bottom, 8)
+                    Text(questions[currentQuestionIndex].text)
+                        .font(AppTheme.bodyFont)
+                    ForEach(questions[currentQuestionIndex].options, id: \.self) { option in
+                        Button(action: {
+                            answers.append(option)
+                            withAnimation {
+                                currentQuestionIndex += 1
+                            }
+                        }) {
+                            Text(option)
+                                .font(AppTheme.bodyFont)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(AppTheme.accentColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                    }
+                } else {
+                    Text("Weekend Quiz Completed")
+                        .font(AppTheme.bodyFont)
+                        .foregroundColor(.green)
+                }
+            }
+            .padding()
+            .background(AppTheme.cardBackground.opacity(0.8))
+            .cornerRadius(15)
+            .shadow(radius: 5)
+        }
+    }
+    
+    // MARK: - INTERESTS Section
     private var interestsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("INTERESTS")
@@ -524,7 +580,7 @@ struct MyProfileView: View {
         .cornerRadius(15)
         .shadow(radius: 5)
     }
-
+    
     // MARK: - Custom Labeled TextField
     @ViewBuilder
     func LabeledField(label: String, text: Binding<String>) -> some View {
@@ -539,8 +595,8 @@ struct MyProfileView: View {
                 .onChange(of: text.wrappedValue) { _ in scheduleAutoSave() }
         }
     }
-
-    // MARK: - Profile Completion
+    
+    // MARK: - Profile Completion View
     struct ProfileCompletionView: View {
         let completion: Double
         var body: some View {
@@ -557,15 +613,15 @@ struct MyProfileView: View {
             .shadow(radius: 5)
         }
     }
-
-    // MARK: - Media Grid
+    
+    // MARK: - Media Grid View
     struct MediaGridView: View {
         let imageUrls: [String]
         let onTapAddOrEdit: (Int) -> Void
         let onRemoveImage: (Int) -> Void
-
+        
         private let columns = Array(repeating: GridItem(.flexible()), count: 3)
-
+        
         var body: some View {
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(0..<9, id: \.self) { index in
@@ -593,7 +649,7 @@ struct MyProfileView: View {
                                 }
                             }
                             .onTapGesture { onTapAddOrEdit(index) }
-
+                            
                             Button(action: { onRemoveImage(index) }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.white)
@@ -620,8 +676,8 @@ struct MyProfileView: View {
             .padding(.horizontal, 8)
         }
     }
-
-    // MARK: - Photo Selection
+    
+    // MARK: - Photo Selection Handler
     private func handlePhotoSelected() {
         guard let newImg = newProfileImage, let index = tappedImageIndex else { return }
         viewModel.uploadProfileImage(image: newImg) { result in
@@ -647,8 +703,8 @@ struct MyProfileView: View {
             }
         }
     }
-
-    // MARK: - Remove Image
+    
+    // MARK: - Remove Image Handler
     private func removeImage(at index: Int) {
         guard var profile = viewModel.userProfile,
               var urls = profile.profileImageUrls, index < urls.count else { return }
@@ -657,18 +713,15 @@ struct MyProfileView: View {
         profile.profileImageUrl = urls.first
         viewModel.updateUserProfile(updatedProfile: profile) { _ in }
     }
-
-    // MARK: - Populate Fields
+    
+    // MARK: - Populate Fields from Profile
     private func populateLocalFields(from profile: UserModel) {
         aboutMe = profile.aboutMe ?? ""
         firstName = profile.firstName ?? ""
         lastName = profile.lastName ?? ""
         dateOfBirth = profile.dateOfBirth ?? ""
         gender = profile.gender ?? "Other"
-        
-        // NEW: Height
         selectedHeight = profile.height ?? ""
-        
         major = profile.major ?? ""
         collegeName = profile.collegeName ?? ""
         budgetRange = profile.budgetRange ?? ""
@@ -680,7 +733,7 @@ struct MyProfileView: View {
         selectedGradeLevel = GradeLevel(rawValue: profile.gradeLevel ?? "") ?? .freshman
         selectedHousingStatus = HousingStatus(rawValue: profile.housingStatus ?? "") ?? .dorm
         selectedLeaseDuration = LeaseDuration(rawValue: profile.leaseDuration ?? "") ?? .notApplicable
-
+        
         // Lifestyle
         selectedPets = profile.pets ?? []
         selectedDrinking = profile.drinking ?? ""
@@ -690,31 +743,32 @@ struct MyProfileView: View {
         selectedDietaryPreferences = profile.dietaryPreferences ?? []
         selectedSocialMedia = profile.socialMedia ?? ""
         selectedSleepingHabits = profile.sleepingHabits ?? ""
+        
+        // Quiz Answers
+        goingOutQuizAnswers = profile.goingOutQuizAnswers ?? []
+        weekendQuizAnswers = profile.weekendQuizAnswers ?? []
     }
-
+    
     // MARK: - Debounced Auto-Save
     private func scheduleAutoSave() {
         autoSaveWorkItem?.cancel()
         autoSaveWorkItem = DispatchWorkItem { autoSaveProfile() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: autoSaveWorkItem!)
     }
-
+    
     private func autoSaveProfile() {
         guard !isPickerActive, var updatedProfile = viewModel.userProfile else { return }
         
         let interestsArray = interestsText
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-
+        
         updatedProfile.aboutMe = aboutMe
         updatedProfile.firstName = firstName
         updatedProfile.lastName = lastName
         updatedProfile.dateOfBirth = dateOfBirth
         updatedProfile.gender = gender
-        
-        // Save Height
         updatedProfile.height = selectedHeight
-        
         updatedProfile.gradeLevel = selectedGradeLevel.rawValue
         updatedProfile.major = major
         updatedProfile.collegeName = collegeName
@@ -726,7 +780,7 @@ struct MyProfileView: View {
         updatedProfile.interests = interestsArray
         updatedProfile.housingStatus = selectedHousingStatus.rawValue
         updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
-
+        
         // Save Lifestyle fields
         updatedProfile.pets = selectedPets
         updatedProfile.drinking = selectedDrinking
@@ -736,7 +790,11 @@ struct MyProfileView: View {
         updatedProfile.dietaryPreferences = selectedDietaryPreferences
         updatedProfile.socialMedia = selectedSocialMedia
         updatedProfile.sleepingHabits = selectedSleepingHabits
-
+        
+        // Save Quiz Answers
+        updatedProfile.goingOutQuizAnswers = goingOutQuizAnswers
+        updatedProfile.weekendQuizAnswers = weekendQuizAnswers
+        
         let originalCreatedAt = updatedProfile.createdAt
         viewModel.updateUserProfile(updatedProfile: updatedProfile) { result in
             switch result {
@@ -747,8 +805,8 @@ struct MyProfileView: View {
             }
         }
     }
-
-    // MARK: - Fallback
+    
+    // MARK: - Fallback Profile
     private func defaultUserProfile() -> UserModel {
         UserModel(
             email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
@@ -762,7 +820,7 @@ struct MultiSelectChipView: View {
     let options: [String]
     @Binding var selectedItems: [String]
     var onSelectionChanged: () -> Void = {}
-
+    
     var body: some View {
         FlowLayout(options, selectedItems: $selectedItems, onSelectionChanged: onSelectionChanged)
             .padding(6)
@@ -770,14 +828,14 @@ struct MultiSelectChipView: View {
     }
 }
 
-// MARK: - FlowLayout for multi-select chips
+// MARK: - FlowLayout for Multi-Select Chips
 struct FlowLayout: View {
     let data: [String]
     @Binding var selectedItems: [String]
     var onSelectionChanged: () -> Void
-
+    
     @State private var totalHeight: CGFloat = .zero
-
+    
     init(_ data: [String],
          selectedItems: Binding<[String]>,
          onSelectionChanged: @escaping () -> Void) {
@@ -785,22 +843,21 @@ struct FlowLayout: View {
         self._selectedItems = selectedItems
         self.onSelectionChanged = onSelectionChanged
     }
-
+    
     var body: some View {
         GeometryReader { geo in
             self.content(in: geo)
         }
         .frame(minHeight: totalHeight)
     }
-
+    
     private func content(in g: GeometryProxy) -> some View {
         var widthAccumulator: CGFloat = 0
         var rows: [RowItem] = []
         var currentRow = RowItem()
-
+        
         for text in data {
             let chipSize = chipSize(for: text)
-            // If it doesn't fit on this row, move to the next
             if widthAccumulator + chipSize.width > g.size.width {
                 rows.append(currentRow)
                 currentRow = RowItem()
@@ -809,16 +866,12 @@ struct FlowLayout: View {
             currentRow.items.append(text)
             widthAccumulator += chipSize.width
         }
-        // Append the last row
         if !currentRow.items.isEmpty {
             rows.append(currentRow)
         }
-
-        // Estimate total height
         DispatchQueue.main.async {
             self.totalHeight = CGFloat(rows.count) * 40
         }
-
         return VStack(alignment: .leading, spacing: 8) {
             ForEach(rows.indices, id: \.self) { rowIndex in
                 HStack(spacing: 8) {
@@ -829,15 +882,15 @@ struct FlowLayout: View {
             }
         }
     }
-
+    
     private func chipSize(for text: String) -> CGSize {
-        let padding: CGFloat = 44 // approximate horizontal + chip margins
+        let padding: CGFloat = 44
         let font = UIFont.systemFont(ofSize: 14)
         let attributes = [NSAttributedString.Key.font: font]
         let textSize = (text as NSString).size(withAttributes: attributes)
         return CGSize(width: textSize.width + padding, height: 36)
     }
-
+    
     private func chipView(_ item: String) -> some View {
         let isSelected = selectedItems.contains(item)
         return Text(item)
@@ -856,8 +909,106 @@ struct FlowLayout: View {
                 onSelectionChanged()
             }
     }
-
+    
     struct RowItem {
         var items: [String] = []
+    }
+}
+
+// MARK: - Quiz Support Structures
+struct Question {
+    let text: String
+    let options: [String]
+}
+
+struct GoingOutQuizView: View {
+    @Binding var answers: [String]
+    @State private var currentQuestionIndex = 0
+    
+    private let questions: [Question] = [
+        Question(text: "How often do you go out?", options: ["Rarely", "Sometimes", "Often", "Very Often"]),
+        Question(text: "Preferred venue for going out?", options: ["Casual Bar", "Club", "Restaurant", "Outdoor"])
+    ]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if currentQuestionIndex < questions.count {
+                Text("Going Out Quiz")
+                    .font(AppTheme.titleFont)
+                    .padding(.bottom, 8)
+                Text(questions[currentQuestionIndex].text)
+                    .font(AppTheme.bodyFont)
+                ForEach(questions[currentQuestionIndex].options, id: \.self) { option in
+                    Button(action: {
+                        answers.append(option)
+                        withAnimation {
+                            currentQuestionIndex += 1
+                        }
+                    }) {
+                        Text(option)
+                            .font(AppTheme.bodyFont)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(AppTheme.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                }
+            } else {
+                Text("Going Out Quiz Completed")
+                    .font(AppTheme.bodyFont)
+                    .foregroundColor(.green)
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.8))
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
+}
+
+struct WeekendQuizView: View {
+    @Binding var answers: [String]
+    @State private var currentQuestionIndex = 0
+    
+    private let questions: [Question] = [
+        Question(text: "What's your typical weekend vibe?", options: ["Stay in", "Hang out with friends", "Adventure", "Party"]),
+        Question(text: "How do you plan your weekends?", options: ["Spontaneous", "Well-planned", "Depends on mood", "Mixed"])
+    ]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if currentQuestionIndex < questions.count {
+                Text("Weekend Quiz")
+                    .font(AppTheme.titleFont)
+                    .padding(.bottom, 8)
+                Text(questions[currentQuestionIndex].text)
+                    .font(AppTheme.bodyFont)
+                ForEach(questions[currentQuestionIndex].options, id: \.self) { option in
+                    Button(action: {
+                        answers.append(option)
+                        withAnimation {
+                            currentQuestionIndex += 1
+                        }
+                    }) {
+                        Text(option)
+                            .font(AppTheme.bodyFont)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(AppTheme.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                }
+            } else {
+                Text("Weekend Quiz Completed")
+                    .font(AppTheme.bodyFont)
+                    .foregroundColor(.green)
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.8))
+        .cornerRadius(15)
+        .shadow(radius: 5)
     }
 }
