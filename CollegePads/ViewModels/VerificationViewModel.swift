@@ -1,10 +1,3 @@
-//
-//  VerificationViewModel.swift
-//  CollegePads
-//
-//  Created by [Your Name] on [Date].
-//
-
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
@@ -15,26 +8,62 @@ class VerificationViewModel: ObservableObject {
     @Published var errorMessage: String?
     private let db = Firestore.firestore()
     
-    /// Uploads the verification image and updates the user's profile as verified.
-    func submitVerification(image: UIImage, completion: @escaping (Result<Void, Error>) -> Void) {
-        // Assume FirebaseStorageService.shared.uploadVerificationImage(image:) is implemented similarly to profile image uploads.
-        FirebaseStorageService.shared.uploadVerificationImage(image: image) { result in
-            switch result {
-            case .success(let urlString):
-                self.updateUserVerificationStatus(imageUrl: urlString, completion: completion)
-            case .failure(let error):
-                DispatchQueue.main.async {
+    /// Sends an email verification to the current user.
+    func sendEmailVerification(completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let user = Auth.auth().currentUser else {
+            let err = NSError(domain: "Verification", code: 0,
+                              userInfo: [NSLocalizedDescriptionKey: "User not authenticated."])
+            DispatchQueue.main.async {
+                self.errorMessage = err.localizedDescription
+                completion(.failure(err))
+            }
+            return
+        }
+        user.sendEmailVerification { error in
+            DispatchQueue.main.async {
+                if let error = error {
                     self.errorMessage = error.localizedDescription
                     completion(.failure(error))
+                } else {
+                    completion(.success(()))
                 }
             }
         }
     }
     
-    /// Updates the current user's profile to mark as verified.
-    private func updateUserVerificationStatus(imageUrl: String, completion: @escaping (Result<Void, Error>) -> Void) {
+    /// Reloads the current user and updates Firestore if the email is verified.
+    func refreshVerificationStatus(completion: @escaping (Result<Void, Error>) -> Void) {
+        guard let user = Auth.auth().currentUser else {
+            let err = NSError(domain: "Verification", code: 0,
+                              userInfo: [NSLocalizedDescriptionKey: "User not authenticated."])
+            DispatchQueue.main.async {
+                self.errorMessage = err.localizedDescription
+                completion(.failure(err))
+            }
+            return
+        }
+        user.reload { error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    self.errorMessage = error.localizedDescription
+                    completion(.failure(error))
+                } else if user.isEmailVerified {
+                    self.updateUserAsVerified(completion: completion)
+                } else {
+                    let err = NSError(domain: "Verification", code: 0,
+                                      userInfo: [NSLocalizedDescriptionKey: "Email not yet verified."])
+                    self.errorMessage = err.localizedDescription
+                    completion(.failure(err))
+                }
+            }
+        }
+    }
+    
+    /// Updates the current user's Firestore document to mark as verified (for email verification).
+    func updateUserAsVerified(completion: @escaping (Result<Void, Error>) -> Void) {
         guard let currentUserID = Auth.auth().currentUser?.uid else {
-            let err = NSError(domain: "Verification", code: 0, userInfo: [NSLocalizedDescriptionKey: "User not authenticated."])
+            let err = NSError(domain: "Verification", code: 0,
+                              userInfo: [NSLocalizedDescriptionKey: "User not authenticated."])
             DispatchQueue.main.async {
                 self.errorMessage = err.localizedDescription
                 completion(.failure(err))
@@ -43,8 +72,7 @@ class VerificationViewModel: ObservableObject {
         }
         let userRef = db.collection("users").document(currentUserID)
         userRef.updateData([
-            "isVerified": true,
-            "verificationImageUrl": imageUrl
+            "isVerified": true
         ]) { error in
             DispatchQueue.main.async {
                 if let error = error {

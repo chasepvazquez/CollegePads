@@ -2,66 +2,33 @@ import SwiftUI
 import PhotosUI
 import FirebaseAuth
 
-// MARK: - Quiz Data Structure
+// MARK: - Quiz Data Structures & Other Quiz-Related Code
+// (Existing quiz questions and views remain unchanged.)
 struct QuizQuestion: Identifiable {
     let id = UUID()
     let question: String
     let options: [String]
 }
 
-// MARK: - Going Out Quiz Questions
 let goingOutQuizQuestions: [QuizQuestion] = [
-    QuizQuestion(
-        question: "You can find me...",
-        options: ["Dancing 💃", "Socializing 🗣️"]
-    ),
-    QuizQuestion(
-        question: "I like to...",
-        options: ["Dress Up 👗", "Dress Down 👕"]
-    ),
-    QuizQuestion(
-        question: "I tend to arrive...",
-        options: ["Early ⏰", "Fashionably Late 🕒"]
-    ),
-    QuizQuestion(
-        question: "My exit strategy looks like...",
-        options: ["Say Bye First 👋", "Disappear 🕶️"]
-    )
+    QuizQuestion(question: "You can find me...", options: ["Dancing 💃", "Socializing 🗣️"]),
+    QuizQuestion(question: "I like to...", options: ["Dress Up 👗", "Dress Down 👕"]),
+    QuizQuestion(question: "I tend to arrive...", options: ["Early ⏰", "Fashionably Late 🕒"]),
+    QuizQuestion(question: "My exit strategy looks like...", options: ["Say Bye First 👋", "Disappear 🕶️"])
 ]
 
-// MARK: - Weekends Quiz Questions
 let weekendsQuizQuestions: [QuizQuestion] = [
-    QuizQuestion(
-        question: "Weekends are for...",
-        options: ["Recharging 😴", "Socializing 🥳"]
-    ),
-    QuizQuestion(
-        question: "Saturday night looks like...",
-        options: ["Cozy nights in 🏡", "Fun nights out 🎊"]
-    ),
-    QuizQuestion(
-        question: "A typical Sunday looks like...",
-        options: ["Self care 💆", "Sunday fun day 🎈"]
-    )
+    QuizQuestion(question: "Weekends are for...", options: ["Recharging 😴", "Socializing 🥳"]),
+    QuizQuestion(question: "Saturday night looks like...", options: ["Cozy nights in 🏡", "Fun nights out 🎊"]),
+    QuizQuestion(question: "A typical Sunday looks like...", options: ["Self care 💆", "Sunday fun day 🎈"])
 ]
 
-// MARK: - My Phone Quiz Questions
 let myPhoneQuizQuestions: [QuizQuestion] = [
-    QuizQuestion(
-        question: "I'm the kind of person who...",
-        options: ["Replies quickly ⚡", "Forgets to reply 💤"]
-    ),
-    QuizQuestion(
-        question: "I prefer receiving...",
-        options: ["Text messages 📱", "Phone calls 📞"]
-    ),
-    QuizQuestion(
-        question: "My phone is always...",
-        options: ["Fully charged 🔋", "Low on battery 🪫"]
-    )
+    QuizQuestion(question: "I'm the kind of person who...", options: ["Replies quickly ⚡", "Forgets to reply 💤"]),
+    QuizQuestion(question: "I prefer receiving...", options: ["Text messages 📱", "Phone calls 📞"]),
+    QuizQuestion(question: "My phone is always...", options: ["Fully charged 🔋", "Low on battery 🪫"])
 ]
 
-// MARK: - Generic QuizView
 struct QuizView: View {
     let quizTitle: String
     let quizQuestions: [QuizQuestion]
@@ -115,12 +82,12 @@ struct QuizView: View {
     }
 }
 
-// MARK: - Combined Quizzes Section (for MyProfileView)
 struct CombinedQuizzesSection: View {
-    // State variables for each quiz's answers and presentation flags
-    @State private var goingOutQuizAnswers: [String] = []
-    @State private var weekendsQuizAnswers: [String] = []
-    @State private var myPhoneQuizAnswers: [String] = []
+    @Binding var goingOutQuizAnswers: [String]
+    @Binding var weekendQuizAnswers: [String]
+    @Binding var phoneQuizAnswers: [String]
+    
+    let onQuizComplete: () -> Void
     
     @State private var showingGoingOutQuiz = false
     @State private var showingWeekendsQuiz = false
@@ -128,12 +95,10 @@ struct CombinedQuizzesSection: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            // Going Out Quiz Sub-section
             VStack(alignment: .leading, spacing: 12) {
                 Text("GOING OUT QUIZ")
                     .font(AppTheme.subtitleFont)
                     .foregroundColor(AppTheme.primaryColor)
-                
                 if goingOutQuizAnswers.isEmpty {
                     Text("Not taken yet")
                         .font(AppTheme.bodyFont)
@@ -145,7 +110,6 @@ struct CombinedQuizzesSection: View {
                             .foregroundColor(.primary)
                     }
                 }
-                
                 Button(action: { showingGoingOutQuiz = true }) {
                     Text(goingOutQuizAnswers.isEmpty ? "Take Quiz" : "Retake Quiz")
                         .font(AppTheme.bodyFont)
@@ -163,26 +127,23 @@ struct CombinedQuizzesSection: View {
             )
             .shadow(radius: 5)
             
-            // Weekends Quiz Sub-section
             VStack(alignment: .leading, spacing: 12) {
                 Text("WEEKENDS QUIZ")
                     .font(AppTheme.subtitleFont)
                     .foregroundColor(AppTheme.primaryColor)
-                
-                if weekendsQuizAnswers.isEmpty {
+                if weekendQuizAnswers.isEmpty {
                     Text("Not taken yet")
                         .font(AppTheme.bodyFont)
                         .foregroundColor(.gray)
                 } else {
-                    ForEach(weekendsQuizAnswers, id: \.self) { answer in
+                    ForEach(weekendQuizAnswers, id: \.self) { answer in
                         Text(answer)
                             .font(AppTheme.bodyFont)
                             .foregroundColor(.primary)
                     }
                 }
-                
                 Button(action: { showingWeekendsQuiz = true }) {
-                    Text(weekendsQuizAnswers.isEmpty ? "Take Quiz" : "Retake Quiz")
+                    Text(weekendQuizAnswers.isEmpty ? "Take Quiz" : "Retake Quiz")
                         .font(AppTheme.bodyFont)
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -198,26 +159,23 @@ struct CombinedQuizzesSection: View {
             )
             .shadow(radius: 5)
             
-            // My Phone Quiz Sub-section
             VStack(alignment: .leading, spacing: 12) {
                 Text("+ MY PHONE QUIZ")
                     .font(AppTheme.subtitleFont)
                     .foregroundColor(AppTheme.primaryColor)
-                
-                if myPhoneQuizAnswers.isEmpty {
+                if phoneQuizAnswers.isEmpty {
                     Text("Not taken yet")
                         .font(AppTheme.bodyFont)
                         .foregroundColor(.gray)
                 } else {
-                    ForEach(myPhoneQuizAnswers, id: \.self) { answer in
+                    ForEach(phoneQuizAnswers, id: \.self) { answer in
                         Text(answer)
                             .font(AppTheme.bodyFont)
                             .foregroundColor(.primary)
                     }
                 }
-                
                 Button(action: { showingMyPhoneQuiz = true }) {
-                    Text(myPhoneQuizAnswers.isEmpty ? "Take Quiz" : "Retake Quiz")
+                    Text(phoneQuizAnswers.isEmpty ? "Take Quiz" : "Retake Quiz")
                         .font(AppTheme.bodyFont)
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -233,7 +191,6 @@ struct CombinedQuizzesSection: View {
             )
             .shadow(radius: 5)
         }
-        // MARK: - Sheet Modals for Quizzes
         .sheet(isPresented: $showingGoingOutQuiz) {
             QuizView(
                 quizTitle: "Going Out Quiz",
@@ -241,6 +198,7 @@ struct CombinedQuizzesSection: View {
                 onComplete: { answers in
                     self.goingOutQuizAnswers = answers
                     showingGoingOutQuiz = false
+                    onQuizComplete()
                 }
             )
         }
@@ -249,8 +207,9 @@ struct CombinedQuizzesSection: View {
                 quizTitle: "Weekends Quiz",
                 quizQuestions: weekendsQuizQuestions,
                 onComplete: { answers in
-                    self.weekendsQuizAnswers = answers
+                    self.weekendQuizAnswers = answers
                     showingWeekendsQuiz = false
+                    onQuizComplete()
                 }
             )
         }
@@ -259,28 +218,43 @@ struct CombinedQuizzesSection: View {
                 quizTitle: "+ My Phone Quiz",
                 quizQuestions: myPhoneQuizQuestions,
                 onComplete: { answers in
-                    self.myPhoneQuizAnswers = answers
+                    self.phoneQuizAnswers = answers
                     showingMyPhoneQuiz = false
+                    onQuizComplete()
                 }
             )
         }
     }
 }
 
+// MARK: - New: Property Media Type Enumeration
+enum PropertyMediaType: String, CaseIterable, Identifiable {
+    case propertyImage = "Property Image"
+    case floorplan = "Floorplan"
+    case document = "Document"
+    var id: String { self.rawValue }
+}
+
 // MARK: - MyProfileView
 struct MyProfileView: View {
     @StateObject private var viewModel = ProfileViewModel.shared
 
-    // MARK: - Mode Selection (Edit / Preview)
+    // MARK: - Mode Selection
     @State private var isPreviewMode = false
 
-    // MARK: - Photo Picker State
+    // MARK: - Photo Picker State (for profile images)
     @State private var showingPhotoPicker = false
     @State private var newProfileImage: UIImage? = nil
     @State private var tappedImageIndex: Int? = nil
     @State private var isPickerActive = false
 
-    // MARK: - State Variables (Fields)
+    // MARK: - Property Media Picker State (for property media uploads)
+    @State private var showingPropertyMediaPicker = false
+    @State private var newPropertyMediaImage: UIImage? = nil
+    @State private var tappedPropertyMediaIndex: Int? = nil
+    @State private var currentPropertyMediaType: PropertyMediaType = .propertyImage
+
+    // MARK: - Profile Fields
     @State private var aboutMe = ""
     @State private var firstName = ""
     @State private var lastName = ""
@@ -299,9 +273,23 @@ struct MyProfileView: View {
     @State private var smoker = false
     @State private var petFriendly = false
     @State private var interestsText = ""
-    @State private var selectedHousingStatus: HousingStatus = .dorm
+    // Removed old single housing status field in favor of multi-select
+    @State private var selectedHousingStatuses: [String] = []
     @State private var selectedLeaseDuration: LeaseDuration = .notApplicable
 
+    // New state variables for roommate count inputs
+    @State private var roommateCountNeeded: Int = 0
+    @State private var roommateCountExisting: Int = 0
+
+    // New state variable for desired lease housing type when "Looking for Lease" is selected
+    @State private var desiredLeaseHousingType: String = ""
+    
+    // MARK: - Property Details & Media State
+    @State private var propertyDetails: String = ""
+    @State private var propertyImageUrls: [String] = []
+    @State private var floorplanUrls: [String] = []
+    @State private var documentUrls: [String] = []
+    
     // MARK: - Lifestyle State
     @State private var selectedPets: [String] = []
     @State private var selectedDrinking: String = ""
@@ -312,10 +300,10 @@ struct MyProfileView: View {
     @State private var selectedSocialMedia: String = ""
     @State private var selectedSleepingHabits: String = ""
     
-    // MARK: - Quiz State (New Quizzes)
+    // MARK: - Quiz State (matching UserModel exactly)
     @State private var goingOutQuizAnswers: [String] = []
     @State private var weekendQuizAnswers: [String] = []
-    @State private var phoneQuizAnswers: [String] = []  // New state for "+ My Phone" quiz
+    @State private var phoneQuizAnswers: [String] = []
 
     // MARK: - Options
     private let petOptions = [
@@ -347,7 +335,13 @@ struct MyProfileView: View {
         "Early bird", "Night owl", "In a spectrum"
     ]
     
-    // NEW: Height Options (3'0" up to 8'0")
+    // New desired lease housing type options
+    private let desiredLeaseHousingOptions = ["Apartment", "House", "Dorm", "Other"]
+    
+    // New property media type options (for segmented control)
+    private let propertyMediaTypeOptions = PropertyMediaType.allCases.map { $0.rawValue }
+    
+    // MARK: - Height Options
     private let heightOptions: [String] = {
         var result: [String] = []
         for ft in 3...8 {
@@ -359,12 +353,11 @@ struct MyProfileView: View {
         return result
     }()
     
-    // New: for college search
+    // MARK: - College Search
     @State private var validColleges: [String] = []
-    
     let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
     
-    // Cleanliness descriptions
+    // MARK: - Cleanliness Descriptions
     private let cleanlinessDescriptions: [Int: String] = [
         1: "Very Messy",
         2: "Messy",
@@ -373,7 +366,7 @@ struct MyProfileView: View {
         5: "Very Tidy"
     ]
     
-    // Debouncer for Auto-Save
+    // MARK: - Auto-Save Debouncer
     @State private var autoSaveWorkItem: DispatchWorkItem?
     
     // MARK: - Enumerations
@@ -412,10 +405,8 @@ struct MyProfileView: View {
     var body: some View {
         ZStack {
             AppTheme.backgroundGradient.ignoresSafeArea()
-            
             VStack(spacing: 0) {
                 headerSection
-                
                 if isPreviewMode {
                     if let profile = viewModel.userProfile {
                         ProfilePreviewView(user: profile)
@@ -434,7 +425,6 @@ struct MyProfileView: View {
                                     completion: ProfileCompletionCalculator.calculateCompletion(for: profile)
                                 )
                             }
-                            
                             MediaGridView(
                                 imageUrls: viewModel.userProfile?.profileImageUrls ?? [],
                                 onTapAddOrEdit: { index in
@@ -447,15 +437,22 @@ struct MyProfileView: View {
                                     removeImage(at: index)
                                 }
                             )
-                            
                             aboutMeSection
                             basicsSection
                             academicsSection
                             housingSection
                             lifestyleSection
                             
-                            // NEW: Quiz Sections (Placed directly underneath Lifestyle)
-                            CombinedQuizzesSection()
+                            // New: Property Details & Media Section
+                            propertyDetailsSection
+                            
+                            // Quiz Sections with onQuizComplete callback to trigger auto-save
+                            CombinedQuizzesSection(
+                                goingOutQuizAnswers: $goingOutQuizAnswers,
+                                weekendQuizAnswers: $weekendQuizAnswers,
+                                phoneQuizAnswers: $phoneQuizAnswers,
+                                onQuizComplete: { scheduleAutoSave() }
+                            )
                             
                             interestsSection
                         }
@@ -478,9 +475,17 @@ struct MyProfileView: View {
         .sheet(isPresented: $showingPhotoPicker) {
             CustomImagePicker(image: $newProfileImage)
         }
+        .sheet(isPresented: $showingPropertyMediaPicker) {
+            CustomImagePicker(image: $newPropertyMediaImage)
+        }
         .onChange(of: newProfileImage) { image in
             if image != nil {
                 handlePhotoSelected()
+            }
+        }
+        .onChange(of: newPropertyMediaImage) { image in
+            if image != nil {
+                handlePropertyMediaSelected()
             }
         }
     }
@@ -496,7 +501,6 @@ struct MyProfileView: View {
             }
             .padding(.horizontal)
             .padding(.top, 8)
-            
             Picker("", selection: $isPreviewMode) {
                 Text("Edit").tag(false)
                 Text("Preview").tag(true)
@@ -607,38 +611,64 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // MARK: - HOUSING Section
+    // MARK: - HOUSING Section (Updated with Multi-Selector and Roommate Count)
     private var housingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("HOUSING")
                 .font(.headline)
-            Group {
-                Picker("Housing Status", selection: $selectedHousingStatus) {
-                    ForEach(HousingStatus.allCases) { status in
-                        Text(status.rawValue).tag(status)
+            
+            // Multi-select housing statuses with a maximum of 3 selections
+            MultiSelectChipView(
+                options: HousingStatus.allCases.map { $0.rawValue },
+                selectedItems: $selectedHousingStatuses,
+                onSelectionChanged: { scheduleAutoSave() },
+                maxSelection: 3
+            )
+            
+            // Lease Duration picker if any applicable status is selected
+            if selectedHousingStatuses.contains(where: { ["Apartment Resident", "House Owner/Renter", "Subleasing", "Looking for Lease"].contains($0) }) {
+                Picker("Lease Duration", selection: $selectedLeaseDuration) {
+                    ForEach(LeaseDuration.allCases) { duration in
+                        Text(duration.rawValue).tag(duration)
                     }
                 }
-                .onChange(of: selectedHousingStatus) { _ in scheduleAutoSave() }
-                if selectedHousingStatus == .apartment ||
-                   selectedHousingStatus == .house ||
-                   selectedHousingStatus == .subleasing ||
-                   selectedHousingStatus == .lookingForLease {
-                    Picker("Lease Duration", selection: $selectedLeaseDuration) {
-                        ForEach(LeaseDuration.allCases) { duration in
-                            Text(duration.rawValue).tag(duration)
-                        }
-                    }
-                    .onChange(of: selectedLeaseDuration) { _ in scheduleAutoSave() }
-                }
-                LabeledField(label: "Budget Range", text: $budgetRange)
-                Picker("Cleanliness", selection: $cleanliness) {
-                    ForEach(1..<6) { number in
-                        let desc = cleanlinessDescriptions[number] ?? ""
-                        Text("\(number) - \(desc)").tag(number)
-                    }
-                }
-                .onChange(of: cleanliness) { _ in scheduleAutoSave() }
+                .pickerStyle(.menu)
+                .onChange(of: selectedLeaseDuration) { _ in scheduleAutoSave() }
             }
+            
+            // Desired Lease Housing Type if "Looking for Lease" is selected
+            if selectedHousingStatuses.contains("Looking for Lease") {
+                Picker("Desired Lease Housing Type", selection: $desiredLeaseHousingType) {
+                    ForEach(desiredLeaseHousingOptions, id: \.self) { option in
+                        Text(option).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: desiredLeaseHousingType) { _ in scheduleAutoSave() }
+            }
+            
+            // Roommate Count Input if any applicable status is selected
+            if selectedHousingStatuses.contains(where: { ["Dorm Resident", "Apartment Resident", "House Owner/Renter", "Looking for Roommate"].contains($0) }) {
+                HStack {
+                    Text("Roommates Needed: \(roommateCountNeeded)")
+                    Stepper("", value: $roommateCountNeeded, in: 0...10)
+                        .onChange(of: roommateCountNeeded) { _ in scheduleAutoSave() }
+                }
+                HStack {
+                    Text("Roommates Already: \(roommateCountExisting)")
+                    Stepper("", value: $roommateCountExisting, in: 0...10)
+                        .onChange(of: roommateCountExisting) { _ in scheduleAutoSave() }
+                }
+            }
+            
+            LabeledField(label: "Budget Range", text: $budgetRange)
+            Picker("Cleanliness", selection: $cleanliness) {
+                ForEach(1..<6) { number in
+                    let desc = cleanlinessDescriptions[number] ?? ""
+                    Text("\(number) - \(desc)").tag(number)
+                }
+            }
+            .onChange(of: cleanliness) { _ in scheduleAutoSave() }
         }
         .padding()
         .background(AppTheme.cardBackground.opacity(0.8))
@@ -734,6 +764,55 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
+    // MARK: - PROPERTY DETAILS Section (New)
+    private var propertyDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("PROPERTY DETAILS")
+                .font(.headline)
+            
+            // Text field for additional details (amenities, room descriptions, etc.)
+            TextEditor(text: $propertyDetails)
+                .frame(minHeight: 100)
+                .padding(6)
+                .background(AppTheme.cardBackground)
+                .cornerRadius(AppTheme.defaultCornerRadius)
+                .onChange(of: propertyDetails) { _ in scheduleAutoSave() }
+            
+            // Segmented control for selecting media type
+            Picker("Media Type", selection: $currentPropertyMediaType) {
+                ForEach(PropertyMediaType.allCases) { type in
+                    Text(type.rawValue).tag(type)
+                }
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .padding(.vertical, 4)
+            
+            // Grid view for the selected media type with an add button
+            VStack(alignment: .leading) {
+                Text(currentPropertyMediaType.rawValue)
+                    .font(.subheadline)
+                PropertyMediaGridView(
+                    mediaType: currentPropertyMediaType,
+                    propertyImageUrls: $propertyImageUrls,
+                    floorplanUrls: $floorplanUrls,
+                    documentUrls: $documentUrls,
+                    onAddMedia: {
+                        tappedPropertyMediaIndex = nil
+                        newPropertyMediaImage = nil
+                        showingPropertyMediaPicker = true
+                    },
+                    onRemoveMedia: { index in
+                        removePropertyMedia(at: index, for: currentPropertyMediaType)
+                    }
+                )
+            }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.8))
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
+    
     // MARK: - INTERESTS Section
     private var interestsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -785,7 +864,7 @@ struct MyProfileView: View {
         }
     }
     
-    // MARK: - Media Grid View
+    // MARK: - Media Grid View (Profile Images)
     struct MediaGridView: View {
         let imageUrls: [String]
         let onTapAddOrEdit: (Int) -> Void
@@ -848,7 +927,81 @@ struct MyProfileView: View {
         }
     }
     
-    // MARK: - Photo Selection Handler
+    // MARK: - New: Property Media Grid View
+    struct PropertyMediaGridView: View {
+        let mediaType: PropertyMediaType
+        @Binding var propertyImageUrls: [String]
+        @Binding var floorplanUrls: [String]
+        @Binding var documentUrls: [String]
+        let onAddMedia: () -> Void
+        let onRemoveMedia: (Int) -> Void
+        
+        private var currentMediaUrls: [String] {
+            switch mediaType {
+            case .propertyImage: return propertyImageUrls
+            case .floorplan: return floorplanUrls
+            case .document: return documentUrls
+            }
+        }
+        
+        var body: some View {
+            VStack {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
+                    ForEach(0..<max(9, currentMediaUrls.count + 1), id: \.self) { index in
+                        ZStack(alignment: .topTrailing) {
+                            if index < currentMediaUrls.count, let url = URL(string: currentMediaUrls[index]) {
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ProgressView()
+                                            .frame(width: 100, height: 100)
+                                    case .success(let image):
+                                        image.resizable()
+                                            .scaledToFill()
+                                            .frame(width: 100, height: 100)
+                                            .clipped()
+                                            .cornerRadius(8)
+                                    case .failure:
+                                        Image(systemName: "doc")
+                                            .resizable()
+                                            .frame(width: 100, height: 100)
+                                    @unknown default:
+                                        Image(systemName: "doc")
+                                            .resizable()
+                                            .frame(width: 100, height: 100)
+                                    }
+                                }
+                                .onTapGesture { onAddMedia() }
+                                
+                                Button(action: { onRemoveMedia(index) }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.white)
+                                        .padding(6)
+                                }
+                                .background(Color.black.opacity(0.6))
+                                .clipShape(Circle())
+                                .offset(x: -4, y: 4)
+                            } else {
+                                ZStack {
+                                    Rectangle()
+                                        .fill(AppTheme.cardBackground)
+                                        .frame(width: 100, height: 100)
+                                        .cornerRadius(8)
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 24))
+                                        .foregroundColor(.gray)
+                                }
+                                .onTapGesture { onAddMedia() }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 8)
+            }
+        }
+    }
+    
+    // MARK: - Photo Selection Handler for Profile Images
     private func handlePhotoSelected() {
         guard let newImg = newProfileImage, let index = tappedImageIndex else { return }
         viewModel.uploadProfileImage(image: newImg) { result in
@@ -875,13 +1028,83 @@ struct MyProfileView: View {
         }
     }
     
-    // MARK: - Remove Image Handler
+    // MARK: - New: Property Media Selection Handler
+    private func handlePropertyMediaSelected() {
+        guard let newImg = newPropertyMediaImage else { return }
+        let folder: String
+        switch currentPropertyMediaType {
+        case .propertyImage:
+            folder = "propertyImages"
+        case .floorplan:
+            folder = "floorplans"
+        case .document:
+            folder = "documents"
+        }
+        viewModel.uploadPropertyMedia(image: newImg, folder: folder) { result in
+            switch result {
+            case .success(let downloadURL):
+                var updatedProfile = viewModel.userProfile ?? defaultUserProfile()
+                switch currentPropertyMediaType {
+                case .propertyImage:
+                    var arr = updatedProfile.propertyImageUrls ?? []
+                    arr.append(downloadURL)
+                    updatedProfile.propertyImageUrls = arr
+                    propertyImageUrls = arr
+                case .floorplan:
+                    var arr = updatedProfile.floorplanUrls ?? []
+                    arr.append(downloadURL)
+                    updatedProfile.floorplanUrls = arr
+                    floorplanUrls = arr
+                case .document:
+                    var arr = updatedProfile.documentUrls ?? []
+                    arr.append(downloadURL)
+                    updatedProfile.documentUrls = arr
+                    documentUrls = arr
+                }
+                viewModel.updateUserProfile(updatedProfile: updatedProfile) { _ in }
+            case .failure:
+                break
+            }
+            DispatchQueue.main.async {
+                showingPropertyMediaPicker = false
+                newPropertyMediaImage = nil
+            }
+        }
+    }
+    
+    // MARK: - Remove Image Handler for Profile Images
     private func removeImage(at index: Int) {
         guard var profile = viewModel.userProfile,
               var urls = profile.profileImageUrls, index < urls.count else { return }
         urls.remove(at: index)
         profile.profileImageUrls = urls
         profile.profileImageUrl = urls.first
+        viewModel.updateUserProfile(updatedProfile: profile) { _ in }
+    }
+    
+    // MARK: - New: Remove Property Media Handler
+    private func removePropertyMedia(at index: Int, for mediaType: PropertyMediaType) {
+        guard var profile = viewModel.userProfile else { return }
+        switch mediaType {
+        case .propertyImage:
+            if var arr = profile.propertyImageUrls, index < arr.count {
+                arr.remove(at: index)
+                profile.propertyImageUrls = arr
+                propertyImageUrls = arr
+            }
+        case .floorplan:
+            if var arr = profile.floorplanUrls, index < arr.count {
+                arr.remove(at: index)
+                profile.floorplanUrls = arr
+                floorplanUrls = arr
+            }
+        case .document:
+            if var arr = profile.documentUrls, index < arr.count {
+                arr.remove(at: index)
+                profile.documentUrls = arr
+                documentUrls = arr
+            }
+        }
         viewModel.updateUserProfile(updatedProfile: profile) { _ in }
     }
     
@@ -902,8 +1125,22 @@ struct MyProfileView: View {
         petFriendly = profile.petFriendly ?? false
         interestsText = (profile.interests ?? []).joined(separator: ", ")
         selectedGradeLevel = GradeLevel(rawValue: profile.gradeLevel ?? "") ?? .freshman
-        selectedHousingStatus = HousingStatus(rawValue: profile.housingStatus ?? "") ?? .dorm
+        // Populate multi-select housing statuses
+        if let hs = profile.housingStatuses, !hs.isEmpty {
+            selectedHousingStatuses = hs
+        } else {
+            selectedHousingStatuses = [profile.housingStatus ?? HousingStatus.dorm.rawValue]
+        }
         selectedLeaseDuration = LeaseDuration(rawValue: profile.leaseDuration ?? "") ?? .notApplicable
+        roommateCountNeeded = profile.roommateCountNeeded ?? 0
+        roommateCountExisting = profile.roommateCountExisting ?? 0
+        desiredLeaseHousingType = profile.desiredLeaseHousingType ?? ""
+        
+        // Populate property details and media
+        propertyDetails = profile.propertyDetails ?? ""
+        propertyImageUrls = profile.propertyImageUrls ?? []
+        floorplanUrls = profile.floorplanUrls ?? []
+        documentUrls = profile.documentUrls ?? []
         
         // Lifestyle
         selectedPets = profile.pets ?? []
@@ -950,8 +1187,19 @@ struct MyProfileView: View {
         updatedProfile.smoker = smoker
         updatedProfile.petFriendly = petFriendly
         updatedProfile.interests = interestsArray
-        updatedProfile.housingStatus = selectedHousingStatus.rawValue
+        
+        // Update housing fields with multi-selector and new inputs
+        updatedProfile.housingStatuses = selectedHousingStatuses
         updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
+        updatedProfile.roommateCountNeeded = roommateCountNeeded
+        updatedProfile.roommateCountExisting = roommateCountExisting
+        updatedProfile.desiredLeaseHousingType = desiredLeaseHousingType.isEmpty ? nil : desiredLeaseHousingType
+        
+        // Save property details and media
+        updatedProfile.propertyDetails = propertyDetails
+        updatedProfile.propertyImageUrls = propertyImageUrls
+        updatedProfile.floorplanUrls = floorplanUrls
+        updatedProfile.documentUrls = documentUrls
         
         // Save Lifestyle fields
         updatedProfile.pets = selectedPets
@@ -988,14 +1236,15 @@ struct MyProfileView: View {
     }
 }
 
-// MARK: - MultiSelectChipView (For Pets & Dietary Preferences)
+// MARK: - MultiSelectChipView (For Pets, Dietary Preferences, and Housing Status)
 struct MultiSelectChipView: View {
     let options: [String]
     @Binding var selectedItems: [String]
     var onSelectionChanged: () -> Void = {}
+    var maxSelection: Int? = nil
     
     var body: some View {
-        FlowLayout(options, selectedItems: $selectedItems, onSelectionChanged: onSelectionChanged)
+        FlowLayout(options, selectedItems: $selectedItems, onSelectionChanged: onSelectionChanged, maxSelection: maxSelection)
             .padding(6)
             .background(Color.clear)
     }
@@ -1006,15 +1255,18 @@ struct FlowLayout: View {
     let data: [String]
     @Binding var selectedItems: [String]
     var onSelectionChanged: () -> Void
+    var maxSelection: Int? = nil
     
     @State private var totalHeight: CGFloat = .zero
     
     init(_ data: [String],
          selectedItems: Binding<[String]>,
-         onSelectionChanged: @escaping () -> Void) {
+         onSelectionChanged: @escaping () -> Void,
+         maxSelection: Int? = nil) {
         self.data = data
         self._selectedItems = selectedItems
         self.onSelectionChanged = onSelectionChanged
+        self.maxSelection = maxSelection
     }
     
     var body: some View {
@@ -1066,6 +1318,7 @@ struct FlowLayout: View {
     
     private func chipView(_ item: String) -> some View {
         let isSelected = selectedItems.contains(item)
+        let isDisabled = !isSelected && (maxSelection != nil && selectedItems.count >= maxSelection!)
         return Text(item)
             .font(.system(size: 14))
             .foregroundColor(isSelected ? .white : .primary)
@@ -1073,7 +1326,9 @@ struct FlowLayout: View {
             .padding(.horizontal, 12)
             .background(isSelected ? AppTheme.accentColor : AppTheme.cardBackground)
             .cornerRadius(16)
+            .opacity(isDisabled ? 0.5 : 1.0)
             .onTapGesture {
+                if isDisabled { return }
                 if isSelected {
                     selectedItems.removeAll { $0 == item }
                 } else {

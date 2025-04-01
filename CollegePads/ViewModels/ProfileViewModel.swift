@@ -170,6 +170,39 @@ class ProfileViewModel: ObservableObject {
         }
     }
     
+    /// NEW: Uploads a property media file (image, floorplan, or document) to Firebase Storage.
+    func uploadPropertyMedia(image: UIImage, folder: String, completion: @escaping (Result<String, Error>) -> Void) {
+        guard let uid = userID,
+              let imageData = image.jpegData(compressionQuality: 0.8) else {
+            print("[ProfileViewModel] uploadPropertyMedia: Invalid user or image data.")
+            completion(.failure(NSError(domain: "UploadError", code: 0,
+                                        userInfo: [NSLocalizedDescriptionKey: "Invalid user or image data."])))
+            return
+        }
+        
+        let storageRef = Storage.storage().reference().child("\(folder)/\(uid)_\(UUID().uuidString).jpg")
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        
+        print("[ProfileViewModel] uploadPropertyMedia: Uploading media to folder \(folder) for uid: \(uid)")
+        storageRef.putData(imageData, metadata: metadata) { _, error in
+            if let error = error {
+                print("[ProfileViewModel] uploadPropertyMedia: Error uploading media: \(error.localizedDescription)")
+                completion(.failure(error))
+                return
+            }
+            storageRef.downloadURL { url, error in
+                if let error = error {
+                    print("[ProfileViewModel] uploadPropertyMedia: Error getting download URL: \(error.localizedDescription)")
+                    completion(.failure(error))
+                } else if let downloadURL = url?.absoluteString {
+                    print("[ProfileViewModel] uploadPropertyMedia: Successfully uploaded media. URL: \(downloadURL)")
+                    completion(.success(downloadURL))
+                }
+            }
+        }
+    }
+    
     /// Removes a blocked user ID from the profile (in memory).
     func removeBlockedUser(with uid: String) {
         if var blocked = userProfile?.blockedUserIDs {
@@ -181,11 +214,36 @@ class ProfileViewModel: ObservableObject {
     
     /// Helper to create a default user profile if none exists.
     private func defaultUserProfile() -> UserModel {
+        // Initialize the new housing-related fields with default values:
+        // - housingStatuses defaults to a single entry "Dorm Resident"
+        // - leaseDuration defaults to "Not Applicable"
+        // - Roommate counts are set to 0, and desiredLeaseHousingType is nil.
         var user = UserModel(
             email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
-            isEmailVerified: false
+            isEmailVerified: false,
+            housingStatuses: [ProfileViewModel.defaultHousingStatus],
+            leaseDuration: LeaseDuration.notApplicable.rawValue,
+            roommateCountNeeded: 0,
+            roommateCountExisting: 0,
+            desiredLeaseHousingType: nil
+            // Note: New property media fields default to nil.
         )
         user.id = Auth.auth().currentUser?.uid
         return user
     }
+    
+    // Default housing status for new profiles
+    static let defaultHousingStatus = "Dorm Resident"
+}
+
+// Define LeaseDuration here so it can be used in ProfileViewModel
+enum LeaseDuration: String, CaseIterable, Identifiable {
+    case current = "Current Lease"
+    case shortTerm = "Short Term (<6 months)"
+    case mediumTerm = "6-12 months"
+    case longTerm = "1 year+"
+    case futureNextYear = "Future: Next Year"
+    case futureTwoPlus = "Future: 2+ Years"
+    case notApplicable = "Not Applicable"
+    var id: String { self.rawValue }
 }

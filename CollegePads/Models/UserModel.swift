@@ -29,7 +29,7 @@ struct UserModel: Codable, Identifiable {
     var lastName: String?
     var dateOfBirth: String?
     var gender: String?            // "Male", "Female", or "Other"
-    var height: String?            // NEW: Height as a string (e.g., "5'9")
+    var height: String?            // e.g., "5'9"
     
     // Academic Info
     var gradeLevel: String?
@@ -56,21 +56,30 @@ struct UserModel: Codable, Identifiable {
     var profileImageUrls: [String]?   // array for multiple images
     var location: GeoPoint?
     
-    // Verification
+    // Verification – Only using email verification now.
     var isVerified: Bool?
-    var verificationImageUrl: String?
     
     // Blocked Users
     var blockedUserIDs: [String]?
     
     // Housing Details
+    // (Legacy) Single housing status field for compatibility
     var housingStatus: String?
+    // New multi-selector field
+    var housingStatuses: [String]?
     var leaseDuration: String?
     
-    // Advanced Filter Settings (grouped together)
+    // New Roommate Count Fields
+    var roommateCountNeeded: Int?
+    var roommateCountExisting: Int?
+    
+    // New Desired Lease Housing Type Field
+    var desiredLeaseHousingType: String?
+    
+    // Advanced Filter Settings
     var filterSettings: FilterSettings?
     
-    // NEW: Lifestyle fields (matching Tinder’s categories)
+    // Lifestyle fields (matching Tinder’s categories)
     var pets: [String]?
     var drinking: String?
     var smoking: String?
@@ -80,11 +89,17 @@ struct UserModel: Codable, Identifiable {
     var socialMedia: String?
     var sleepingHabits: String?
     
-    // NEW: Quiz Answers
+    // Quiz Answers
     var goingOutQuizAnswers: [String]?
     var weekendQuizAnswers: [String]?
-    var phoneQuizAnswers: [String]?   // NEW: "+ My Phone" quiz answers
+    var phoneQuizAnswers: [String]?   // "+ My Phone" quiz answers
     
+    // NEW: Property Details & Media Upload
+    var propertyDetails: String?
+    var propertyImageUrls: [String]?
+    var floorplanUrls: [String]?
+    var documentUrls: [String]?
+
     init(
         email: String,
         isEmailVerified: Bool,
@@ -93,7 +108,7 @@ struct UserModel: Codable, Identifiable {
         lastName: String? = nil,
         dateOfBirth: String? = nil,
         gender: String? = nil,
-        height: String? = nil,               // NEW
+        height: String? = nil,
         gradeLevel: String? = nil,
         major: String? = nil,
         collegeName: String? = nil,
@@ -112,12 +127,15 @@ struct UserModel: Codable, Identifiable {
         profileImageUrls: [String]? = nil,
         location: GeoPoint? = nil,
         isVerified: Bool? = false,
-        verificationImageUrl: String? = nil,
         blockedUserIDs: [String]? = nil,
         housingStatus: String? = nil,
+        housingStatuses: [String]? = nil,
         leaseDuration: String? = nil,
         filterSettings: FilterSettings? = nil,
         createdAt: Date? = nil,
+        roommateCountNeeded: Int? = nil,
+        roommateCountExisting: Int? = nil,
+        desiredLeaseHousingType: String? = nil,
         pets: [String]? = nil,
         drinking: String? = nil,
         smoking: String? = nil,
@@ -128,7 +146,12 @@ struct UserModel: Codable, Identifiable {
         sleepingHabits: String? = nil,
         goingOutQuizAnswers: [String]? = nil,
         weekendQuizAnswers: [String]? = nil,
-        phoneQuizAnswers: [String]? = nil    // NEW
+        phoneQuizAnswers: [String]? = nil,
+        // NEW property details parameters:
+        propertyDetails: String? = nil,
+        propertyImageUrls: [String]? = nil,
+        floorplanUrls: [String]? = nil,
+        documentUrls: [String]? = nil
     ) {
         self.email = email
         self.isEmailVerified = isEmailVerified
@@ -139,7 +162,8 @@ struct UserModel: Codable, Identifiable {
         self.lastName = lastName
         self.dateOfBirth = dateOfBirth
         self.gender = gender
-        self.height = height                      // NEW
+        self.height = height
+        
         self.gradeLevel = gradeLevel
         self.major = major
         self.collegeName = collegeName
@@ -162,15 +186,20 @@ struct UserModel: Codable, Identifiable {
         self.location = location
         
         self.isVerified = isVerified
-        self.verificationImageUrl = verificationImageUrl
+        
         self.blockedUserIDs = blockedUserIDs
         
         self.housingStatus = housingStatus
+        self.housingStatuses = housingStatuses
         self.leaseDuration = leaseDuration
+        
+        self.roommateCountNeeded = roommateCountNeeded
+        self.roommateCountExisting = roommateCountExisting
+        
+        self.desiredLeaseHousingType = desiredLeaseHousingType
         
         self.filterSettings = filterSettings
         
-        // NEW: Lifestyle fields
         self.pets = pets
         self.drinking = drinking
         self.smoking = smoking
@@ -180,9 +209,14 @@ struct UserModel: Codable, Identifiable {
         self.socialMedia = socialMedia
         self.sleepingHabits = sleepingHabits
         
-        // NEW: Quiz Answers
         self.goingOutQuizAnswers = goingOutQuizAnswers
         self.weekendQuizAnswers = weekendQuizAnswers
-        self.phoneQuizAnswers = phoneQuizAnswers    // NEW
+        self.phoneQuizAnswers = phoneQuizAnswers
+        
+        // New property details fields
+        self.propertyDetails = propertyDetails
+        self.propertyImageUrls = propertyImageUrls
+        self.floorplanUrls = floorplanUrls
+        self.documentUrls = documentUrls
     }
 }

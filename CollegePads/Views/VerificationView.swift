@@ -1,48 +1,68 @@
 import SwiftUI
-import PhotosUI
 import FirebaseAuth
 
 struct VerificationView: View {
     @StateObject private var viewModel = VerificationViewModel()
-    @State private var selectedImage: UIImage?
-    @State private var showingImagePicker = false
     @State private var isSubmitting: Bool = false
     @Environment(\.presentationMode) var presentationMode
-    
+
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Upload Verification Document")
+                // MARK: - Email Verification Section
+                Section(header: Text("Email Verification")
                             .font(AppTheme.subtitleFont)) {
-                    if let image = selectedImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(height: 200)
-                            .onTapGesture {
-                                showingImagePicker = true
-                            }
-                            .accessibilityLabel("Selected Verification Image")
+                    if let currentUser = Auth.auth().currentUser, currentUser.isEmailVerified {
+                        Text("Your email is verified!")
+                            .foregroundColor(.green)
                     } else {
-                        Button("Select Verification Image") {
-                            showingImagePicker = true
+                        Button("Send Verification Email") {
+                            isSubmitting = true
+                            viewModel.sendEmailVerification { result in
+                                DispatchQueue.main.async {
+                                    isSubmitting = false
+                                    switch result {
+                                    case .success:
+                                        print("Verification email sent.")
+                                    case .failure(let error):
+                                        print("Failed to send email verification: \(error.localizedDescription)")
+                                    }
+                                }
+                            }
                         }
                         .font(AppTheme.bodyFont)
-                        .accessibilityLabel("Select Verification Image Button")
+                        .accessibilityLabel("Send Verification Email Button")
+                        
+                        Button("Refresh Verification Status") {
+                            viewModel.refreshVerificationStatus { result in
+                                DispatchQueue.main.async {
+                                    switch result {
+                                    case .success:
+                                        print("Firestore updated to verified.")
+                                    case .failure(let error):
+                                        print("Failed to update Firestore: \(error.localizedDescription)")
+                                    }
+                                }
+                            }
+                        }
+                        .font(AppTheme.bodyFont)
+                        .padding(.top, 8)
                     }
                 }
                 
+                // MARK: - Submission Section
                 Section {
                     Button(action: submitVerification) {
                         if isSubmitting {
                             ProgressView()
                         } else {
-                            Text("Submit Verification")
+                            Text("Done")
                                 .font(AppTheme.bodyFont)
                                 .frame(maxWidth: .infinity, alignment: .center)
                         }
                     }
-                    .disabled(selectedImage == nil || isSubmitting)
+                    // Enable button if the current user is verified.
+                    .disabled(!(Auth.auth().currentUser?.isEmailVerified ?? false) || isSubmitting)
                 }
             }
             .scrollContentBackground(.hidden)
@@ -51,10 +71,6 @@ struct VerificationView: View {
             .navigationBarItems(trailing: Button("Cancel") {
                 presentationMode.wrappedValue.dismiss()
             })
-            // Use CustomImagePicker instead of the old picker.
-            .sheet(isPresented: $showingImagePicker) {
-                CustomImagePicker(image: $selectedImage)
-            }
             .alert(item: Binding(
                 get: {
                     if let errorMessage = viewModel.errorMessage {
@@ -64,24 +80,17 @@ struct VerificationView: View {
                 },
                 set: { _ in viewModel.errorMessage = nil }
             )) { alertError in
-                Alert(title: Text("Error"), message: Text(alertError.message), dismissButton: .default(Text("OK")))
+                Alert(title: Text("Error"),
+                      message: Text(alertError.message),
+                      dismissButton: .default(Text("OK")))
             }
         }
     }
     
     private func submitVerification() {
-        guard let image = selectedImage else { return }
-        isSubmitting = true
-        viewModel.submitVerification(image: image) { result in
-            DispatchQueue.main.async {
-                isSubmitting = false
-                switch result {
-                case .success:
-                    presentationMode.wrappedValue.dismiss()
-                case .failure(let error):
-                    print("Verification submission failed: \(error.localizedDescription)")
-                }
-            }
+        // If the user is verified, dismiss the view.
+        if let currentUser = Auth.auth().currentUser, currentUser.isEmailVerified {
+            presentationMode.wrappedValue.dismiss()
         }
     }
 }
