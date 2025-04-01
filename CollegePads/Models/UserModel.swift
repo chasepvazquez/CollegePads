@@ -63,18 +63,16 @@ struct UserModel: Codable, Identifiable {
     var blockedUserIDs: [String]?
     
     // Housing Details
-    // (Legacy) Single housing status field for compatibility
+    // Tier‑1: Primary housing status (legacy)
     var housingStatus: String?
-    // New multi-selector field
-    var housingStatuses: [String]?
+    // Lease Duration (new property)
     var leaseDuration: String?
+    // Tier‑2: Clean housing type selection
+    var desiredLeaseHousingType: String?
     
     // New Roommate Count Fields
     var roommateCountNeeded: Int?
     var roommateCountExisting: Int?
-    
-    // New Desired Lease Housing Type Field
-    var desiredLeaseHousingType: String?
     
     // Advanced Filter Settings
     var filterSettings: FilterSettings?
@@ -129,13 +127,12 @@ struct UserModel: Codable, Identifiable {
         isVerified: Bool? = false,
         blockedUserIDs: [String]? = nil,
         housingStatus: String? = nil,
-        housingStatuses: [String]? = nil,
         leaseDuration: String? = nil,
-        filterSettings: FilterSettings? = nil,
-        createdAt: Date? = nil,
+        desiredLeaseHousingType: String? = nil,
         roommateCountNeeded: Int? = nil,
         roommateCountExisting: Int? = nil,
-        desiredLeaseHousingType: String? = nil,
+        filterSettings: FilterSettings? = nil,
+        createdAt: Date? = nil,
         pets: [String]? = nil,
         drinking: String? = nil,
         smoking: String? = nil,
@@ -147,7 +144,6 @@ struct UserModel: Codable, Identifiable {
         goingOutQuizAnswers: [String]? = nil,
         weekendQuizAnswers: [String]? = nil,
         phoneQuizAnswers: [String]? = nil,
-        // NEW property details parameters:
         propertyDetails: String? = nil,
         propertyImageUrls: [String]? = nil,
         floorplanUrls: [String]? = nil,
@@ -190,13 +186,11 @@ struct UserModel: Codable, Identifiable {
         self.blockedUserIDs = blockedUserIDs
         
         self.housingStatus = housingStatus
-        self.housingStatuses = housingStatuses
         self.leaseDuration = leaseDuration
+        self.desiredLeaseHousingType = desiredLeaseHousingType
         
         self.roommateCountNeeded = roommateCountNeeded
         self.roommateCountExisting = roommateCountExisting
-        
-        self.desiredLeaseHousingType = desiredLeaseHousingType
         
         self.filterSettings = filterSettings
         
@@ -213,7 +207,6 @@ struct UserModel: Codable, Identifiable {
         self.weekendQuizAnswers = weekendQuizAnswers
         self.phoneQuizAnswers = phoneQuizAnswers
         
-        // New property details fields
         self.propertyDetails = propertyDetails
         self.propertyImageUrls = propertyImageUrls
         self.floorplanUrls = floorplanUrls

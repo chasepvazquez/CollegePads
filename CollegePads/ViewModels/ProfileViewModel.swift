@@ -9,16 +9,16 @@ class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
     @Published var didLoadProfile: Bool = false  // Flag to track if profile is loaded
-    
+
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
-    
+
     static let shared = ProfileViewModel()
-    
+
     var userID: String? {
         Auth.auth().currentUser?.uid
     }
-    
+
     /// Loads the currently authenticated user's profile from Firestore.
     func loadUserProfile(completion: ((UserModel?) -> Void)? = nil) {
         if didLoadProfile {
@@ -70,7 +70,7 @@ class ProfileViewModel: ObservableObject {
             }
         }
     }
-    
+
     /// Loads any user's profile by candidateID from Firestore.
     func loadUserProfile(with candidateID: String) {
         print("[ProfileViewModel] loadUserProfile(with:) for candidateID: \(candidateID)")
@@ -103,7 +103,7 @@ class ProfileViewModel: ObservableObject {
             }
         }
     }
-    
+
     /// Updates the current user's profile in Firestore.
     func updateUserProfile(updatedProfile: UserModel, completion: @escaping (Result<Void, Error>) -> Void) {
         guard let uid = userID else {
@@ -136,7 +136,7 @@ class ProfileViewModel: ObservableObject {
             completion(.failure(error))
         }
     }
-    
+
     /// Uploads a profile image to Firebase Storage.
     func uploadProfileImage(image: UIImage, completion: @escaping (Result<String, Error>) -> Void) {
         guard let uid = userID,
@@ -146,11 +146,11 @@ class ProfileViewModel: ObservableObject {
                                         userInfo: [NSLocalizedDescriptionKey: "Invalid user or image data."])))
             return
         }
-        
+
         let storageRef = Storage.storage().reference().child("profileImages/\(uid)_\(UUID().uuidString).jpg")
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
-        
+
         print("[ProfileViewModel] uploadProfileImage: Uploading image for uid: \(uid)")
         storageRef.putData(imageData, metadata: metadata) { _, error in
             if let error = error {
@@ -169,7 +169,7 @@ class ProfileViewModel: ObservableObject {
             }
         }
     }
-    
+
     /// NEW: Uploads a property media file (image, floorplan, or document) to Firebase Storage.
     func uploadPropertyMedia(image: UIImage, folder: String, completion: @escaping (Result<String, Error>) -> Void) {
         guard let uid = userID,
@@ -179,11 +179,11 @@ class ProfileViewModel: ObservableObject {
                                         userInfo: [NSLocalizedDescriptionKey: "Invalid user or image data."])))
             return
         }
-        
+
         let storageRef = Storage.storage().reference().child("\(folder)/\(uid)_\(UUID().uuidString).jpg")
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
-        
+
         print("[ProfileViewModel] uploadPropertyMedia: Uploading media to folder \(folder) for uid: \(uid)")
         storageRef.putData(imageData, metadata: metadata) { _, error in
             if let error = error {
@@ -202,7 +202,7 @@ class ProfileViewModel: ObservableObject {
             }
         }
     }
-    
+
     /// Removes a blocked user ID from the profile (in memory).
     func removeBlockedUser(with uid: String) {
         if var blocked = userProfile?.blockedUserIDs {
@@ -211,39 +211,62 @@ class ProfileViewModel: ObservableObject {
             print("[ProfileViewModel] removeBlockedUser: Removed blocked user with uid: \(uid)")
         }
     }
-    
+
     /// Helper to create a default user profile if none exists.
     private func defaultUserProfile() -> UserModel {
-        // Initialize the new housing-related fields with default values:
-        // - housingStatuses defaults to a single entry "Dorm Resident"
-        // - leaseDuration defaults to "Not Applicable"
-        // - Roommate counts are set to 0, and desiredLeaseHousingType is nil.
-        var user = UserModel(
+        let user = UserModel(
             email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
             isEmailVerified: false,
-            housingStatuses: [ProfileViewModel.defaultHousingStatus],
-            leaseDuration: LeaseDuration.notApplicable.rawValue,
+            aboutMe: nil,
+            firstName: nil,
+            lastName: nil,
+            dateOfBirth: nil,
+            gender: nil,
+            height: nil,
+            gradeLevel: nil,
+            major: nil,
+            collegeName: nil,
+            dormType: nil,
+            preferredDorm: nil,
+            budgetRange: nil,
+            cleanliness: nil,
+            sleepSchedule: nil,
+            smoker: nil,
+            petFriendly: nil,
+            livingStyle: nil,
+            socialLevel: nil,
+            studyHabits: nil,
+            interests: nil,
+            profileImageUrl: nil,
+            profileImageUrls: nil,
+            location: nil,
+            isVerified: false,
+            blockedUserIDs: nil,
+            housingStatus: nil,
+            leaseDuration: nil,
+            desiredLeaseHousingType: nil,
             roommateCountNeeded: 0,
             roommateCountExisting: 0,
-            desiredLeaseHousingType: nil
-            // Note: New property media fields default to nil.
+            filterSettings: nil,
+            createdAt: nil,
+            pets: nil,
+            drinking: nil,
+            smoking: nil,
+            cannabis: nil,
+            workout: nil,
+            dietaryPreferences: nil,
+            socialMedia: nil,
+            sleepingHabits: nil,
+            goingOutQuizAnswers: nil,
+            weekendQuizAnswers: nil,
+            phoneQuizAnswers: nil,
+            propertyDetails: nil,
+            propertyImageUrls: nil,
+            floorplanUrls: nil,
+            documentUrls: nil
         )
-        user.id = Auth.auth().currentUser?.uid
-        return user
+        var mutableUser = user
+        mutableUser.id = Auth.auth().currentUser?.uid
+        return mutableUser
     }
-    
-    // Default housing status for new profiles
-    static let defaultHousingStatus = "Dorm Resident"
-}
-
-// Define LeaseDuration here so it can be used in ProfileViewModel
-enum LeaseDuration: String, CaseIterable, Identifiable {
-    case current = "Current Lease"
-    case shortTerm = "Short Term (<6 months)"
-    case mediumTerm = "6-12 months"
-    case longTerm = "1 year+"
-    case futureNextYear = "Future: Next Year"
-    case futureTwoPlus = "Future: 2+ Years"
-    case notApplicable = "Not Applicable"
-    var id: String { self.rawValue }
 }

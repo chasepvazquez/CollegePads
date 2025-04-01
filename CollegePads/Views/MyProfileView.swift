@@ -235,7 +235,13 @@ enum PropertyMediaType: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 }
 
-// MARK: - MyProfileView
+// MARK: - New: Tiered Housing Preference Enums
+enum PrimaryHousingPreference: String, CaseIterable, Identifiable {
+    case lookingForLease = "Looking for Lease"
+    case lookingForRoommate = "Looking for Roommate"
+    var id: String { self.rawValue }
+}
+
 struct MyProfileView: View {
     @StateObject private var viewModel = ProfileViewModel.shared
 
@@ -253,6 +259,10 @@ struct MyProfileView: View {
     @State private var newPropertyMediaImage: UIImage? = nil
     @State private var tappedPropertyMediaIndex: Int? = nil
     @State private var currentPropertyMediaType: PropertyMediaType = .propertyImage
+
+    // MARK: - Housing Tiered State
+    @State private var primaryHousingPreference: PrimaryHousingPreference? = nil
+    @State private var secondaryHousingType: String = "" // tier 2 selection
 
     // MARK: - Profile Fields
     @State private var aboutMe = ""
@@ -273,17 +283,12 @@ struct MyProfileView: View {
     @State private var smoker = false
     @State private var petFriendly = false
     @State private var interestsText = ""
-    // Removed old single housing status field in favor of multi-select
-    @State private var selectedHousingStatuses: [String] = []
-    @State private var selectedLeaseDuration: LeaseDuration = .notApplicable
+    // (Old housing multi-select removed)
 
     // New state variables for roommate count inputs
     @State private var roommateCountNeeded: Int = 0
     @State private var roommateCountExisting: Int = 0
 
-    // New state variable for desired lease housing type when "Looking for Lease" is selected
-    @State private var desiredLeaseHousingType: String = ""
-    
     // MARK: - Property Details & Media State
     @State private var propertyDetails: String = ""
     @State private var propertyImageUrls: [String] = []
@@ -335,8 +340,9 @@ struct MyProfileView: View {
         "Early bird", "Night owl", "In a spectrum"
     ]
     
-    // New desired lease housing type options
-    private let desiredLeaseHousingOptions = ["Apartment", "House", "Dorm", "Other"]
+    // New desired lease housing type options (for tier‑2 when primary is set)
+    private let leaseTypeForLease = ["Dorm", "Apartment", "House"]
+    private let leaseTypeForRoommate = ["Dorm", "Apartment", "House", "Subleasing"]
     
     // New property media type options (for segmented control)
     private let propertyMediaTypeOptions = PropertyMediaType.allCases.map { $0.rawValue }
@@ -380,16 +386,7 @@ struct MyProfileView: View {
         case other = "Other"
         var id: String { self.rawValue }
     }
-    enum HousingStatus: String, CaseIterable, Identifiable {
-        case dorm = "Dorm Resident"
-        case apartment = "Apartment Resident"
-        case house = "House Owner/Renter"
-        case subleasing = "Subleasing"
-        case lookingForRoommate = "Looking for Roommate"
-        case lookingForLease = "Looking for Lease"
-        case other = "Other"
-        var id: String { self.rawValue }
-    }
+    // (Old HousingStatus enum is no longer used for tiered UI.)
     enum LeaseDuration: String, CaseIterable, Identifiable {
         case current = "Current Lease"
         case shortTerm = "Short Term (<6 months)"
@@ -441,10 +438,11 @@ struct MyProfileView: View {
                             basicsSection
                             academicsSection
                             housingSection
+                            // Show property details only if primary preference is "Looking for Roommate"
+                            if primaryHousingPreference == .lookingForRoommate {
+                                propertyDetailsSection
+                            }
                             lifestyleSection
-                            
-                            // New: Property Details & Media Section
-                            propertyDetailsSection
                             
                             // Quiz Sections with onQuizComplete callback to trigger auto-save
                             CombinedQuizzesSection(
@@ -611,44 +609,46 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // MARK: - HOUSING Section (Updated with Multi-Selector and Roommate Count)
+    // MARK: - HOUSING Section (Tiered Selection)
     private var housingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("HOUSING")
                 .font(.headline)
             
-            // Multi-select housing statuses with a maximum of 3 selections
-            MultiSelectChipView(
-                options: HousingStatus.allCases.map { $0.rawValue },
-                selectedItems: $selectedHousingStatuses,
-                onSelectionChanged: { scheduleAutoSave() },
-                maxSelection: 3
-            )
-            
-            // Lease Duration picker if any applicable status is selected
-            if selectedHousingStatuses.contains(where: { ["Apartment Resident", "House Owner/Renter", "Subleasing", "Looking for Lease"].contains($0) }) {
-                Picker("Lease Duration", selection: $selectedLeaseDuration) {
-                    ForEach(LeaseDuration.allCases) { duration in
-                        Text(duration.rawValue).tag(duration)
-                    }
+            // Tier 1: Primary housing preference picker
+            Picker("Primary Preference", selection: $primaryHousingPreference) {
+                Text("Select Preference").tag(PrimaryHousingPreference?.none)
+                ForEach(PrimaryHousingPreference.allCases) { pref in
+                    Text(pref.rawValue).tag(Optional(pref))
                 }
-                .pickerStyle(.menu)
-                .onChange(of: selectedLeaseDuration) { _ in scheduleAutoSave() }
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .onChange(of: primaryHousingPreference) { _ in
+                scheduleAutoSave()
+                // Clear tier 2 if tier 1 changes.
+                secondaryHousingType = ""
             }
             
-            // Desired Lease Housing Type if "Looking for Lease" is selected
-            if selectedHousingStatuses.contains("Looking for Lease") {
-                Picker("Desired Lease Housing Type", selection: $desiredLeaseHousingType) {
-                    ForEach(desiredLeaseHousingOptions, id: \.self) { option in
-                        Text(option).tag(option)
+            // Tier 2: Secondary housing type selection, shown if primary is selected
+            if let primary = primaryHousingPreference {
+                Picker("Housing Type", selection: $secondaryHousingType) {
+                    Text("Select Type").tag("")
+                    if primary == .lookingForLease {
+                        ForEach(leaseTypeForLease, id: \.self) { type in
+                            Text(type).tag(type)
+                        }
+                    } else {
+                        ForEach(leaseTypeForRoommate, id: \.self) { type in
+                            Text(type).tag(type)
+                        }
                     }
                 }
-                .pickerStyle(.menu)
-                .onChange(of: desiredLeaseHousingType) { _ in scheduleAutoSave() }
+                .pickerStyle(MenuPickerStyle())
+                .onChange(of: secondaryHousingType) { _ in scheduleAutoSave() }
             }
             
-            // Roommate Count Input if any applicable status is selected
-            if selectedHousingStatuses.contains(where: { ["Dorm Resident", "Apartment Resident", "House Owner/Renter", "Looking for Roommate"].contains($0) }) {
+            // Roommate Count Input: show if tier 1 is "Looking for Roommate"
+            if primaryHousingPreference == .lookingForRoommate {
                 HStack {
                     Text("Roommates Needed: \(roommateCountNeeded)")
                     Stepper("", value: $roommateCountNeeded, in: 0...10)
@@ -669,6 +669,55 @@ struct MyProfileView: View {
                 }
             }
             .onChange(of: cleanliness) { _ in scheduleAutoSave() }
+        }
+        .padding()
+        .background(AppTheme.cardBackground.opacity(0.8))
+        .cornerRadius(15)
+        .shadow(radius: 5)
+    }
+    
+    // MARK: - PROPERTY DETAILS Section (Shown only if primary preference is Looking for Roommate)
+    private var propertyDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("PROPERTY DETAILS")
+                .font(.headline)
+            
+            // Text field for additional details
+            TextEditor(text: $propertyDetails)
+                .frame(minHeight: 100)
+                .padding(6)
+                .background(AppTheme.cardBackground)
+                .cornerRadius(AppTheme.defaultCornerRadius)
+                .onChange(of: propertyDetails) { _ in scheduleAutoSave() }
+            
+            // Segmented control for selecting media type
+            Picker("Media Type", selection: $currentPropertyMediaType) {
+                ForEach(PropertyMediaType.allCases) { type in
+                    Text(type.rawValue).tag(type)
+                }
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .padding(.vertical, 4)
+            
+            // Grid view for the selected media type with an add button
+            VStack(alignment: .leading) {
+                Text(currentPropertyMediaType.rawValue)
+                    .font(.subheadline)
+                PropertyMediaGridView(
+                    mediaType: currentPropertyMediaType,
+                    propertyImageUrls: $propertyImageUrls,
+                    floorplanUrls: $floorplanUrls,
+                    documentUrls: $documentUrls,
+                    onAddMedia: {
+                        tappedPropertyMediaIndex = nil
+                        newPropertyMediaImage = nil
+                        showingPropertyMediaPicker = true
+                    },
+                    onRemoveMedia: { index in
+                        removePropertyMedia(at: index, for: currentPropertyMediaType)
+                    }
+                )
+            }
         }
         .padding()
         .background(AppTheme.cardBackground.opacity(0.8))
@@ -764,55 +813,6 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // MARK: - PROPERTY DETAILS Section (New)
-    private var propertyDetailsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("PROPERTY DETAILS")
-                .font(.headline)
-            
-            // Text field for additional details (amenities, room descriptions, etc.)
-            TextEditor(text: $propertyDetails)
-                .frame(minHeight: 100)
-                .padding(6)
-                .background(AppTheme.cardBackground)
-                .cornerRadius(AppTheme.defaultCornerRadius)
-                .onChange(of: propertyDetails) { _ in scheduleAutoSave() }
-            
-            // Segmented control for selecting media type
-            Picker("Media Type", selection: $currentPropertyMediaType) {
-                ForEach(PropertyMediaType.allCases) { type in
-                    Text(type.rawValue).tag(type)
-                }
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding(.vertical, 4)
-            
-            // Grid view for the selected media type with an add button
-            VStack(alignment: .leading) {
-                Text(currentPropertyMediaType.rawValue)
-                    .font(.subheadline)
-                PropertyMediaGridView(
-                    mediaType: currentPropertyMediaType,
-                    propertyImageUrls: $propertyImageUrls,
-                    floorplanUrls: $floorplanUrls,
-                    documentUrls: $documentUrls,
-                    onAddMedia: {
-                        tappedPropertyMediaIndex = nil
-                        newPropertyMediaImage = nil
-                        showingPropertyMediaPicker = true
-                    },
-                    onRemoveMedia: { index in
-                        removePropertyMedia(at: index, for: currentPropertyMediaType)
-                    }
-                )
-            }
-        }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
-    }
-    
     // MARK: - INTERESTS Section
     private var interestsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -869,9 +869,9 @@ struct MyProfileView: View {
         let imageUrls: [String]
         let onTapAddOrEdit: (Int) -> Void
         let onRemoveImage: (Int) -> Void
-        
+
         private let columns = Array(repeating: GridItem(.flexible()), count: 3)
-        
+
         var body: some View {
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(0..<9, id: \.self) { index in
@@ -899,7 +899,7 @@ struct MyProfileView: View {
                                 }
                             }
                             .onTapGesture { onTapAddOrEdit(index) }
-                            
+
                             Button(action: { onRemoveImage(index) }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.white)
@@ -935,7 +935,7 @@ struct MyProfileView: View {
         @Binding var documentUrls: [String]
         let onAddMedia: () -> Void
         let onRemoveMedia: (Int) -> Void
-        
+
         private var currentMediaUrls: [String] {
             switch mediaType {
             case .propertyImage: return propertyImageUrls
@@ -943,7 +943,7 @@ struct MyProfileView: View {
             case .document: return documentUrls
             }
         }
-        
+
         var body: some View {
             VStack {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
@@ -972,7 +972,7 @@ struct MyProfileView: View {
                                     }
                                 }
                                 .onTapGesture { onAddMedia() }
-                                
+
                                 Button(action: { onRemoveMedia(index) }) {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundColor(.white)
@@ -1125,16 +1125,14 @@ struct MyProfileView: View {
         petFriendly = profile.petFriendly ?? false
         interestsText = (profile.interests ?? []).joined(separator: ", ")
         selectedGradeLevel = GradeLevel(rawValue: profile.gradeLevel ?? "") ?? .freshman
-        // Populate multi-select housing statuses
-        if let hs = profile.housingStatuses, !hs.isEmpty {
-            selectedHousingStatuses = hs
+        
+        // Populate tiered housing preferences
+        if let primary = profile.housingStatus, let pref = PrimaryHousingPreference(rawValue: primary) {
+            primaryHousingPreference = pref
         } else {
-            selectedHousingStatuses = [profile.housingStatus ?? HousingStatus.dorm.rawValue]
+            primaryHousingPreference = nil
         }
-        selectedLeaseDuration = LeaseDuration(rawValue: profile.leaseDuration ?? "") ?? .notApplicable
-        roommateCountNeeded = profile.roommateCountNeeded ?? 0
-        roommateCountExisting = profile.roommateCountExisting ?? 0
-        desiredLeaseHousingType = profile.desiredLeaseHousingType ?? ""
+        secondaryHousingType = profile.desiredLeaseHousingType ?? ""
         
         // Populate property details and media
         propertyDetails = profile.propertyDetails ?? ""
@@ -1188,12 +1186,13 @@ struct MyProfileView: View {
         updatedProfile.petFriendly = petFriendly
         updatedProfile.interests = interestsArray
         
-        // Update housing fields with multi-selector and new inputs
-        updatedProfile.housingStatuses = selectedHousingStatuses
-        updatedProfile.leaseDuration = selectedLeaseDuration.rawValue
+        // Update tiered housing fields:
+        updatedProfile.housingStatus = primaryHousingPreference?.rawValue
+        updatedProfile.desiredLeaseHousingType = secondaryHousingType.isEmpty ? nil : secondaryHousingType
+        
+        // Save roommate counts (if applicable)
         updatedProfile.roommateCountNeeded = roommateCountNeeded
         updatedProfile.roommateCountExisting = roommateCountExisting
-        updatedProfile.desiredLeaseHousingType = desiredLeaseHousingType.isEmpty ? nil : desiredLeaseHousingType
         
         // Save property details and media
         updatedProfile.propertyDetails = propertyDetails
@@ -1236,13 +1235,13 @@ struct MyProfileView: View {
     }
 }
 
-// MARK: - MultiSelectChipView (For Pets, Dietary Preferences, and Housing Status)
+// MARK: - MultiSelectChipView (For Pets and Dietary Preferences)
 struct MultiSelectChipView: View {
     let options: [String]
     @Binding var selectedItems: [String]
     var onSelectionChanged: () -> Void = {}
     var maxSelection: Int? = nil
-    
+
     var body: some View {
         FlowLayout(options, selectedItems: $selectedItems, onSelectionChanged: onSelectionChanged, maxSelection: maxSelection)
             .padding(6)
@@ -1256,9 +1255,9 @@ struct FlowLayout: View {
     @Binding var selectedItems: [String]
     var onSelectionChanged: () -> Void
     var maxSelection: Int? = nil
-    
+
     @State private var totalHeight: CGFloat = .zero
-    
+
     init(_ data: [String],
          selectedItems: Binding<[String]>,
          onSelectionChanged: @escaping () -> Void,
@@ -1268,19 +1267,19 @@ struct FlowLayout: View {
         self.onSelectionChanged = onSelectionChanged
         self.maxSelection = maxSelection
     }
-    
+
     var body: some View {
         GeometryReader { geo in
             self.content(in: geo)
         }
         .frame(minHeight: totalHeight)
     }
-    
+
     private func content(in g: GeometryProxy) -> some View {
         var widthAccumulator: CGFloat = 0
         var rows: [RowItem] = []
         var currentRow = RowItem()
-        
+
         for text in data {
             let chipSize = chipSize(for: text)
             if widthAccumulator + chipSize.width > g.size.width {
@@ -1307,7 +1306,7 @@ struct FlowLayout: View {
             }
         }
     }
-    
+
     private func chipSize(for text: String) -> CGSize {
         let padding: CGFloat = 44
         let font = UIFont.systemFont(ofSize: 14)
@@ -1315,7 +1314,7 @@ struct FlowLayout: View {
         let textSize = (text as NSString).size(withAttributes: attributes)
         return CGSize(width: textSize.width + padding, height: 36)
     }
-    
+
     private func chipView(_ item: String) -> some View {
         let isSelected = selectedItems.contains(item)
         let isDisabled = !isSelected && (maxSelection != nil && selectedItems.count >= maxSelection!)
@@ -1337,7 +1336,7 @@ struct FlowLayout: View {
                 onSelectionChanged()
             }
     }
-    
+
     struct RowItem {
         var items: [String] = []
     }
