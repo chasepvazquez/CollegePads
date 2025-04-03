@@ -170,7 +170,7 @@ class ProfileViewModel: ObservableObject {
         }
     }
 
-    /// NEW: Uploads a property media file (image, floorplan, or document) to Firebase Storage.
+    /// Uploads a property media file (image, floorplan, or document) to Firebase Storage.
     func uploadPropertyMedia(image: UIImage, folder: String, completion: @escaping (Result<String, Error>) -> Void) {
         guard let uid = userID,
               let imageData = image.jpegData(compressionQuality: 0.8) else {
@@ -269,4 +269,15 @@ class ProfileViewModel: ObservableObject {
         mutableUser.id = Auth.auth().currentUser?.uid
         return mutableUser
     }
+}
+
+enum LeaseDuration: String, CaseIterable, Identifiable {
+    case current = "Current Lease"
+    case shortTerm = "Short Term (<6 months)"
+    case mediumTerm = "6-12 months"
+    case longTerm = "1 year+"
+    case futureNextYear = "Future: Next Year"
+    case futureTwoPlus = "Future: 2+ Years"
+    case notApplicable = "Not Applicable"
+    var id: String { self.rawValue }
 }
