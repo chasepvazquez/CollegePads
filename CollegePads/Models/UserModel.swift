@@ -18,12 +18,12 @@ struct FilterSettings: Codable {
 struct UserModel: Codable, Identifiable {
     @DocumentID var id: String?
     
-    // Basic Info
+    // 1. Basic Info
     var email: String
     var createdAt: Date?           // optional creation date
     var isEmailVerified: Bool
     
-    // Personal Info
+    // 2. Personal Info
     var aboutMe: String?
     var firstName: String?
     var lastName: String?
@@ -31,14 +31,38 @@ struct UserModel: Codable, Identifiable {
     var gender: String?            // "Male", "Female", or "Other"
     var height: String?            // e.g., "5'9"
     
-    // Academic Info
+    // 3. Academic Info
     var gradeLevel: String?
     var major: String?
     var collegeName: String?       // Selected via search
     
-    // Roommate Preferences
-    var dormType: String?
-    var preferredDorm: String?
+    // 4. Housing & Lease Info (for housing selection)
+    var housingStatus: String?
+    var dormType: String?          // restored dormType field
+    var preferredDorm: String?     // restored preferredDorm field
+    var desiredLeaseHousingType: String?
+    var roommateCountNeeded: Int?
+    var roommateCountExisting: Int?
+    
+    // 5. Property Details
+    var propertyDetails: String?
+    var propertyImageUrls: [String]?
+    var floorplanUrls: [String]?
+    var documentUrls: [String]?
+    
+    // 6. Room Type Selector (available for both views)
+    var roomType: String?
+    
+    // 7. Lease & Pricing Details (displayed only for Looking for Roommate view)
+    var leaseStartDate: Date?
+    var leaseDuration: String?     // reused for lease duration details
+    var monthlyRent: Double?
+    var specialLeaseConditions: [String]?
+    
+    // 8. Amenities Multi-Select Field
+    var amenities: [String]?
+    
+    // 9. Additional Housing Fields
     var budgetRange: String?
     var cleanliness: Int?
     var sleepSchedule: String?
@@ -46,38 +70,26 @@ struct UserModel: Codable, Identifiable {
     var petFriendly: Bool?
     var livingStyle: String?
     
-    // Interests
+    // 10. Interests
     var socialLevel: Int?
     var studyHabits: Int?
     var interests: [String]?
     
-    // Media & Location
+    // 11. Media & Location
     var profileImageUrl: String?      // legacy single image
     var profileImageUrls: [String]?   // array for multiple images
     var location: GeoPoint?
     
-    // Verification – Only using email verification now.
+    // 12. Verification
     var isVerified: Bool?
     
-    // Blocked Users
+    // 13. Blocked Users
     var blockedUserIDs: [String]?
     
-    // Housing Details
-    // Tier‑1: Primary housing status (legacy)
-    var housingStatus: String?
-    // Lease Duration (new property)
-    var leaseDuration: String?
-    // Tier‑2: Clean housing type selection
-    var desiredLeaseHousingType: String?
-    
-    // New Roommate Count Fields
-    var roommateCountNeeded: Int?
-    var roommateCountExisting: Int?
-    
-    // Advanced Filter Settings
+    // 14. Advanced Filter Settings
     var filterSettings: FilterSettings?
     
-    // Lifestyle fields (matching Tinder’s categories)
+    // 15. Lifestyle Fields (matching Tinder’s categories)
     var pets: [String]?
     var drinking: String?
     var smoking: String?
@@ -87,52 +99,69 @@ struct UserModel: Codable, Identifiable {
     var socialMedia: String?
     var sleepingHabits: String?
     
-    // Quiz Answers
+    // 16. Quiz Answers
     var goingOutQuizAnswers: [String]?
     var weekendQuizAnswers: [String]?
     var phoneQuizAnswers: [String]?   // "+ My Phone" quiz answers
     
-    // NEW: Property Details & Media Upload
-    var propertyDetails: String?
-    var propertyImageUrls: [String]?
-    var floorplanUrls: [String]?
-    var documentUrls: [String]?
-
     init(
         email: String,
         isEmailVerified: Bool,
+        createdAt: Date? = nil,
+        // 2. Personal Info
         aboutMe: String? = nil,
         firstName: String? = nil,
         lastName: String? = nil,
         dateOfBirth: String? = nil,
         gender: String? = nil,
         height: String? = nil,
+        // 3. Academic Info
         gradeLevel: String? = nil,
         major: String? = nil,
         collegeName: String? = nil,
+        // 4. Housing & Lease Info
+        housingStatus: String? = nil,
         dormType: String? = nil,
         preferredDorm: String? = nil,
+        desiredLeaseHousingType: String? = nil,
+        roommateCountNeeded: Int? = nil,
+        roommateCountExisting: Int? = nil,
+        // 5. Property Details
+        propertyDetails: String? = nil,
+        propertyImageUrls: [String]? = nil,
+        floorplanUrls: [String]? = nil,
+        documentUrls: [String]? = nil,
+        // 6. Room Type Selector
+        roomType: String? = nil,
+        // 7. Lease & Pricing Details
+        leaseStartDate: Date? = nil,
+        leaseDuration: String? = nil,
+        monthlyRent: Double? = nil,
+        specialLeaseConditions: [String]? = nil,
+        // 8. Amenities Multi-Select Field
+        amenities: [String]? = nil,
+        // 9. Additional Housing Fields
         budgetRange: String? = nil,
         cleanliness: Int? = nil,
         sleepSchedule: String? = nil,
         smoker: Bool? = nil,
         petFriendly: Bool? = nil,
         livingStyle: String? = nil,
+        // 10. Interests
         socialLevel: Int? = nil,
         studyHabits: Int? = nil,
         interests: [String]? = nil,
+        // 11. Media & Location
         profileImageUrl: String? = nil,
         profileImageUrls: [String]? = nil,
         location: GeoPoint? = nil,
+        // 12. Verification
         isVerified: Bool? = false,
+        // 13. Blocked Users
         blockedUserIDs: [String]? = nil,
-        housingStatus: String? = nil,
-        leaseDuration: String? = nil,
-        desiredLeaseHousingType: String? = nil,
-        roommateCountNeeded: Int? = nil,
-        roommateCountExisting: Int? = nil,
+        // 14. Advanced Filter Settings
         filterSettings: FilterSettings? = nil,
-        createdAt: Date? = nil,
+        // 15. Lifestyle Fields
         pets: [String]? = nil,
         drinking: String? = nil,
         smoking: String? = nil,
@@ -141,18 +170,17 @@ struct UserModel: Codable, Identifiable {
         dietaryPreferences: [String]? = nil,
         socialMedia: String? = nil,
         sleepingHabits: String? = nil,
+        // 16. Quiz Answers
         goingOutQuizAnswers: [String]? = nil,
         weekendQuizAnswers: [String]? = nil,
         phoneQuizAnswers: [String]? = nil,
-        propertyDetails: String? = nil,
-        propertyImageUrls: [String]? = nil,
-        floorplanUrls: [String]? = nil,
-        documentUrls: [String]? = nil
+        // Basic Info
     ) {
         self.email = email
         self.isEmailVerified = isEmailVerified
         self.createdAt = createdAt ?? Date()
         
+        // Personal Info
         self.aboutMe = aboutMe
         self.firstName = firstName
         self.lastName = lastName
@@ -160,12 +188,38 @@ struct UserModel: Codable, Identifiable {
         self.gender = gender
         self.height = height
         
+        // Academic Info
         self.gradeLevel = gradeLevel
         self.major = major
         self.collegeName = collegeName
         
+        // Housing & Lease Info
+        self.housingStatus = housingStatus
         self.dormType = dormType
         self.preferredDorm = preferredDorm
+        self.desiredLeaseHousingType = desiredLeaseHousingType
+        self.roommateCountNeeded = roommateCountNeeded
+        self.roommateCountExisting = roommateCountExisting
+        
+        // Property Details
+        self.propertyDetails = propertyDetails
+        self.propertyImageUrls = propertyImageUrls
+        self.floorplanUrls = floorplanUrls
+        self.documentUrls = documentUrls
+        
+        // Room Type Selector
+        self.roomType = roomType
+        
+        // Lease & Pricing Details
+        self.leaseStartDate = leaseStartDate
+        self.leaseDuration = leaseDuration
+        self.monthlyRent = monthlyRent
+        self.specialLeaseConditions = specialLeaseConditions
+        
+        // Amenities Multi-Select Field
+        self.amenities = amenities
+        
+        // Additional Housing Fields
         self.budgetRange = budgetRange
         self.cleanliness = cleanliness
         self.sleepSchedule = sleepSchedule
@@ -173,27 +227,26 @@ struct UserModel: Codable, Identifiable {
         self.petFriendly = petFriendly
         self.livingStyle = livingStyle
         
+        // Interests
         self.socialLevel = socialLevel
         self.studyHabits = studyHabits
         self.interests = interests
         
+        // Media & Location
         self.profileImageUrl = profileImageUrl
         self.profileImageUrls = profileImageUrls
         self.location = location
         
+        // Verification
         self.isVerified = isVerified
         
+        // Blocked Users
         self.blockedUserIDs = blockedUserIDs
         
-        self.housingStatus = housingStatus
-        self.leaseDuration = leaseDuration
-        self.desiredLeaseHousingType = desiredLeaseHousingType
-        
-        self.roommateCountNeeded = roommateCountNeeded
-        self.roommateCountExisting = roommateCountExisting
-        
+        // Advanced Filter Settings
         self.filterSettings = filterSettings
         
+        // Lifestyle Fields
         self.pets = pets
         self.drinking = drinking
         self.smoking = smoking
@@ -203,13 +256,9 @@ struct UserModel: Codable, Identifiable {
         self.socialMedia = socialMedia
         self.sleepingHabits = sleepingHabits
         
+        // Quiz Answers
         self.goingOutQuizAnswers = goingOutQuizAnswers
         self.weekendQuizAnswers = weekendQuizAnswers
         self.phoneQuizAnswers = phoneQuizAnswers
-        
-        self.propertyDetails = propertyDetails
-        self.propertyImageUrls = propertyImageUrls
-        self.floorplanUrls = floorplanUrls
-        self.documentUrls = documentUrls
     }
 }

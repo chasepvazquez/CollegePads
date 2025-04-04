@@ -214,41 +214,78 @@ class ProfileViewModel: ObservableObject {
 
     /// Helper to create a default user profile if none exists.
     private func defaultUserProfile() -> UserModel {
+        // The order here reflects:
+        // 1. Basic Info
+        // 2. Personal Info
+        // 3. Academic Info
+        // 4. Housing & Lease Info (housingStatus, desiredLeaseHousingType, roommateCountNeeded, roommateCountExisting)
+        // 5. Property Details (propertyDetails, propertyImageUrls, floorplanUrls, documentUrls)
+        // 6. Room Type Selector (roomType)
+        // 7. Lease & Pricing Details (leaseStartDate, leaseDuration, monthlyRent, specialLeaseConditions)
+        // 8. Amenities (amenities)
+        // 9. Additional Housing Fields (budgetRange, cleanliness, sleepSchedule, smoker, petFriendly, livingStyle)
+        // 10. Interests (socialLevel, studyHabits, interests)
+        // 11. Media & Location (profileImageUrl, profileImageUrls, location)
+        // 12. Verification (isVerified)
+        // 13. Blocked Users (blockedUserIDs)
+        // 14. Advanced Filter Settings (filterSettings)
+        // 15. Lifestyle Fields (pets, drinking, smoking, cannabis, workout, dietaryPreferences, socialMedia, sleepingHabits)
+        // 16. Quiz Answers (goingOutQuizAnswers, weekendQuizAnswers, phoneQuizAnswers)
         let user = UserModel(
             email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
             isEmailVerified: false,
+            // 2. Personal Info
             aboutMe: nil,
             firstName: nil,
             lastName: nil,
             dateOfBirth: nil,
             gender: nil,
             height: nil,
+            // 3. Academic Info
             gradeLevel: nil,
             major: nil,
             collegeName: nil,
-            dormType: nil,
-            preferredDorm: nil,
+            // 4. Housing & Lease Info
+            housingStatus: nil,
+            desiredLeaseHousingType: nil,
+            roommateCountNeeded: 0,
+            roommateCountExisting: 0,
+            // 5. Property Details
+            propertyDetails: nil,
+            propertyImageUrls: nil,
+            floorplanUrls: nil,
+            documentUrls: nil,
+            // 6. Room Type Selector
+            roomType: nil,
+            // 7. Lease & Pricing Details
+            leaseStartDate: nil,
+            leaseDuration: nil,
+            monthlyRent: nil,
+            specialLeaseConditions: nil,
+            // 8. Amenities Multi-Select Field
+            amenities: nil,
+            // 9. Additional Housing Fields
             budgetRange: nil,
             cleanliness: nil,
             sleepSchedule: nil,
             smoker: nil,
             petFriendly: nil,
             livingStyle: nil,
+            // 10. Interests
             socialLevel: nil,
             studyHabits: nil,
             interests: nil,
+            // 11. Media & Location
             profileImageUrl: nil,
             profileImageUrls: nil,
             location: nil,
+            // 12. Verification
             isVerified: false,
+            // 13. Blocked Users
             blockedUserIDs: nil,
-            housingStatus: nil,
-            leaseDuration: nil,
-            desiredLeaseHousingType: nil,
-            roommateCountNeeded: 0,
-            roommateCountExisting: 0,
+            // 14. Advanced Filter Settings
             filterSettings: nil,
-            createdAt: nil,
+            // 15. Lifestyle Fields
             pets: nil,
             drinking: nil,
             smoking: nil,
@@ -257,27 +294,13 @@ class ProfileViewModel: ObservableObject {
             dietaryPreferences: nil,
             socialMedia: nil,
             sleepingHabits: nil,
+            // 16. Quiz Answers
             goingOutQuizAnswers: nil,
             weekendQuizAnswers: nil,
-            phoneQuizAnswers: nil,
-            propertyDetails: nil,
-            propertyImageUrls: nil,
-            floorplanUrls: nil,
-            documentUrls: nil
+            phoneQuizAnswers: nil
         )
         var mutableUser = user
         mutableUser.id = Auth.auth().currentUser?.uid
         return mutableUser
     }
-}
-
-enum LeaseDuration: String, CaseIterable, Identifiable {
-    case current = "Current Lease"
-    case shortTerm = "Short Term (<6 months)"
-    case mediumTerm = "6-12 months"
-    case longTerm = "1 year+"
-    case futureNextYear = "Future: Next Year"
-    case futureTwoPlus = "Future: 2+ Years"
-    case notApplicable = "Not Applicable"
-    var id: String { self.rawValue }
 }
