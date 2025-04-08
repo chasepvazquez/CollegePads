@@ -59,7 +59,7 @@ struct MyProfileView: View {
     @State private var showingPropertyMediaPicker = false
     @State private var newPropertyMediaImage: UIImage? = nil
     @State private var tappedPropertyMediaIndex: Int? = nil
-    @State private var currentPropertyMediaType: PropertyMediaType = .propertyImage
+    // Old segmented property media type removed
 
     // MARK: - Housing Tiered State
     @State private var primaryHousingPreference: PrimaryHousingPreference? = nil
@@ -92,10 +92,10 @@ struct MyProfileView: View {
 
     // MARK: - Property Details & Media State
     @State private var propertyDetails: String = ""
+    // Use only one unified array for property/floorplan images.
     @State private var propertyImageUrls: [String] = []
-    @State private var floorplanUrls: [String] = []
-    @State private var documentUrls: [String] = []
-    
+    // Remove floorplanUrls and documentUrls from UI.
+
     // MARK: - Amenities State (New Multi-Select)
     @State private var selectedAmenities: [String] = []
     private let propertyAmenitiesOptions = [
@@ -216,8 +216,7 @@ struct MyProfileView: View {
     private let leaseTypeForLease = ["Dorm", "Apartment", "House"]
     private let leaseTypeForRoommate = ["Dorm", "Apartment", "House", "Subleasing"]
     
-    // New property media type options (for segmented control)
-    private let propertyMediaTypeOptions = PropertyMediaType.allCases.map { $0.rawValue }
+    // New property media type options (for segmented control) are removed as we use one unified grid.
     
     // MARK: - Height Options
     private let heightOptions: [String] = {
@@ -314,12 +313,12 @@ struct MyProfileView: View {
                             basicsSection
                             academicsSection
                             housingSection
-                            // Property Details now appear only for Looking for Roommate
+                            // Property Details appears only for Looking for Roommate
                             if primaryHousingPreference == .lookingForRoommate {
                                 propertyDetailsSection
                             }
                             roomTypeSection
-                            // Lease & Pricing Details are displayed only for Looking for Roommate view
+                            // Lease & Pricing Details are displayed only for Looking for Roommate view.
                             if primaryHousingPreference == .lookingForRoommate {
                                 leasePricingSection
                             }
@@ -368,7 +367,6 @@ struct MyProfileView: View {
     }
     
     // MARK: - Subviews
-    
     private var headerSection: some View {
         VStack(spacing: 8) {
             HStack {
@@ -487,6 +485,7 @@ struct MyProfileView: View {
     }
     
     // Updated Housing Section:
+    // Budget range is only for Looking for Lease, roommate count for Looking for Roommate.
     private var housingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("HOUSING")
@@ -520,12 +519,9 @@ struct MyProfileView: View {
                 .onChange(of: secondaryHousingType) { _ in scheduleAutoSave() }
             }
             
-            // Show budget range only for Looking for Lease
             if primaryHousingPreference == .lookingForLease {
                 LabeledField(label: "Budget Range", text: $budgetRange)
-            }
-            // Add roommate count info for Looking for Roommate
-            else if primaryHousingPreference == .lookingForRoommate {
+            } else if primaryHousingPreference == .lookingForRoommate {
                 HStack {
                     Text("Roommates Needed: \(roommateCountNeeded)")
                     Stepper("", value: $roommateCountNeeded, in: 0...10)
@@ -543,44 +539,33 @@ struct MyProfileView: View {
         .cornerRadius(15)
         .shadow(radius: 5)
     }
-
     
-    // Property Details Section remains unchanged
+    // Updated Property Details Section:
+    // Use consistent background for TextEditor and a unified 9‑image grid.
     private var propertyDetailsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("PROPERTY DETAILS")
                 .font(.headline)
             TextEditor(text: $propertyDetails)
-                .frame(minHeight: 100)
-                .padding(6)
+                .scrollContentBackground(.hidden)
                 .background(AppTheme.cardBackground)
                 .cornerRadius(AppTheme.defaultCornerRadius)
+                .frame(minHeight: 100)
+                .padding(6)
                 .onChange(of: propertyDetails) { _ in scheduleAutoSave() }
-            Picker("Media Type", selection: $currentPropertyMediaType) {
-                ForEach(PropertyMediaType.allCases) { type in
-                    Text(type.rawValue).tag(type)
+            Text("Property & Floorplan Images")
+                .font(.subheadline)
+            SinglePropertyMediaGridView(
+                imageUrls: $propertyImageUrls,
+                onAddMedia: {
+                    tappedPropertyMediaIndex = nil
+                    newPropertyMediaImage = nil
+                    showingPropertyMediaPicker = true
+                },
+                onRemoveMedia: { index in
+                    removePropertyMedia(at: index)
                 }
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding(.vertical, 4)
-            VStack(alignment: .leading) {
-                Text(currentPropertyMediaType.rawValue)
-                    .font(.subheadline)
-                PropertyMediaGridView(
-                    mediaType: currentPropertyMediaType,
-                    propertyImageUrls: $propertyImageUrls,
-                    floorplanUrls: $floorplanUrls,
-                    documentUrls: $documentUrls,
-                    onAddMedia: {
-                        tappedPropertyMediaIndex = nil
-                        newPropertyMediaImage = nil
-                        showingPropertyMediaPicker = true
-                    },
-                    onRemoveMedia: { index in
-                        removePropertyMedia(at: index, for: currentPropertyMediaType)
-                    }
-                )
-            }
+            )
         }
         .padding()
         .background(AppTheme.cardBackground.opacity(0.8))
@@ -588,7 +573,7 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // Room Type Section remains for both views.
+    // Room Type Section remains unchanged.
     private var roomTypeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("ROOM TYPE")
@@ -607,7 +592,7 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // Lease & Pricing Details are only shown for Looking for Roommate view.
+    // Lease & Pricing Section (for Looking for Roommate only).
     private var leasePricingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("LEASE & PRICING DETAILS")
@@ -647,13 +632,13 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // Lifestyle Section updated: now includes a "Cleanliness" header above the cleanliness picker.
+    // Lifestyle Section updated: Cleanliness appears first as a header using bodyFont.
     private var lifestyleSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("LIFESTYLE")
                 .font(.headline)
                 .padding(.bottom, 4)
-            // Cleanliness now appears first and uses bodyFont
+            // Cleanliness section using bodyFont instead of bold text.
             VStack(alignment: .leading, spacing: 4) {
                 Text("Cleanliness")
                     .font(AppTheme.bodyFont)
@@ -859,76 +844,95 @@ struct MyProfileView: View {
         }
     }
     
-    struct PropertyMediaGridView: View {
-        let mediaType: PropertyMediaType
-        @Binding var propertyImageUrls: [String]
-        @Binding var floorplanUrls: [String]
-        @Binding var documentUrls: [String]
+    // New Unified SinglePropertyMediaGridView
+    struct SinglePropertyMediaGridView: View {
+        @Binding var imageUrls: [String]
         let onAddMedia: () -> Void
         let onRemoveMedia: (Int) -> Void
 
-        private var currentMediaUrls: [String] {
-            switch mediaType {
-            case .propertyImage: return propertyImageUrls
-            case .floorplan: return floorplanUrls
-            case .document: return documentUrls
-            }
-        }
-
+        private let columns = Array(repeating: GridItem(.flexible()), count: 3)
+        
         var body: some View {
-            VStack {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 8) {
-                    ForEach(0..<max(9, currentMediaUrls.count + 1), id: \.self) { index in
-                        ZStack(alignment: .topTrailing) {
-                            if index < currentMediaUrls.count, let url = URL(string: currentMediaUrls[index]) {
-                                AsyncImage(url: url) { phase in
-                                    switch phase {
-                                    case .empty:
-                                        ProgressView()
-                                            .frame(width: 100, height: 100)
-                                    case .success(let image):
-                                        image.resizable()
-                                            .scaledToFill()
-                                            .frame(width: 100, height: 100)
-                                            .clipped()
-                                            .cornerRadius(8)
-                                    case .failure:
-                                        Image(systemName: "doc")
-                                            .resizable()
-                                            .frame(width: 100, height: 100)
-                                    @unknown default:
-                                        Image(systemName: "doc")
-                                            .resizable()
-                                            .frame(width: 100, height: 100)
+            LazyVGrid(columns: columns, spacing: 8) {
+                ForEach(0..<9, id: \.self) { index in
+                    ZStack(alignment: .topTrailing) {
+                        if index < imageUrls.count, let url = URL(string: imageUrls[index]) {
+                            // Display the uploaded image.
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .empty:
+                                    ProgressView()
+                                        .frame(width: 100, height: 100)
+                                case .success(let image):
+                                    image.resizable()
+                                        .scaledToFill()
+                                        .frame(width: 100, height: 100)
+                                        .clipped()
+                                        .cornerRadius(8)
+                                case .failure:
+                                    Image(systemName: "doc")
+                                        .resizable()
+                                        .frame(width: 100, height: 100)
+                                @unknown default:
+                                    Image(systemName: "doc")
+                                        .resizable()
+                                        .frame(width: 100, height: 100)
+                                }
+                            }
+                            .overlay(
+                                Group {
+                                    if index == 0 {
+                                        // For the first cell, show an overlay indicating that this image is for the floorplan.
+                                        Text("Floorplan")
+                                            .font(.caption)
+                                            .padding(4)
+                                            .background(Color.black.opacity(0.7))
+                                            .foregroundColor(.white)
+                                            .cornerRadius(4)
+                                            .padding(4)
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                                     }
                                 }
-                                .onTapGesture { onAddMedia() }
-                                
-                                Button(action: { onRemoveMedia(index) }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.white)
-                                        .padding(6)
-                                }
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(Circle())
-                                .offset(x: -4, y: 4)
-                            } else {
-                                ZStack {
-                                    Rectangle()
-                                        .fill(AppTheme.cardBackground)
-                                        .frame(width: 100, height: 100)
-                                        .cornerRadius(8)
+                            )
+                            .onTapGesture { onAddMedia() }
+                            
+                            Button(action: { onRemoveMedia(index) }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.white)
+                                    .padding(6)
+                            }
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Circle())
+                            .offset(x: -4, y: 4)
+                        } else {
+                            // Empty cell placeholder.
+                            ZStack {
+                                Rectangle()
+                                    .fill(AppTheme.cardBackground)
+                                    .frame(width: 100, height: 100)
+                                    .cornerRadius(8)
+                                if index == 0 {
+                                    // First cell: show floorplan placeholder.
+                                    Text("Floorplan")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                        .padding(4)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .stroke(Color.gray, lineWidth: 1)
+                                        )
+                                } else {
                                     Image(systemName: "plus")
                                         .font(.system(size: 24))
                                         .foregroundColor(.gray)
                                 }
-                                .onTapGesture { onAddMedia() }
                             }
+                            .onTapGesture { onAddMedia() }
                         }
                     }
                 }
-                .padding(.horizontal, 8)
             }
+            .padding(.horizontal, 8)
         }
     }
     
@@ -958,38 +962,18 @@ struct MyProfileView: View {
         }
     }
     
+    // Updated handlePropertyMediaSelected() to use unified propertyImageUrls array.
     private func handlePropertyMediaSelected() {
         guard let newImg = newPropertyMediaImage else { return }
-        let folder: String
-        switch currentPropertyMediaType {
-        case .propertyImage:
-            folder = "propertyImages"
-        case .floorplan:
-            folder = "floorplans"
-        case .document:
-            folder = "documents"
-        }
+        let folder = "propertyMedia" // Use a unified folder name
         viewModel.uploadPropertyMedia(image: newImg, folder: folder) { result in
             switch result {
             case .success(let downloadURL):
                 var updatedProfile = viewModel.userProfile ?? defaultUserProfile()
-                switch currentPropertyMediaType {
-                case .propertyImage:
-                    var arr = updatedProfile.propertyImageUrls ?? []
-                    arr.append(downloadURL)
-                    updatedProfile.propertyImageUrls = arr
-                    propertyImageUrls = arr
-                case .floorplan:
-                    var arr = updatedProfile.floorplanUrls ?? []
-                    arr.append(downloadURL)
-                    updatedProfile.floorplanUrls = arr
-                    floorplanUrls = arr
-                case .document:
-                    var arr = updatedProfile.documentUrls ?? []
-                    arr.append(downloadURL)
-                    updatedProfile.documentUrls = arr
-                    documentUrls = arr
-                }
+                var arr = updatedProfile.propertyImageUrls ?? []
+                arr.append(downloadURL)
+                updatedProfile.propertyImageUrls = arr
+                propertyImageUrls = arr
                 viewModel.updateUserProfile(updatedProfile: updatedProfile) { _ in }
             case .failure:
                 break
@@ -1010,28 +994,12 @@ struct MyProfileView: View {
         viewModel.updateUserProfile(updatedProfile: profile) { _ in }
     }
     
-    private func removePropertyMedia(at index: Int, for mediaType: PropertyMediaType) {
-        guard var profile = viewModel.userProfile else { return }
-        switch mediaType {
-        case .propertyImage:
-            if var arr = profile.propertyImageUrls, index < arr.count {
-                arr.remove(at: index)
-                profile.propertyImageUrls = arr
-                propertyImageUrls = arr
-            }
-        case .floorplan:
-            if var arr = profile.floorplanUrls, index < arr.count {
-                arr.remove(at: index)
-                profile.floorplanUrls = arr
-                floorplanUrls = arr
-            }
-        case .document:
-            if var arr = profile.documentUrls, index < arr.count {
-                arr.remove(at: index)
-                profile.documentUrls = arr
-                documentUrls = arr
-            }
-        }
+    // Updated removePropertyMedia() to remove from unified propertyImageUrls
+    private func removePropertyMedia(at index: Int) {
+        guard var profile = viewModel.userProfile,
+              var urls = profile.propertyImageUrls, index < urls.count else { return }
+        urls.remove(at: index)
+        profile.propertyImageUrls = urls
         viewModel.updateUserProfile(updatedProfile: profile) { _ in }
     }
     
@@ -1061,8 +1029,7 @@ struct MyProfileView: View {
         
         propertyDetails = profile.propertyDetails ?? ""
         propertyImageUrls = profile.propertyImageUrls ?? []
-        floorplanUrls = profile.floorplanUrls ?? []
-        documentUrls = profile.documentUrls ?? []
+        // floorplanUrls and documentUrls are no longer used.
         
         selectedAmenities = profile.amenities ?? []
         
@@ -1131,8 +1098,6 @@ struct MyProfileView: View {
         
         updatedProfile.propertyDetails = propertyDetails
         updatedProfile.propertyImageUrls = propertyImageUrls
-        updatedProfile.floorplanUrls = floorplanUrls
-        updatedProfile.documentUrls = documentUrls
         
         updatedProfile.amenities = selectedAmenities
         
