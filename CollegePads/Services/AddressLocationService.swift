@@ -83,4 +83,14 @@ extension AddressLocationService: MKLocalSearchCompleterDelegate {
             self.error = error
         }
     }
+    func getCoordinate(for address: String, completion: @escaping (CLLocationCoordinate2D?) -> Void) {
+        let geocoder = CLGeocoder()
+        geocoder.geocodeAddressString(address) { placemarks, error in
+            if let placemark = placemarks?.first, let location = placemark.location {
+                completion(location.coordinate)
+            } else {
+                completion(nil)
+            }
+        }
+    }
 }

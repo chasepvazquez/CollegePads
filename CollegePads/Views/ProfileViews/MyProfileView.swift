@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import FirebaseAuth
 import MapKit
+import FirebaseFirestore
 
 // MARK: - Missing Enum Definitions
 enum PrimaryHousingPreference: String, CaseIterable, Identifiable {
@@ -96,6 +97,7 @@ struct MyProfileView: View {
     @State private var propertyImageUrls: [String] = []
     // NEW: State for property address entry (only used for roommate mode)
     @State private var propertyAddress: String = ""
+    @State private var propertyCoordinate: CLLocationCoordinate2D? = nil
     @StateObject private var addressLocationService = AddressLocationService()
 
     // MARK: - Amenities State (New Multi-Select)
@@ -567,9 +569,16 @@ struct MyProfileView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             ForEach(addressLocationService.suggestions, id: \.self) { suggestion in
                                 Button(action: {
-                                    propertyAddress = suggestion.title + " " + suggestion.subtitle
+                                    let fullAddress = suggestion.title + " " + suggestion.subtitle
+                                    propertyAddress = fullAddress
                                     addressLocationService.suggestions = []
-                                    scheduleAutoSave()
+                                    // Geocode the selected address and update the coordinate state.
+                                    addressLocationService.getCoordinate(for: fullAddress) { coordinate in
+                                        DispatchQueue.main.async {
+                                            self.propertyCoordinate = coordinate
+                                            scheduleAutoSave()
+                                        }
+                                    }
                                 }) {
                                     Text(suggestion.title + " " + suggestion.subtitle)
                                         .foregroundColor(.primary)
@@ -1121,6 +1130,7 @@ struct MyProfileView: View {
         updatedProfile.propertyDetails = propertyDetails
         updatedProfile.propertyImageUrls = propertyImageUrls
         updatedProfile.propertyAddress = propertyAddress
+        updatedProfile.location = propertyCoordinate != nil ? GeoPoint(latitude: propertyCoordinate!.latitude, longitude: propertyCoordinate!.longitude) : nil
         
         updatedProfile.amenities = selectedAmenities
         
