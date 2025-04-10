@@ -6,6 +6,7 @@ import FirebaseFirestore
 
 // MARK: - Missing Enum Definitions
 enum PrimaryHousingPreference: String, CaseIterable, Identifiable {
+    case lookingToFindTogether = "Looking to Find Together"
     case lookingForLease = "Looking for Lease"
     case lookingForRoommate = "Looking for Roommate"
     var id: String { self.rawValue }
@@ -314,17 +315,25 @@ struct MyProfileView: View {
                              basicsSection
                              academicsSection
                              // Moved Property Details Section so that it is placed below Housing.
-                             if primaryHousingPreference == .lookingForRoommate {
-                                 housingSection
-                                 propertyDetailsSection
+                             // Layout the editable sections based on the selected housing preference.
+                             if let pref = primaryHousingPreference {
+                                 if pref == .lookingForLease {
+                                     housingSection
+                                     roomTypeSection
+                                     amenitiesSection
+                                 } else if pref == .lookingForRoommate {
+                                     housingSection
+                                     propertyDetailsSection
+                                     roomTypeSection
+                                     leasePricingSection
+                                     amenitiesSection
+                                 } else if pref == .lookingToFindTogether {
+                                     housingSection
+                                     // Do not show roomTypeSection and amenitiesSection in "Looking to Find Together" mode.
+                                 }
                              } else {
                                  housingSection
                              }
-                             roomTypeSection
-                             if primaryHousingPreference == .lookingForRoommate {
-                                 leasePricingSection
-                             }
-                             amenitiesSection
                              lifestyleSection
                              CombinedQuizzesSection(
                                  goingOutQuizAnswers: $goingOutQuizAnswers,
@@ -505,7 +514,7 @@ struct MyProfileView: View {
             if let primary = primaryHousingPreference {
                 Picker("Housing Type", selection: $secondaryHousingType) {
                     Text("Select Type").tag("")
-                    if primary == .lookingForLease {
+                    if primary == .lookingForLease || primary == .lookingToFindTogether {
                         ForEach(leaseTypeForLease, id: \.self) { type in
                             Text(type).tag(type)
                         }
@@ -519,7 +528,8 @@ struct MyProfileView: View {
                 .onChange(of: secondaryHousingType) { _ in scheduleAutoSave() }
             }
             
-            if primaryHousingPreference == .lookingForLease {
+            // Show budget range for both lease and "find together" modes.
+            if primaryHousingPreference == .lookingForLease || primaryHousingPreference == .lookingToFindTogether {
                 LabeledField(label: "Budget Range", text: $budgetRange)
             } else if primaryHousingPreference == .lookingForRoommate {
                 HStack {

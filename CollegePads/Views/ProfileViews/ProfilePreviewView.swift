@@ -43,8 +43,12 @@ struct ProfilePreviewView: View {
     // MARK: - Initializer
     init(user: UserModel) {
         self.user = user
-        // If the user is not in roommate mode, force previewMode to personal.
-        if user.housingStatus != PrimaryHousingPreference.lookingForRoommate.rawValue {
+        // For roommate mode, allow toggling; for lease and for our new 'Looking to Find Together' mode, force lease preview.
+        if user.housingStatus == PrimaryHousingPreference.lookingForRoommate.rawValue {
+            // leave the segmented picker as is
+        } else if user.housingStatus == PrimaryHousingPreference.lookingToFindTogether.rawValue {
+            _previewModeRaw.wrappedValue = PreviewMode.lease.rawValue
+        } else {
             _previewModeRaw.wrappedValue = PreviewMode.personal.rawValue
         }
     }

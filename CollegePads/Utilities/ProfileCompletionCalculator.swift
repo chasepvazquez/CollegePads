@@ -49,7 +49,11 @@ struct ProfileCompletionCalculator {
         if let weekend = user.weekendQuizAnswers, !weekend.isEmpty { universalScore += 3 }
         if let phone = user.phoneQuizAnswers, !phone.isEmpty { universalScore += 3 }
         // Room Type (from picker)
-        if let roomType = user.roomType, !roomType.isEmpty { universalScore += 5 }
+        // Room Type (only count if NOT in "Looking to Find Together" mode)
+        if let roomType = user.roomType, !roomType.isEmpty,
+           user.housingStatus != PrimaryHousingPreference.lookingToFindTogether.rawValue {
+            universalScore += 5
+        }
         // Lifestyle Bonus:
         if ( (user.pets?.isEmpty == false) ||
              (user.drinking?.isEmpty == false) ||
@@ -71,8 +75,8 @@ struct ProfileCompletionCalculator {
         // Check housing preference to branch into mode-specific scoring.
         if let housingStatus = user.housingStatus, let preference = PrimaryHousingPreference(rawValue: housingStatus) {
             switch preference {
-            case .lookingForLease:
-                // For "Looking for Lease", only the Budget Range field matters.
+            case .lookingForLease, .lookingToFindTogether:
+                // For "Looking for Lease" and "Looking to Find Together", only the Budget Range field matters.
                 modeSpecificMax = 5.0
                 if let budget = user.budgetRange, !budget.isEmpty {
                     modeSpecificScore += 5.0
