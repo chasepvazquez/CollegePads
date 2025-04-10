@@ -54,22 +54,18 @@ struct SwipeCardView: View {
     
     var body: some View {
         ZStack {
-            // Card background.
             AppTheme.backgroundGradient
                 .cornerRadius(AppTheme.defaultCornerRadius)
                 .shadow(radius: 5)
-            
             if let candidate = user {
-                VStack(spacing: 10) {
-                    // Profile image with overlays.
-                    ZStack(alignment: .topTrailing) {
-                        profileImage(for: candidate)
-                        verifiedBadge(for: candidate)
-                        favoriteButton(for: candidate)
-                    }
-                    userInfoSection(for: candidate)
-                }
-                .cornerRadius(AppTheme.defaultCornerRadius)
+                // Determine if the candidate’s preview should be forced into lease mode.
+                let currentUserStatus = ProfileViewModel.shared.userProfile?.housingStatus
+                let forcedPreview: PreviewMode? = (currentUserStatus == PrimaryHousingPreference.lookingForLease.rawValue &&
+                                                   candidate.housingStatus == PrimaryHousingPreference.lookingForRoommate.rawValue)
+                                                  ? .lease : nil
+                // Use the ProfilePreviewView as the card content.
+                ProfilePreviewView(user: candidate, forcePreviewMode: forcedPreview)
+                    .cornerRadius(AppTheme.defaultCornerRadius)
             } else {
                 ProgressView()
             }
@@ -87,7 +83,6 @@ struct SwipeCardView: View {
         .rotationEffect(Angle(degrees: rotation))
         .gesture(dragGesture)
         .onAppear {
-            // If candidate data is not provided, load it from Firestore.
             if initialUser == nil, let candidateID = candidateID {
                 loadCandidate(candidateID: candidateID)
             } else if let candidate = user {

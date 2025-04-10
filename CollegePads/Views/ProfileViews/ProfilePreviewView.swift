@@ -41,15 +41,19 @@ struct ProfilePreviewView: View {
     }
     
     // MARK: - Initializer
-    init(user: UserModel) {
+    init(user: UserModel, forcePreviewMode: PreviewMode? = nil) {
         self.user = user
-        // For roommate mode, allow toggling; for lease and for our new 'Looking to Find Together' mode, force lease preview.
-        if user.housingStatus == PrimaryHousingPreference.lookingForRoommate.rawValue {
-            // leave the segmented picker as is
-        } else if user.housingStatus == PrimaryHousingPreference.lookingToFindTogether.rawValue {
-            _previewModeRaw.wrappedValue = PreviewMode.lease.rawValue
+        if let forced = forcePreviewMode {
+            _previewModeRaw.wrappedValue = forced.rawValue
         } else {
-            _previewModeRaw.wrappedValue = PreviewMode.personal.rawValue
+            // For roommate mode, allow toggling; for lease and for our new 'Looking to Find Together' mode, force lease preview.
+            if user.housingStatus == PrimaryHousingPreference.lookingForRoommate.rawValue {
+                // leave the segmented picker as is
+            } else if user.housingStatus == PrimaryHousingPreference.lookingToFindTogether.rawValue {
+                _previewModeRaw.wrappedValue = PreviewMode.lease.rawValue
+            } else {
+                _previewModeRaw.wrappedValue = PreviewMode.personal.rawValue
+            }
         }
     }
     
