@@ -1,131 +1,108 @@
 import Foundation
+import FirebaseFirestore
 
 struct ProfileCompletionCalculator {
-    /// Calculates the profile completion percentage for a given UserModel.
-    /// The calculation uses weighted points for each field, including:
-    /// - Basic Info (email, first/last name, DOB, gender, height)
-    /// - Academic Info (grade, major, college)
-    /// - Housing Info (dorm, housing status, lease duration, budget)
-    /// - Other fields (cleanliness, sleep schedule, about me, interests)
-    /// - Lifestyle fields (if any of pets, drinking, smoking, cannabis, workout, dietary preferences, social media, sleeping habits are filled)
-    /// - Quiz answers (each non-empty quiz array gives points)
-    /// - Profile images (each image adds a small amount, capped at a maximum)
-    ///
-    /// - Parameter user: The UserModel instance.
-    /// - Returns: A value between 0.0 and 100.0 representing the profile completion percentage.
+    /// Calculates profile completion for a UserModel.
+    /// The function first assigns points to universal fields (common to every profile)
+    /// and then branches based on the user's primary housing preference.
+    /// - For “Looking for Lease”, only the budget range field is required in addition.
+    /// - For “Looking for Roommate”, additional fields are required for:
+    ///   • Roommate counts (needed and existing)
+    ///   • Property details: property details text, property address, property media (if any)
+    ///   • Lease pricing: lease start date, lease duration, monthly rent and special lease conditions.
+    /// The final score is scaled by the maximum available points for that mode.
     static func calculateCompletion(for user: UserModel) -> Double {
-        var score: Double = 0.0
-        
-        // Define weights for each group of fields.
-        let emailWeight = 10.0
-        let firstNameWeight = 5.0
-        let lastNameWeight = 5.0
-        let dobWeight = 5.0
-        let genderWeight = 5.0
-        let heightWeight = 5.0
-        
-        let gradeWeight = 5.0
-        let majorWeight = 5.0
-        let collegeWeight = 5.0
-        
-        let dormWeight = 5.0
-        let housingStatusWeight = 5.0
-        let leaseWeight = 5.0
-        let budgetWeight = 5.0
-        
-        let cleanlinessWeight = 3.0
-        let sleepScheduleWeight = 3.0
-        let aboutMeWeight = 10.0
-        let interestsWeight = 5.0
-        
-        // Lifestyle fields (if any are set, add a flat weight)
-        let lifestyleWeight = 4.0
-        
-        // Quiz answers – each category contributes if answered.
-        let goingOutQuizWeight = 3.0
-        let weekendQuizWeight = 3.0
-        let phoneQuizWeight = 3.0
-        
-        // Profile images: each image contributes 2 points up to a maximum of 10.
-        let perImageScore = 2.0
-        let maxImagesScore = 10.0
-        
-        // Calculate points for basic info
-        if !user.email.isEmpty { score += emailWeight }
-        if let first = user.firstName, !first.isEmpty { score += firstNameWeight }
-        if let last = user.lastName, !last.isEmpty { score += lastNameWeight }
-        if let dob = user.dateOfBirth, !dob.isEmpty { score += dobWeight }
-        if let gender = user.gender, !gender.isEmpty { score += genderWeight }
-        if let height = user.height, !height.isEmpty { score += heightWeight }
-        
-        // Academic info
-        if let grade = user.gradeLevel, !grade.isEmpty { score += gradeWeight }
-        if let major = user.major, !major.isEmpty { score += majorWeight }
-        if let college = user.collegeName, !college.isEmpty { score += collegeWeight }
-        
-        // Housing info
-        if let dorm = user.dormType, !dorm.isEmpty { score += dormWeight }
-        if let housing = user.housingStatus, !housing.isEmpty { score += housingStatusWeight }
-        if let lease = user.leaseDuration, !lease.isEmpty { score += leaseWeight }
-        if let budget = user.budgetRange, !budget.isEmpty { score += budgetWeight }
-        
-        // Other fields
-        if let cleanliness = user.cleanliness, cleanliness > 0 { score += cleanlinessWeight }
-        if let sleep = user.sleepSchedule, !sleep.isEmpty { score += sleepScheduleWeight }
-        if let about = user.aboutMe, !about.isEmpty { score += aboutMeWeight }
-        if let interests = user.interests, !interests.isEmpty { score += interestsWeight }
-        
-        // Lifestyle: if at least one field among these is set, add the weight.
-        if (user.pets?.isEmpty == false ||
-            (user.drinking?.isEmpty == false) ||
-            (user.smoking != nil) ||
-            (user.cannabis?.isEmpty == false) ||
-            (user.workout?.isEmpty == false) ||
-            (user.dietaryPreferences?.isEmpty == false) ||
-            (user.socialMedia?.isEmpty == false) ||
-            (user.sleepingHabits?.isEmpty == false)) {
-            score += lifestyleWeight
-        }
-        
-        // Quiz answers: add weight if each quiz category has answers.
-        if let goingOut = user.goingOutQuizAnswers, !goingOut.isEmpty { score += goingOutQuizWeight }
-        if let weekend = user.weekendQuizAnswers, !weekend.isEmpty { score += weekendQuizWeight }
-        if let phone = user.phoneQuizAnswers, !phone.isEmpty { score += phoneQuizWeight }
-        
-        // Profile images: add points per image (capped)
+        var universalScore: Double = 0.0
+
+        // MARK: Universal Fields (Common to All Profiles)
+        // Basic Info
+        if !user.email.isEmpty { universalScore += 10 }
+        if let first = user.firstName, !first.isEmpty { universalScore += 5 }
+        if let last = user.lastName, !last.isEmpty { universalScore += 5 }
+        if let dob = user.dateOfBirth, !dob.isEmpty { universalScore += 5 }
+        if let gender = user.gender, !gender.isEmpty { universalScore += 5 }
+        if let height = user.height, !height.isEmpty { universalScore += 5 }
+        // Academic Info
+        if let grade = user.gradeLevel, !grade.isEmpty { universalScore += 5 }
+        if let major = user.major, !major.isEmpty { universalScore += 5 }
+        if let college = user.collegeName, !college.isEmpty { universalScore += 5 }
+        // About Me
+        if let about = user.aboutMe, !about.isEmpty { universalScore += 10 }
+        // Additional universal fields: Cleanliness, Sleep Schedule and Interests
+        if let cleanliness = user.cleanliness, cleanliness > 0 { universalScore += 3 }
+        if let sleep = user.sleepSchedule, !sleep.isEmpty { universalScore += 3 }
+        if let interests = user.interests, !interests.isEmpty { universalScore += 5 }
+        // Housing type (desiredLeaseHousingType is set via the picker in housing section)
+        if let housingType = user.desiredLeaseHousingType, !housingType.isEmpty { universalScore += 5 }
+        // Profile Images: Each image adds 2 points up to a maximum of 10.
+        let imagesScore: Double
         if let images = user.profileImageUrls, !images.isEmpty {
-            let imageScore = min(Double(images.count) * perImageScore, maxImagesScore)
-            score += imageScore
+            imagesScore = min(Double(images.count) * 2.0, 10.0)
         } else if let single = user.profileImageUrl, !single.isEmpty {
-            score += perImageScore
+            imagesScore = 2.0
+        } else {
+            imagesScore = 0.0
         }
-        
-        // Calculate the maximum possible score.
-        let maxScore = emailWeight +
-            firstNameWeight +
-            lastNameWeight +
-            dobWeight +
-            genderWeight +
-            heightWeight +
-            gradeWeight +
-            majorWeight +
-            collegeWeight +
-            dormWeight +
-            housingStatusWeight +
-            leaseWeight +
-            budgetWeight +
-            cleanlinessWeight +
-            sleepScheduleWeight +
-            aboutMeWeight +
-            interestsWeight +
-            lifestyleWeight +
-            goingOutQuizWeight +
-            weekendQuizWeight +
-            phoneQuizWeight +
-            maxImagesScore
-        
-        // Compute percentage and cap at 100%
-        let percent = (score / maxScore) * 100.0
-        return min(percent, 100.0)
+        universalScore += imagesScore
+        // Quiz Answers: 3 points each for non-empty quiz responses.
+        if let goingOut = user.goingOutQuizAnswers, !goingOut.isEmpty { universalScore += 3 }
+        if let weekend = user.weekendQuizAnswers, !weekend.isEmpty { universalScore += 3 }
+        if let phone = user.phoneQuizAnswers, !phone.isEmpty { universalScore += 3 }
+        // Room Type (from picker)
+        if let roomType = user.roomType, !roomType.isEmpty { universalScore += 5 }
+        // Lifestyle Bonus:
+        if ( (user.pets?.isEmpty == false) ||
+             (user.drinking?.isEmpty == false) ||
+             (user.smoking != nil) ||    // Boolean field: even false counts as set
+             (user.cannabis?.isEmpty == false) ||
+             (user.workout?.isEmpty == false) ||
+             (user.dietaryPreferences?.isEmpty == false) ||
+             (user.socialMedia?.isEmpty == false) ||
+             (user.sleepingHabits?.isEmpty == false) ) {
+            universalScore += 4
+        }
+        // Universal maximum points sum to 104.
+        let universalMax = 104.0
+
+        // MARK: Mode-Specific Fields
+        var modeSpecificScore: Double = 0.0
+        var modeSpecificMax: Double = 0.0
+
+        // Check housing preference to branch into mode-specific scoring.
+        if let housingStatus = user.housingStatus, let preference = PrimaryHousingPreference(rawValue: housingStatus) {
+            switch preference {
+            case .lookingForLease:
+                // For "Looking for Lease", only the Budget Range field matters.
+                modeSpecificMax = 5.0
+                if let budget = user.budgetRange, !budget.isEmpty {
+                    modeSpecificScore += 5.0
+                }
+            case .lookingForRoommate:
+                // For "Looking for Roommate", there are three groups:
+                // 1. Roommate counts: Needed (5) and Already (5) = 10 points.
+                modeSpecificScore += (user.roommateCountNeeded != nil ? 5.0 : 0.0)
+                modeSpecificScore += (user.roommateCountExisting != nil ? 5.0 : 0.0)
+                // 2. Property Details Section: propertyDetails (5), propertyAddress (5), property media (5) = 15 points.
+                if let details = user.propertyDetails, !details.isEmpty { modeSpecificScore += 5.0 }
+                if let address = user.propertyAddress, !address.isEmpty { modeSpecificScore += 5.0 }
+                if let propertyImages = user.propertyImageUrls, !propertyImages.isEmpty { modeSpecificScore += 5.0 }
+                // 3. Lease Pricing Section: leaseStartDate (5), leaseDuration (5), monthlyRent (5), specialLeaseConditions (3) = 18 points.
+                if user.leaseStartDate != nil { modeSpecificScore += 5.0 }
+                if let duration = user.leaseDuration, !duration.isEmpty { modeSpecificScore += 5.0 }
+                if user.monthlyRent != nil { modeSpecificScore += 5.0 }
+                if let conditions = user.specialLeaseConditions, !conditions.isEmpty { modeSpecificScore += 3.0 }
+                modeSpecificMax = 10.0 + 15.0 + 18.0  // Total 43 points.
+            }
+        } else {
+            // If no housing preference is set, no mode-specific points are applied.
+            modeSpecificMax = 0.0
+        }
+
+        // Overall score and maximum.
+        let totalScore = universalScore + modeSpecificScore
+        let maxScore = universalMax + modeSpecificMax
+
+        let percentage = (totalScore / maxScore) * 100.0
+        return min(percentage, 100.0)
     }
 }

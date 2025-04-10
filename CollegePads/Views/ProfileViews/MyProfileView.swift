@@ -341,10 +341,10 @@ struct MyProfileView: View {
              }
          }
          .onAppear {
-             if viewModel.userProfile == nil {
-                 viewModel.loadUserProfile()
-             } else if let existingProfile = viewModel.userProfile {
-                 populateLocalFields(from: existingProfile)
+             viewModel.loadUserProfile { profile in
+                 if let profile = profile {
+                     populateLocalFields(from: profile)
+                 }
              }
              UniversityDataProvider.shared.loadUniversities { colleges in
                  self.validColleges = colleges
@@ -1062,6 +1062,11 @@ struct MyProfileView: View {
         propertyDetails = profile.propertyDetails ?? ""
         propertyImageUrls = profile.propertyImageUrls ?? []
         propertyAddress = profile.propertyAddress ?? ""
+            if let loc = profile.location {
+                propertyCoordinate = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
+            } else {
+                propertyCoordinate = nil
+            }
         selectedAmenities = profile.amenities ?? []
         
         if let startDate = profile.leaseStartDate {
