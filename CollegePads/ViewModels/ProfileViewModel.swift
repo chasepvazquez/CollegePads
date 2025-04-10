@@ -214,23 +214,6 @@ class ProfileViewModel: ObservableObject {
 
     /// Helper to create a default user profile if none exists.
     private func defaultUserProfile() -> UserModel {
-        // The order here reflects:
-        // 1. Basic Info
-        // 2. Personal Info
-        // 3. Academic Info
-        // 4. Housing & Lease Info (housingStatus, desiredLeaseHousingType, roommateCountNeeded, roommateCountExisting)
-        // 5. Property Details (propertyDetails, propertyImageUrls, floorplanUrls, documentUrls)
-        // 6. Room Type Selector (roomType)
-        // 7. Lease & Pricing Details (leaseStartDate, leaseDuration, monthlyRent, specialLeaseConditions)
-        // 8. Amenities (amenities)
-        // 9. Additional Housing Fields (budgetRange, cleanliness, sleepSchedule, smoker, petFriendly, livingStyle)
-        // 10. Interests (socialLevel, studyHabits, interests)
-        // 11. Media & Location (profileImageUrl, profileImageUrls, location)
-        // 12. Verification (isVerified)
-        // 13. Blocked Users (blockedUserIDs)
-        // 14. Advanced Filter Settings (filterSettings)
-        // 15. Lifestyle Fields (pets, drinking, smoking, cannabis, workout, dietaryPreferences, socialMedia, sleepingHabits)
-        // 16. Quiz Answers (goingOutQuizAnswers, weekendQuizAnswers, phoneQuizAnswers)
         let user = UserModel(
             email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
             isEmailVerified: false,
@@ -252,6 +235,7 @@ class ProfileViewModel: ObservableObject {
             roommateCountExisting: 0,
             // 5. Property Details
             propertyDetails: nil,
+            propertyAddress: nil, // NEW
             propertyImageUrls: nil,
             floorplanUrls: nil,
             documentUrls: nil,

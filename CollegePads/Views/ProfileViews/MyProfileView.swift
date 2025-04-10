@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import FirebaseAuth
+import MapKit
 
 // MARK: - Missing Enum Definitions
 enum PrimaryHousingPreference: String, CaseIterable, Identifiable {
@@ -59,7 +60,6 @@ struct MyProfileView: View {
     @State private var showingPropertyMediaPicker = false
     @State private var newPropertyMediaImage: UIImage? = nil
     @State private var tappedPropertyMediaIndex: Int? = nil
-    // Old segmented property media type removed
 
     // MARK: - Housing Tiered State
     @State private var primaryHousingPreference: PrimaryHousingPreference? = nil
@@ -94,7 +94,9 @@ struct MyProfileView: View {
     @State private var propertyDetails: String = ""
     // Use only one unified array for property/floorplan images.
     @State private var propertyImageUrls: [String] = []
-    // Remove floorplanUrls and documentUrls from UI.
+    // NEW: State for property address entry (only used for roommate mode)
+    @State private var propertyAddress: String = ""
+    @StateObject private var addressLocationService = AddressLocationService()
 
     // MARK: - Amenities State (New Multi-Select)
     @State private var selectedAmenities: [String] = []
@@ -181,6 +183,7 @@ struct MyProfileView: View {
     @State private var goingOutQuizAnswers: [String] = []
     @State private var weekendQuizAnswers: [String] = []
     @State private var phoneQuizAnswers: [String] = []
+    
 
     // MARK: - Options
     private let petOptions = [
@@ -215,8 +218,6 @@ struct MyProfileView: View {
     // New desired lease housing type options
     private let leaseTypeForLease = ["Dorm", "Apartment", "House"]
     private let leaseTypeForRoommate = ["Dorm", "Apartment", "House", "Subleasing"]
-    
-    // New property media type options (for segmented control) are removed as we use one unified grid.
     
     // MARK: - Height Options
     private let heightOptions: [String] = {
@@ -268,103 +269,102 @@ struct MyProfileView: View {
         var id: String { self.rawValue }
     }
     
-    // Updated: Lease & Pricing Details are now displayed only for the “Looking for Roommate” view.
+    // Updated: Lease & Pricing Details are now always saved (persistent) regardless of preview mode.
     private var isLeaseOrSublease: Bool {
         return primaryHousingPreference == .lookingForRoommate
     }
     
     // MARK: - Body
     var body: some View {
-        ZStack {
-            AppTheme.backgroundGradient.ignoresSafeArea()
-            VStack(spacing: 0) {
-                headerSection
-                if isPreviewMode {
-                    if let profile = viewModel.userProfile {
-                        ProfilePreviewView(user: profile)
-                            .transition(.opacity)
-                    } else {
-                        Text("Loading preview...")
-                            .font(AppTheme.bodyFont)
-                            .foregroundColor(.primary)
-                            .padding()
-                    }
-                } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 24) {
-                            if let profile = viewModel.userProfile {
-                                ProfileCompletionView(
-                                    completion: ProfileCompletionCalculator.calculateCompletion(for: profile)
-                                )
-                            }
-                            MediaGridView(
-                                imageUrls: viewModel.userProfile?.profileImageUrls ?? [],
-                                onTapAddOrEdit: { index in
-                                    tappedImageIndex = index
-                                    newProfileImage = nil
-                                    isPickerActive = true
-                                    showingPhotoPicker = true
-                                },
-                                onRemoveImage: { index in
-                                    removeImage(at: index)
-                                }
-                            )
-                            aboutMeSection
-                            basicsSection
-                            academicsSection
-                            housingSection
-                            // Property Details appears only for Looking for Roommate
-                            if primaryHousingPreference == .lookingForRoommate {
-                                propertyDetailsSection
-                            }
-                            roomTypeSection
-                            // Lease & Pricing Details are displayed only for Looking for Roommate view.
-                            if primaryHousingPreference == .lookingForRoommate {
-                                leasePricingSection
-                            }
-                            amenitiesSection
-                            lifestyleSection
-                            CombinedQuizzesSection(
-                                goingOutQuizAnswers: $goingOutQuizAnswers,
-                                weekendQuizAnswers: $weekendQuizAnswers,
-                                phoneQuizAnswers: $phoneQuizAnswers,
-                                onQuizComplete: { scheduleAutoSave() }
-                            )
-                            interestsSection
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom, 30)
-                    }
-                }
-            }
-        }
-        .onAppear {
-            if viewModel.userProfile == nil {
-                viewModel.loadUserProfile()
-            } else if let existingProfile = viewModel.userProfile {
-                populateLocalFields(from: existingProfile)
-            }
-            UniversityDataProvider.shared.loadUniversities { colleges in
-                self.validColleges = colleges
-            }
-        }
-        .sheet(isPresented: $showingPhotoPicker) {
-            CustomImagePicker(image: $newProfileImage)
-        }
-        .sheet(isPresented: $showingPropertyMediaPicker) {
-            CustomImagePicker(image: $newPropertyMediaImage)
-        }
-        .onChange(of: newProfileImage) { image in
-            if image != nil {
-                handlePhotoSelected()
-            }
-        }
-        .onChange(of: newPropertyMediaImage) { image in
-            if image != nil {
-                handlePropertyMediaSelected()
-            }
-        }
-    }
+         ZStack {
+             AppTheme.backgroundGradient.ignoresSafeArea()
+             VStack(spacing: 0) {
+                 headerSection
+                 if isPreviewMode {
+                     if let profile = viewModel.userProfile {
+                         ProfilePreviewView(user: profile)
+                             .transition(.opacity)
+                     } else {
+                         Text("Loading preview...")
+                             .font(AppTheme.bodyFont)
+                             .foregroundColor(.primary)
+                             .padding()
+                     }
+                 } else {
+                     ScrollView(showsIndicators: false) {
+                         VStack(spacing: 24) {
+                             if let profile = viewModel.userProfile {
+                                 ProfileCompletionView(completion: ProfileCompletionCalculator.calculateCompletion(for: profile))
+                             }
+                             MediaGridView(
+                                 imageUrls: viewModel.userProfile?.profileImageUrls ?? [],
+                                 onTapAddOrEdit: { index in
+                                     tappedImageIndex = index
+                                     newProfileImage = nil
+                                     isPickerActive = true
+                                     showingPhotoPicker = true
+                                 },
+                                 onRemoveImage: { index in
+                                     removeImage(at: index)
+                                 }
+                             )
+                             aboutMeSection
+                             basicsSection
+                             academicsSection
+                             // Moved Property Details Section so that it is placed below Housing.
+                             if primaryHousingPreference == .lookingForRoommate {
+                                 housingSection
+                                 propertyDetailsSection
+                             } else {
+                                 housingSection
+                             }
+                             roomTypeSection
+                             if primaryHousingPreference == .lookingForRoommate {
+                                 leasePricingSection
+                             }
+                             amenitiesSection
+                             lifestyleSection
+                             CombinedQuizzesSection(
+                                 goingOutQuizAnswers: $goingOutQuizAnswers,
+                                 weekendQuizAnswers: $weekendQuizAnswers,
+                                 phoneQuizAnswers: $phoneQuizAnswers,
+                                 onQuizComplete: { scheduleAutoSave() }
+                             )
+                             interestsSection
+                         }
+                         .padding(.horizontal)
+                         .padding(.bottom, 30)
+                     }
+                 }
+             }
+         }
+         .onAppear {
+             if viewModel.userProfile == nil {
+                 viewModel.loadUserProfile()
+             } else if let existingProfile = viewModel.userProfile {
+                 populateLocalFields(from: existingProfile)
+             }
+             UniversityDataProvider.shared.loadUniversities { colleges in
+                 self.validColleges = colleges
+             }
+         }
+         .sheet(isPresented: $showingPhotoPicker) {
+             CustomImagePicker(image: $newProfileImage)
+         }
+         .sheet(isPresented: $showingPropertyMediaPicker) {
+             CustomImagePicker(image: $newPropertyMediaImage)
+         }
+         .onChange(of: newProfileImage) { image in
+             if image != nil {
+                 handlePhotoSelected()
+             }
+         }
+         .onChange(of: newPropertyMediaImage) { image in
+             if image != nil {
+                 handlePropertyMediaSelected()
+             }
+         }
+     }
     
     // MARK: - Subviews
     private var headerSection: some View {
@@ -484,8 +484,6 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // Updated Housing Section:
-    // Budget range is only for Looking for Lease, roommate count for Looking for Roommate.
     private var housingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("HOUSING")
@@ -540,8 +538,7 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // Updated Property Details Section:
-    // Use consistent background for TextEditor and a unified 9‑image grid.
+    // MARK: - Updated Property Details Section (for Roommate mode)
     private var propertyDetailsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("PROPERTY DETAILS")
@@ -553,6 +550,39 @@ struct MyProfileView: View {
                 .frame(minHeight: 100)
                 .padding(6)
                 .onChange(of: propertyDetails) { _ in scheduleAutoSave() }
+            // NEW: Property Address Entry with autofill suggestions (inside property details)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Property Address")
+                    .foregroundColor(.secondary)
+                TextField("Enter property address", text: $propertyAddress)
+                    .padding(8)
+                    .background(AppTheme.cardBackground)
+                    .cornerRadius(8)
+                    .onChange(of: propertyAddress) { newValue in
+                        addressLocationService.queryFragment = newValue
+                        scheduleAutoSave()
+                    }
+                if !addressLocationService.suggestions.isEmpty {
+                    ScrollView(.vertical) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(addressLocationService.suggestions, id: \.self) { suggestion in
+                                Button(action: {
+                                    propertyAddress = suggestion.title + " " + suggestion.subtitle
+                                    addressLocationService.suggestions = []
+                                    scheduleAutoSave()
+                                }) {
+                                    Text(suggestion.title + " " + suggestion.subtitle)
+                                        .foregroundColor(.primary)
+                                        .padding(8)
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 150)
+                    .background(AppTheme.cardBackground.opacity(0.8))
+                    .cornerRadius(8)
+                }
+            }
             Text("Property & Floorplan Images")
                 .font(.subheadline)
             SinglePropertyMediaGridView(
@@ -573,7 +603,6 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // Room Type Section remains unchanged.
     private var roomTypeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("ROOM TYPE")
@@ -592,7 +621,6 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // Lease & Pricing Section (for Looking for Roommate only).
     private var leasePricingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("LEASE & PRICING DETAILS")
@@ -632,13 +660,11 @@ struct MyProfileView: View {
         .shadow(radius: 5)
     }
     
-    // Lifestyle Section updated: Cleanliness appears first as a header using bodyFont.
     private var lifestyleSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("LIFESTYLE")
                 .font(.headline)
                 .padding(.bottom, 4)
-            // Cleanliness section using bodyFont instead of bold text.
             VStack(alignment: .leading, spacing: 4) {
                 Text("Cleanliness")
                     .font(AppTheme.bodyFont)
@@ -857,7 +883,6 @@ struct MyProfileView: View {
                 ForEach(0..<9, id: \.self) { index in
                     ZStack(alignment: .topTrailing) {
                         if index < imageUrls.count, let url = URL(string: imageUrls[index]) {
-                            // Display the uploaded image.
                             AsyncImage(url: url) { phase in
                                 switch phase {
                                 case .empty:
@@ -882,7 +907,6 @@ struct MyProfileView: View {
                             .overlay(
                                 Group {
                                     if index == 0 {
-                                        // For the first cell, show an overlay indicating that this image is for the floorplan.
                                         Text("Floorplan")
                                             .font(.caption)
                                             .padding(4)
@@ -905,14 +929,12 @@ struct MyProfileView: View {
                             .clipShape(Circle())
                             .offset(x: -4, y: 4)
                         } else {
-                            // Empty cell placeholder.
                             ZStack {
                                 Rectangle()
                                     .fill(AppTheme.cardBackground)
                                     .frame(width: 100, height: 100)
                                     .cornerRadius(8)
                                 if index == 0 {
-                                    // First cell: show floorplan placeholder.
                                     Text("Floorplan")
                                         .font(.caption)
                                         .foregroundColor(.gray)
@@ -962,10 +984,9 @@ struct MyProfileView: View {
         }
     }
     
-    // Updated handlePropertyMediaSelected() to use unified propertyImageUrls array.
     private func handlePropertyMediaSelected() {
         guard let newImg = newPropertyMediaImage else { return }
-        let folder = "propertyMedia" // Use a unified folder name
+        let folder = "propertyMedia"
         viewModel.uploadPropertyMedia(image: newImg, folder: folder) { result in
             switch result {
             case .success(let downloadURL):
@@ -994,7 +1015,6 @@ struct MyProfileView: View {
         viewModel.updateUserProfile(updatedProfile: profile) { _ in }
     }
     
-    // Updated removePropertyMedia() to remove from unified propertyImageUrls
     private func removePropertyMedia(at index: Int) {
         guard var profile = viewModel.userProfile,
               var urls = profile.propertyImageUrls, index < urls.count else { return }
@@ -1012,6 +1032,10 @@ struct MyProfileView: View {
         selectedHeight = profile.height ?? ""
         major = profile.major ?? ""
         collegeName = profile.collegeName ?? ""
+        collegeSearchQuery = profile.collegeName ?? ""
+        secondaryHousingType = profile.desiredLeaseHousingType ?? ""
+        roommateCountNeeded = profile.roommateCountNeeded ?? 0
+        roommateCountExisting = profile.roommateCountExisting ?? 0
         budgetRange = profile.budgetRange ?? ""
         cleanliness = profile.cleanliness ?? 3
         sleepSchedule = profile.sleepSchedule ?? "Flexible"
@@ -1026,11 +1050,9 @@ struct MyProfileView: View {
             primaryHousingPreference = nil
         }
         secondaryHousingType = profile.desiredLeaseHousingType ?? ""
-        
         propertyDetails = profile.propertyDetails ?? ""
         propertyImageUrls = profile.propertyImageUrls ?? []
-        // floorplanUrls and documentUrls are no longer used.
-        
+        propertyAddress = profile.propertyAddress ?? ""
         selectedAmenities = profile.amenities ?? []
         
         if let startDate = profile.leaseStartDate {
@@ -1098,26 +1120,20 @@ struct MyProfileView: View {
         
         updatedProfile.propertyDetails = propertyDetails
         updatedProfile.propertyImageUrls = propertyImageUrls
+        updatedProfile.propertyAddress = propertyAddress
         
         updatedProfile.amenities = selectedAmenities
         
-        if isLeaseOrSublease {
-            updatedProfile.leaseStartDate = leaseStartDate
-            updatedProfile.leaseDuration = leaseDurationText
-            if let rent = Double(monthlyRentText) {
-                updatedProfile.monthlyRent = rent
-            } else {
-                updatedProfile.monthlyRent = nil
-            }
-            updatedProfile.specialLeaseConditions = selectedSpecialLeaseConditions
-            updatedProfile.roomType = roomType
+        // ALWAYS save lease & pricing details so data persists.
+        updatedProfile.leaseStartDate = leaseStartDate
+        updatedProfile.leaseDuration = leaseDurationText
+        if let rent = Double(monthlyRentText) {
+            updatedProfile.monthlyRent = rent
         } else {
-            updatedProfile.leaseStartDate = nil
-            updatedProfile.leaseDuration = nil
             updatedProfile.monthlyRent = nil
-            updatedProfile.specialLeaseConditions = nil
-            updatedProfile.roomType = roomType
         }
+        updatedProfile.specialLeaseConditions = selectedSpecialLeaseConditions
+        updatedProfile.roomType = roomType
         
         updatedProfile.pets = selectedPets
         updatedProfile.drinking = selectedDrinking
@@ -1144,7 +1160,6 @@ struct MyProfileView: View {
     }
     
     private func defaultUserProfile() -> UserModel {
-        // Updated order: housingStatus, desiredLeaseHousingType, roommate counts, property details, room type, then lease/pricing details, then amenities, then budgetRange & cleanliness.
         UserModel(
             email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
             isEmailVerified: false,
@@ -1165,6 +1180,7 @@ struct MyProfileView: View {
             roommateCountNeeded: 0,
             roommateCountExisting: 0,
             propertyDetails: nil,
+            propertyAddress: nil, // NEW: default property address is nil
             propertyImageUrls: nil,
             floorplanUrls: nil,
             documentUrls: nil,
@@ -1184,6 +1200,7 @@ struct MyProfileView: View {
             studyHabits: nil,
             interests: nil,
             profileImageUrl: nil,
+            profileImageUrls: nil,
             location: nil,
             isVerified: false,
             blockedUserIDs: nil,

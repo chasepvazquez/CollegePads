@@ -46,6 +46,7 @@ struct UserModel: Codable, Identifiable {
     
     // 5. Property Details
     var propertyDetails: String?
+    var propertyAddress: String?   // NEW: property address entered by the user
     var propertyImageUrls: [String]?
     var floorplanUrls: [String]?
     var documentUrls: [String]?
@@ -128,6 +129,7 @@ struct UserModel: Codable, Identifiable {
         roommateCountExisting: Int? = nil,
         // 5. Property Details
         propertyDetails: String? = nil,
+        propertyAddress: String? = nil,   // NEW: address parameter
         propertyImageUrls: [String]? = nil,
         floorplanUrls: [String]? = nil,
         documentUrls: [String]? = nil,
@@ -173,8 +175,7 @@ struct UserModel: Codable, Identifiable {
         // 16. Quiz Answers
         goingOutQuizAnswers: [String]? = nil,
         weekendQuizAnswers: [String]? = nil,
-        phoneQuizAnswers: [String]? = nil,
-        // Basic Info
+        phoneQuizAnswers: [String]? = nil
     ) {
         self.email = email
         self.isEmailVerified = isEmailVerified
@@ -203,6 +204,7 @@ struct UserModel: Codable, Identifiable {
         
         // Property Details
         self.propertyDetails = propertyDetails
+        self.propertyAddress = propertyAddress   // NEW: assign address
         self.propertyImageUrls = propertyImageUrls
         self.floorplanUrls = floorplanUrls
         self.documentUrls = documentUrls
