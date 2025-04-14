@@ -353,10 +353,15 @@ struct MyProfileView: View {
              viewModel.loadUserProfile { profile in
                  if let profile = profile {
                      populateLocalFields(from: profile)
+                 } else {
+                     // Add a log message to help diagnose why no profile is loaded.
+                     print("[MyProfileView] Warning: No user profile loaded; check if the document exists in Firestore.")
+                     // Optionally trigger your onboarding flow here if desired.
                  }
              }
              UniversityDataProvider.shared.loadUniversities { colleges in
                  self.validColleges = colleges
+                 print("[MyProfileView] Loaded \(colleges.count) colleges from UniversityDataProvider.")
              }
          }
          .sheet(isPresented: $showingPhotoPicker) {
@@ -978,11 +983,15 @@ struct MyProfileView: View {
     }
     
     private func handlePhotoSelected() {
-        guard let newImg = newProfileImage, let index = tappedImageIndex else { return }
+        guard let newImg = newProfileImage,
+              var updatedProfile = viewModel.userProfile, // do not fallback to defaultUserProfile()
+              let index = tappedImageIndex else {
+            print("[MyProfileView] Error: userProfile is nil while handling photo selection.")
+            return
+        }
         viewModel.uploadProfileImage(image: newImg) { result in
             switch result {
             case .success(let downloadURL):
-                var updatedProfile = viewModel.userProfile ?? defaultUserProfile()
                 var urls = updatedProfile.profileImageUrls ?? []
                 if index < urls.count {
                     urls[index] = downloadURL
@@ -992,8 +1001,8 @@ struct MyProfileView: View {
                 updatedProfile.profileImageUrls = Array(urls.prefix(9))
                 updatedProfile.profileImageUrl = updatedProfile.profileImageUrls?.first
                 viewModel.updateUserProfile(updatedProfile: updatedProfile) { _ in }
-            case .failure:
-                break
+            case .failure(let error):
+                print("[MyProfileView] Error uploading profile image: \(error.localizedDescription)")
             }
             DispatchQueue.main.async {
                 showingPhotoPicker = false
@@ -1004,19 +1013,24 @@ struct MyProfileView: View {
     }
     
     private func handlePropertyMediaSelected() {
-        guard let newImg = newPropertyMediaImage else { return }
+        guard let newImg = newPropertyMediaImage,
+              var updatedProfile = viewModel.userProfile else {
+            print("[MyProfileView] Error: userProfile is nil while handling property media selection.")
+            return
+        }
         let folder = "propertyMedia"
         viewModel.uploadPropertyMedia(image: newImg, folder: folder) { result in
             switch result {
             case .success(let downloadURL):
-                var updatedProfile = viewModel.userProfile ?? defaultUserProfile()
                 var arr = updatedProfile.propertyImageUrls ?? []
                 arr.append(downloadURL)
                 updatedProfile.propertyImageUrls = arr
-                propertyImageUrls = arr
+                DispatchQueue.main.async {
+                    propertyImageUrls = arr
+                }
                 viewModel.updateUserProfile(updatedProfile: updatedProfile) { _ in }
-            case .failure:
-                break
+            case .failure(let error):
+                print("[MyProfileView] Error uploading property media: \(error.localizedDescription)")
             }
             DispatchQueue.main.async {
                 showingPropertyMediaPicker = false
@@ -1024,6 +1038,7 @@ struct MyProfileView: View {
             }
         }
     }
+
     
     private func removeImage(at index: Int) {
         guard var profile = viewModel.userProfile,

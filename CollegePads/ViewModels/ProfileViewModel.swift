@@ -8,7 +8,6 @@ import Combine
 class ProfileViewModel: ObservableObject {
     @Published var userProfile: UserModel?
     @Published var errorMessage: String?
-    @Published var didLoadProfile: Bool = false  // Flag to track if profile is loaded
 
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
@@ -21,12 +20,7 @@ class ProfileViewModel: ObservableObject {
 
     /// Loads the currently authenticated user's profile from Firestore.
     func loadUserProfile(completion: ((UserModel?) -> Void)? = nil) {
-        if didLoadProfile {
-            print("[ProfileViewModel] loadUserProfile: Already loaded, skipping fetch.")
-            completion?(userProfile)
-            return
-        }
-        
+        // Always fetch fresh data for the profile instead of skipping based on didLoadProfile.
         guard let uid = userID else {
             DispatchQueue.main.async {
                 self.errorMessage = "User not authenticated"
@@ -57,7 +51,7 @@ class ProfileViewModel: ObservableObject {
                 let profile = try snapshot.data(as: UserModel.self)
                 DispatchQueue.main.async {
                     self.userProfile = profile
-                    self.didLoadProfile = true  // Mark as loaded
+                    // Removed didLoadProfile setting to always allow fresh fetches.
                     print("[ProfileViewModel] loadUserProfile: Successfully loaded profile: \(profile)")
                 }
                 completion?(profile)
@@ -70,6 +64,7 @@ class ProfileViewModel: ObservableObject {
             }
         }
     }
+
 
     /// Loads any user's profile by candidateID from Firestore.
     func loadUserProfile(with candidateID: String) {
