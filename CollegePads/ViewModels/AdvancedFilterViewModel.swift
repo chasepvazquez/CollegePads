@@ -5,26 +5,20 @@ import Combine
 import CoreLocation
 import FirebaseAuth
 
-// New enum for filtering mode.
 enum FilterMode: String, CaseIterable, Identifiable {
-    case university
-    case distance
-    var id: String { self.rawValue }
+    case university, distance
+    var id: String { rawValue }
 }
 
 class AdvancedFilterViewModel: ObservableObject {
-    // MARK: - Filter Fields
-    
-    // Replace overloaded housing status with this enum-based field.
+    // MARK: - Filters
     @Published var filterHousingPreference: PrimaryHousingPreference? = nil
-    
-    // College filter (for university mode).
     @Published var filterCollegeName: String = ""
     
-    // Budget Range (for both lease and find together).
-    @Published var filterBudgetRange: String = ""
-    
-    // Grade Group filter.
+    // ↓ NEW numeric budget sliders for “Find Together”
+    @Published var filterBudgetMin: Double? = nil
+    @Published var filterBudgetMax: Double? = nil
+
     @Published var filterGradeGroup: String = ""
     
     // Interests – free text, comma-separated keywords.
@@ -108,189 +102,169 @@ class AdvancedFilterViewModel: ObservableObject {
 
     /// Applies all filters by querying Firestore first and then applying local filtering.
     func applyFilters(currentLocation: CLLocation?) {
-        var query: Query = db.collection("users")
-        
-        // Filter by primary housing preference if provided.
-        if let housingPref = filterHousingPreference {
-            query = query.whereField("housingStatus", isEqualTo: housingPref.rawValue)
-        }
-        
-        // When in university mode, filter by college name.
-        if filterMode == .university && !filterCollegeName.isEmpty {
-            query = query.whereField("collegeName", isEqualTo: filterCollegeName)
-        }
-        
-        // Budget Range filter.
-        if !filterBudgetRange.isEmpty {
-            query = query.whereField("budgetRange", isEqualTo: filterBudgetRange)
-        }
-        
-        query
-            .snapshotPublisher()
-            .map { snapshot -> [UserModel] in
-                snapshot.documents.compactMap { try? $0.data(as: UserModel.self) }
+        // 1) Fetch *all* users
+        db.collection("users")
+        .snapshotPublisher()
+        .map { $0.documents.compactMap { try? $0.data(as: UserModel.self) } }
+        .map { users in
+              // Determine which filters are “active”
+              let hasHousing     = self.filterHousingPreference != nil
+              let hasCollege     = self.filterMode == .university && !self.filterCollegeName.isEmpty
+              let hasFindBudget = (self.filterHousingPreference == .lookingToFindTogether)
+                                                 && self.filterBudgetMin != nil
+                                                 && self.filterBudgetMax != nil
+              let hasGrade       = !self.filterGradeGroup.isEmpty
+              let hasInterests   = !self.filterInterests.isEmpty
+              let hasRoomType    = !self.filterRoomType.isEmpty
+              let hasAmenities   = !self.filterAmenities.isEmpty
+              let hasPetFilter   = self.filterPetFriendly != nil
+              let hasSmokerFilter = self.filterSmoker != nil
+              let hasDrinker     = self.filterDrinker != nil
+              let hasMJ          = self.filterMarijuana != nil
+              let hasWorkout     = self.filterWorkout != nil
+              let hasCleanliness = self.filterCleanliness != nil
+              let hasSleepSched  = !self.filterSleepSchedule.isEmpty
+              let hasLeaseRent   = (self.filterHousingPreference == .lookingForLease)
+                                   && self.filterMonthlyRentMin != nil
+                                   && self.filterMonthlyRentMax != nil
+              let hasDistance    = self.filterMode == .distance && currentLocation != nil
+
+              let totalActive = [
+                  hasHousing, hasCollege, hasFindBudget, hasGrade, hasInterests,
+                  hasRoomType, hasAmenities, hasPetFilter, hasSmokerFilter,
+                  hasDrinker, hasMJ, hasWorkout, hasCleanliness, hasSleepSched,
+                  hasLeaseRent, hasDistance
+              ].filter { $0 }.count
+
+              // If *no* filters are set, just show everyone:
+              guard totalActive > 0 else { return users }
+
+              // 2) Keep any user matching *at least one* active filter:
+              return users.filter { user in
+                  var matched = false
+
+                  if hasHousing,
+                     user.housingStatus == self.filterHousingPreference?.rawValue {
+                      matched = true
+                  }
+                  if hasCollege,
+                     user.collegeName == self.filterCollegeName {
+                      matched = true
+                  }
+                  if hasFindBudget,
+                                      let rent = user.monthlyRent,
+                                      let minB = self.filterBudgetMin,
+                                      let maxB = self.filterBudgetMax,
+                     rent >= minB && rent <= maxB {
+                      matched = true
+                  }
+                  if hasGrade {
+                      let grade = user.gradeLevel?.lowercased() ?? ""
+                      let sel   = self.filterGradeGroup.lowercased()
+                      switch sel {
+                      case "freshman":
+                          matched = matched || grade == "freshman"
+                      case "underclassmen":
+                          matched = matched || (grade == "freshman" || grade == "sophomore")
+                      case "upperclassmen":
+                          matched = matched || (grade == "junior"  || grade == "senior")
+                      case "graduate":
+                          matched = matched || grade == "graduate"
+                      default: break
+                      }
+                  }
+                  if hasInterests,
+                     let ui = user.interests?.map({ $0.lowercased() }) {
+                      let keys = self.filterInterests
+                                    .split(separator: ",")
+                                    .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+                      if !Set(keys).intersection(ui).isEmpty {
+                          matched = true
+                      }
+                  }
+                  if hasRoomType,
+                     user.roomType == self.filterRoomType {
+                      matched = true
+                  }
+                  if hasAmenities,
+                     let ua = user.amenities,
+                     Set(self.filterAmenities).isSubset(of: Set(ua)) {
+                      matched = true
+                  }
+                  if hasPetFilter,
+                     user.petFriendly == self.filterPetFriendly {
+                      matched = true
+                  }
+                  if hasSmokerFilter,
+                     user.smoker == self.filterSmoker {
+                      matched = true
+                  }
+                  if hasDrinker,
+                     let d = user.drinking?.lowercased() {
+                      if self.filterDrinker! {
+                          matched = matched || (d != "not for me")
+                      } else {
+                          matched = matched || (d == "not for me")
+                      }
+                  }
+                  if hasMJ,
+                     let c = user.cannabis?.lowercased() {
+                      if self.filterMarijuana! {
+                          matched = matched || (c != "never")
+                      } else {
+                          matched = matched || (c == "never")
+                      }
+                  }
+                  if hasWorkout,
+                     let w = user.workout?.lowercased() {
+                      if self.filterWorkout! {
+                          matched = matched || (w != "never")
+                      } else {
+                          matched = matched || (w == "never")
+                      }
+                  }
+                  if hasCleanliness,
+                     let cl = user.cleanliness,
+                     cl == self.filterCleanliness {
+                      matched = true
+                  }
+                  if hasSleepSched,
+                     user.sleepSchedule?.lowercased() == self.filterSleepSchedule.lowercased() {
+                      matched = true
+                  }
+                  if hasLeaseRent,
+                     let rent = user.monthlyRent,
+                     let minR = self.filterMonthlyRentMin,
+                     let maxR = self.filterMonthlyRentMax,
+                     rent >= minR && rent <= maxR {
+                      matched = true
+                  }
+                  if hasDistance,
+                     let cp = user.location,
+                     let loc = currentLocation {
+                      let uloc = CLLocation(latitude: cp.latitude, longitude: cp.longitude)
+                      let km = loc.distance(from: uloc) / 1000.0
+                      if km <= self.maxDistance {
+                          matched = true
+                      }
+                  }
+
+                  return matched
+              }
+          }
+          .sink(
+            receiveCompletion: { completion in
+              if case let .failure(err) = completion {
+                DispatchQueue.main.async { self.errorMessage = err.localizedDescription }
+              }
+            },
+            receiveValue: { users in
+              DispatchQueue.main.async { self.filteredUsers = users }
             }
-            .map { users in
-                var filtered = users
-                
-                // Grade Group filter.
-                if !self.filterGradeGroup.isEmpty {
-                    filtered = filtered.filter { user in
-                        guard let grade = user.gradeLevel?.lowercased() else { return false }
-                        let selected = self.filterGradeGroup.lowercased()
-                        switch selected {
-                        case "freshman":
-                            return grade == "freshman"
-                        case "underclassmen":
-                            return grade == "freshman" || grade == "sophomore"
-                        case "upperclassmen":
-                            return grade == "junior" || grade == "senior"
-                        case "graduate":
-                            return grade == "graduate"
-                        default:
-                            return true
-                        }
-                    }
-                }
-                
-                // Interests filter.
-                if !self.filterInterests.isEmpty {
-                    let keywords = self.filterInterests
-                        .split(separator: ",")
-                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-                    filtered = filtered.filter { user in
-                        guard let userInterests = user.interests else { return false }
-                        let lowerInterests = userInterests.map { $0.lowercased() }
-                        return !Set(keywords).intersection(lowerInterests).isEmpty
-                    }
-                }
-                
-                // Room Type filter.
-                if !self.filterRoomType.isEmpty {
-                    filtered = filtered.filter { user in
-                        return user.roomType == self.filterRoomType
-                    }
-                }
-                
-                // Amenities filter: only include users who have all selected amenities.
-                if !self.filterAmenities.isEmpty {
-                    filtered = filtered.filter { user in
-                        guard let userAmenities = user.amenities else { return false }
-                        return Set(self.filterAmenities).isSubset(of: Set(userAmenities))
-                    }
-                }
-                
-                // Pet Friendly filter.
-                if let petFriendly = self.filterPetFriendly {
-                    filtered = filtered.filter { user in
-                        return user.petFriendly == petFriendly
-                    }
-                }
-                
-                // Smoker filter.
-                if let smoker = self.filterSmoker {
-                    filtered = filtered.filter { user in
-                        return user.smoker == smoker
-                    }
-                }
-                
-                // Drinker filter.
-                if let drinker = self.filterDrinker {
-                    filtered = filtered.filter { user in
-                        if let drinking = user.drinking?.lowercased() {
-                            if drinker {
-                                // If filtering for drinkers, exclude users who indicate "not for me"
-                                return drinking != "not for me"
-                            } else {
-                                return drinking == "not for me"
-                            }
-                        }
-                        return false
-                    }
-                }
-                
-                // Marijuana filter.
-                if let marijuana = self.filterMarijuana {
-                    filtered = filtered.filter { user in
-                        if let cannabis = user.cannabis?.lowercased() {
-                            if marijuana {
-                                return cannabis != "never"
-                            } else {
-                                return cannabis == "never"
-                            }
-                        }
-                        return false
-                    }
-                }
-                
-                // Workout filter.
-                if let workout = self.filterWorkout {
-                    filtered = filtered.filter { user in
-                        if let userWorkout = user.workout?.lowercased() {
-                            if workout {
-                                return userWorkout != "never"
-                            } else {
-                                return userWorkout == "never"
-                            }
-                        }
-                        return false
-                    }
-                }
-                
-                // Cleanliness filter.
-                if let cleanliness = self.filterCleanliness {
-                    filtered = filtered.filter { user in
-                        guard let userCleanliness = user.cleanliness else { return false }
-                        return userCleanliness == cleanliness
-                    }
-                }
-                
-                // Sleep Schedule filter.
-                if !self.filterSleepSchedule.isEmpty {
-                    filtered = filtered.filter { user in
-                        return user.sleepSchedule?.lowercased() == self.filterSleepSchedule.lowercased()
-                    }
-                }
-                
-                // Monthly Rent filter – applied only if filtering by lease.
-                if self.filterHousingPreference == .lookingForLease,
-                   let minRent = self.filterMonthlyRentMin,
-                   let maxRent = self.filterMonthlyRentMax {
-                    filtered = filtered.filter { user in
-                        if let rent = user.monthlyRent {
-                            return rent >= minRent && rent <= maxRent
-                        }
-                        return false
-                    }
-                }
-                
-                // Distance filter – only in distance mode.
-                if self.filterMode == .distance, let currentLocation = currentLocation {
-                    filtered = filtered.filter { user in
-                        if let geoPoint = user.location {
-                            let userLocation = CLLocation(latitude: geoPoint.latitude, longitude: geoPoint.longitude)
-                            let distance = currentLocation.distance(from: userLocation) / 1000.0
-                            return distance <= self.maxDistance
-                        }
-                        return false
-                    }
-                }
-                
-                return filtered
-            }
-            .sink { completion in
-                if case let .failure(error) = completion {
-                    DispatchQueue.main.async {
-                        self.errorMessage = error.localizedDescription
-                    }
-                }
-            } receiveValue: { users in
-                DispatchQueue.main.async {
-                    self.filteredUsers = users
-                }
-            }
-            .store(in: &cancellables)
+          )
+          .store(in: &cancellables)
     }
+
     
     // MARK: - Save and Load Filters
     
@@ -301,7 +275,6 @@ class AdvancedFilterViewModel: ObservableObject {
         var data: [String: Any] = [
             "filterHousingPreference": filterHousingPreference?.rawValue ?? "",
             "filterCollegeName": filterCollegeName,
-            "filterBudgetRange": filterBudgetRange,
             "filterGradeGroup": filterGradeGroup,
             "filterInterests": filterInterests,
             "filterPreferredGender": filterPreferredGender,
@@ -317,6 +290,13 @@ class AdvancedFilterViewModel: ObservableObject {
             "filterCleanliness": filterCleanliness as Any,
             "filterSleepSchedule": filterSleepSchedule
         ]
+        if filterHousingPreference == .lookingToFindTogether {
+                    data["filterBudgetMin"] = filterBudgetMin ?? FieldValue.delete()
+                    data["filterBudgetMax"] = filterBudgetMax ?? FieldValue.delete()
+                } else {
+                    data["filterBudgetMin"] = FieldValue.delete()
+                    data["filterBudgetMax"] = FieldValue.delete()
+                }
         if filterHousingPreference == .lookingForLease {
             data["filterMonthlyRentMin"] = filterMonthlyRentMin ?? FieldValue.delete()
             data["filterMonthlyRentMax"] = filterMonthlyRentMax ?? FieldValue.delete()
@@ -360,7 +340,8 @@ class AdvancedFilterViewModel: ObservableObject {
             DispatchQueue.main.async {
                 self.filterHousingPreference = PrimaryHousingPreference(rawValue: data["filterHousingPreference"] as? String ?? "")
                 self.filterCollegeName = data["filterCollegeName"] as? String ?? ""
-                self.filterBudgetRange = data["filterBudgetRange"] as? String ?? ""
+                self.filterBudgetMin     = data["filterBudgetMin"] as? Double
+                self.filterBudgetMax     = data["filterBudgetMax"] as? Double
                 self.filterGradeGroup = data["filterGradeGroup"] as? String ?? ""
                 self.filterInterests = data["filterInterests"] as? String ?? ""
                 self.maxDistance = data["filterMaxDistance"] as? Double ?? 10.0

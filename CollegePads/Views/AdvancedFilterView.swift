@@ -1,45 +1,31 @@
+// AdvancedFilterView.swift
+
 import SwiftUI
 import CoreLocation
 
 struct AdvancedFilterView: View {
     @StateObject private var viewModel = AdvancedFilterViewModel()
     @StateObject private var locationManager = LocationManager()
-
-    // Options for other filters.
-    let preferredGenders = ["Any", "Male", "Female", "Other"]
     
-    // Use the shared GradeLevel enum from MyProfileView.
+    let preferredGenders = ["Any", "Male", "Female", "Other"]
     @State private var selectedGradeLevel: MyProfileView.GradeLevel = .freshman
     @State private var localFilterMode: FilterMode = .university
     
-    // College search state.
+    /// allColleges holds the full list, loaded once on appear
+    @State private var allColleges: [String] = []
+    
+    // College search state:
     @State private var collegeSearchQuery: String = ""
     @State private var filteredColleges: [String] = []
     
-    // Alert binding helper.
     private var alertBinding: Binding<GenericAlertError?> {
-        Binding<GenericAlertError?>(
-            get: { self.getAlertError() },
-            set: { self.setAlertError($0) }
-        )
-    }
-    
-    private func getAlertError() -> GenericAlertError? {
-        if let errorMessage = viewModel.errorMessage {
-            return GenericAlertError(message: errorMessage)
-        }
-        return nil
-    }
-    
-    private func setAlertError(_ newValue: GenericAlertError?) {
-        viewModel.errorMessage = newValue?.message
+        Binding(get: { viewModel.errorMessage.map(GenericAlertError.init) }, set: { _ in })
     }
     
     var body: some View {
         ZStack {
             AppTheme.backgroundGradient.ignoresSafeArea()
             List {
-                // Filtering Mode Section.
                 Section {
                     Picker("Filter Mode", selection: $localFilterMode) {
                         ForEach(FilterMode.allCases) { mode in
@@ -48,9 +34,9 @@ struct AdvancedFilterView: View {
                         }
                     }
                     .pickerStyle(SegmentedPickerStyle())
-                    .onChange(of: localFilterMode) { newMode in
-                        viewModel.filterMode = newMode
-                        if newMode == .university {
+                    .onChange(of: localFilterMode) { new in
+                        viewModel.filterMode = new
+                        if new == .university {
                             viewModel.maxDistance = 50.0
                         } else {
                             viewModel.filterCollegeName = ""
@@ -58,11 +44,9 @@ struct AdvancedFilterView: View {
                         autoApplyAndSave()
                     }
                 } header: {
-                    Text("Filtering Mode")
-                        .font(AppTheme.subtitleFont)
+                    Text("Filtering Mode").font(AppTheme.subtitleFont)
                 }
                 
-                // Filter Criteria Section – now calls MyProfileView's properties.
                 FilterCriteriaSection(
                     selectedGradeLevel: $selectedGradeLevel,
                     collegeSearchQuery: $collegeSearchQuery,
@@ -73,30 +57,20 @@ struct AdvancedFilterView: View {
                     autoApplyAndSave: autoApplyAndSave
                 )
                 
-                // Filtered Users Section.
                 if !viewModel.filteredUsers.isEmpty {
                     Section {
                         ForEach(viewModel.filteredUsers) { user in
                             VStack(alignment: .leading) {
-                                if let firstName = user.firstName,
-                                   let lastName = user.lastName,
-                                   !firstName.isEmpty && !lastName.isEmpty {
-                                    Text("\(firstName) \(lastName)")
-                                        .font(AppTheme.titleFont)
-                                } else {
-                                    Text("Name not provided")
-                                        .font(AppTheme.titleFont)
-                                }
+                                Text("\(user.firstName ?? "") \(user.lastName ?? "")")
+                                    .font(AppTheme.titleFont)
                                 if let grade = user.gradeLevel {
-                                    Text("Grade: \(grade)")
-                                        .font(AppTheme.bodyFont)
+                                    Text("Grade: \(grade)").font(AppTheme.bodyFont)
                                 }
                                 if let housing = user.housingStatus {
-                                    Text("Housing: \(housing)")
-                                        .font(AppTheme.bodyFont)
+                                    Text("Housing: \(housing)").font(AppTheme.bodyFont)
                                 }
-                                if let interests = user.interests {
-                                    Text("Interests: \(interests.joined(separator: ", "))")
+                                if let ints = user.interests {
+                                    Text("Interests: \(ints.joined(separator: ", "))")
                                         .font(AppTheme.bodyFont)
                                         .foregroundColor(AppTheme.secondaryColor)
                                 }
@@ -104,8 +78,7 @@ struct AdvancedFilterView: View {
                             .padding(.vertical, 4)
                         }
                     } header: {
-                        Text("Filtered Users")
-                            .font(AppTheme.subtitleFont)
+                        Text("Filtered Users").font(AppTheme.subtitleFont)
                     }
                 } else {
                     Section {
@@ -119,26 +92,26 @@ struct AdvancedFilterView: View {
             .background(AppTheme.backgroundGradient)
             .listStyle(InsetGroupedListStyle())
             .font(AppTheme.bodyFont)
-            .alert(item: alertBinding) { alertError in
-                Alert(title: Text("Error"),
-                      message: Text(alertError.message),
-                      dismissButton: .default(Text("OK")))
+            .alert(item: alertBinding) { err in
+                Alert(title: Text("Error"), message: Text(err.message), dismissButton: .default(Text("OK")))
             }
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Advanced Search")
-                        .font(AppTheme.titleFont)
-                        .foregroundColor(.primary)
+                    Text("Advanced Search").font(AppTheme.titleFont)
                 }
             }
         }
         .onAppear {
+            // 1️⃣ Load saved filters & sync UI state
             viewModel.loadFiltersFromUserDoc {
+                localFilterMode       = viewModel.filterMode
+                selectedGradeLevel    = MyProfileView.GradeLevel(rawValue: viewModel.filterGradeGroup) ?? .freshman
+                collegeSearchQuery    = viewModel.filterCollegeName
                 viewModel.applyFilters(currentLocation: locationManager.currentLocation)
             }
+            // 2️⃣ Then load the college list
             UniversityDataProvider.shared.loadUniversities { colleges in
-                filteredColleges = colleges
-                print("AdvancedFilterView loaded \(colleges.count) colleges.")
+                allColleges = colleges
             }
         }
     }
@@ -148,6 +121,7 @@ struct AdvancedFilterView: View {
         viewModel.saveFiltersToUserDoc()
     }
 }
+
 private struct FilterCriteriaSection: View {
     @Binding var selectedGradeLevel: MyProfileView.GradeLevel
     @Binding var collegeSearchQuery: String
@@ -156,8 +130,7 @@ private struct FilterCriteriaSection: View {
     let localFilterMode: FilterMode
     let preferredGenders: [String]
     let autoApplyAndSave: () -> Void
-
-    // Group for Grade and Housing Pickers.
+    
     private var gradeAndHousing: some View {
         VStack(spacing: 8) {
             Picker("Grade Group", selection: $selectedGradeLevel) {
@@ -165,14 +138,14 @@ private struct FilterCriteriaSection: View {
                     Text(level.rawValue).tag(level)
                 }
             }
-            .onChange(of: selectedGradeLevel) { newLevel in
-                viewModel.filterGradeGroup = newLevel.rawValue
+            .onChange(of: selectedGradeLevel) {
+                viewModel.filterGradeGroup = $0.rawValue
                 autoApplyAndSave()
             }
             Picker("Housing Preference", selection: $viewModel.filterHousingPreference) {
                 Text("All").tag(Optional<PrimaryHousingPreference>(nil))
-                ForEach(PrimaryHousingPreference.allCases) { status in
-                    Text(status.rawValue).tag(Optional(status))
+                ForEach(PrimaryHousingPreference.allCases) {
+                    Text($0.rawValue).tag(Optional($0))
                 }
             }
             .pickerStyle(SegmentedPickerStyle())
@@ -187,83 +160,104 @@ private struct FilterCriteriaSection: View {
         }
     }
     
-    // Group for Amenities and Toggles.
-        private var amenitiesAndToggles: some View {
-            VStack(spacing: 8) {
-                MultiSelectChipView(
-                    options: viewModel.propertyAmenitiesOptions,  // Using the view model property
-                    selectedItems: $viewModel.filterAmenities
-                ) {
-                    autoApplyAndSave()
-                }
-                Toggle("Must be Pet Friendly", isOn: Binding(
-                    get: { viewModel.filterPetFriendly ?? false },
-                    set: { viewModel.filterPetFriendly = $0; autoApplyAndSave() }
-                ))
-                Toggle("Smoker OK", isOn: Binding(
-                    get: { viewModel.filterSmoker ?? false },
-                    set: { viewModel.filterSmoker = $0; autoApplyAndSave() }
-                ))
-                Toggle("Drinker OK", isOn: Binding(
-                    get: { viewModel.filterDrinker ?? false },
-                    set: { viewModel.filterDrinker = $0; autoApplyAndSave() }
-                ))
-                Toggle("Marijuana Use OK", isOn: Binding(
-                    get: { viewModel.filterMarijuana ?? false },
-                    set: { viewModel.filterMarijuana = $0; autoApplyAndSave() }
-                ))
-                Toggle("Workout Regularly", isOn: Binding(
-                    get: { viewModel.filterWorkout ?? false },
-                    set: { viewModel.filterWorkout = $0; autoApplyAndSave() }
-                ))
+    private var amenitiesAndToggles: some View {
+        VStack(spacing: 8) {
+            MultiSelectChipView(options: viewModel.propertyAmenitiesOptions,
+                                selectedItems: $viewModel.filterAmenities) {
+                autoApplyAndSave()
             }
+            Toggle("Must be Pet Friendly",
+                   isOn: Binding(get: { viewModel.filterPetFriendly ?? false },
+                                 set: { viewModel.filterPetFriendly = $0; autoApplyAndSave() }))
+            Toggle("Smoker OK",
+                   isOn: Binding(get: { viewModel.filterSmoker ?? false },
+                                 set: { viewModel.filterSmoker = $0; autoApplyAndSave() }))
+            Toggle("Drinker OK",
+                   isOn: Binding(get: { viewModel.filterDrinker ?? false },
+                                 set: { viewModel.filterDrinker = $0; autoApplyAndSave() }))
+            Toggle("Marijuana Use OK",
+                   isOn: Binding(get: { viewModel.filterMarijuana ?? false },
+                                 set: { viewModel.filterMarijuana = $0; autoApplyAndSave() }))
+            Toggle("Workout Regularly",
+                   isOn: Binding(get: { viewModel.filterWorkout ?? false },
+                                 set: { viewModel.filterWorkout = $0; autoApplyAndSave() }))
         }
-        
-        // Group for Cleanliness and Sleep Schedule.
-        private var cleanlinessAndSleep: some View {
-            VStack(spacing: 8) {
-                Picker("Cleanliness", selection: Binding(
-                    get: { viewModel.filterCleanliness ?? 0 },
-                    set: { viewModel.filterCleanliness = $0; autoApplyAndSave() }
-                )) {
-                    ForEach(1..<6) { number in
-                        let desc = viewModel.cleanlinessDescriptions[number] ?? ""
-                        Text("\(number) - \(desc)").tag(number)
-                    }
-                }
-                .pickerStyle(MenuPickerStyle())
-                Picker("Sleep Schedule", selection: $viewModel.filterSleepSchedule) {
-                    Text("All").tag("")
-                    Text("Early Bird").tag("Early Bird")
-                    Text("Night Owl").tag("Night Owl")
-                    Text("Flexible").tag("Flexible")
-                }
-                .onChange(of: viewModel.filterSleepSchedule) { _ in autoApplyAndSave() }
-            }
-        }
+    }
     
-    // Group for Rent/College Search based on mode.
-    private var rentOrCollege: some View {
+    private var cleanlinessAndSleep: some View {
+        VStack(spacing: 8) {
+            Picker("Cleanliness", selection:
+                Binding(get: { viewModel.filterCleanliness ?? 0 },
+                        set: { viewModel.filterCleanliness = $0; autoApplyAndSave() })) {
+                ForEach(1..<6) {
+                    Text("\($0) – \(viewModel.cleanlinessDescriptions[$0]!)").tag($0)
+                }
+            }
+            .pickerStyle(MenuPickerStyle())
+            Picker("Sleep Schedule", selection: $viewModel.filterSleepSchedule) {
+                Text("All").tag("")
+                Text("Early Bird").tag("Early Bird")
+                Text("Night Owl").tag("Night Owl")
+                Text("Flexible").tag("Flexible")
+            }
+            .onChange(of: viewModel.filterSleepSchedule) { _ in autoApplyAndSave() }
+        }
+    }
+    
+    private var housingSpecificFilters: some View {
         VStack(spacing: 8) {
             if viewModel.filterHousingPreference == .lookingForLease {
                 VStack(alignment: .leading) {
-                    Text("Monthly Rent Range")
+                    Text("Monthly Rent Range").font(.headline)
                     HStack {
                         Text("Min: \(Int(viewModel.filterMonthlyRentMin ?? 0))")
-                        Slider(value: Binding(
-                            get: { viewModel.filterMonthlyRentMin ?? 0 },
-                            set: { viewModel.filterMonthlyRentMin = $0; autoApplyAndSave() }
-                        ), in: 0...5000, step: 50)
+                        Slider(
+                            value: Binding(
+                                get: { viewModel.filterMonthlyRentMin ?? 0 },
+                                set: { viewModel.filterMonthlyRentMin = $0; autoApplyAndSave() }
+                            ),
+                            in: 0...5000, step: 50
+                        )
                     }
                     HStack {
                         Text("Max: \(Int(viewModel.filterMonthlyRentMax ?? 5000))")
-                        Slider(value: Binding(
-                            get: { viewModel.filterMonthlyRentMax ?? 5000 },
-                            set: { viewModel.filterMonthlyRentMax = $0; autoApplyAndSave() }
-                        ), in: 0...5000, step: 50)
+                        Slider(
+                            value: Binding(
+                                get: { viewModel.filterMonthlyRentMax ?? 5000 },
+                                set: { viewModel.filterMonthlyRentMax = $0; autoApplyAndSave() }
+                            ),
+                            in: 0...5000, step: 50
+                        )
                     }
                 }
-            } else if localFilterMode == .university {
+            }
+            // 2️⃣ Find Together → **Budget Range**
+            else if viewModel.filterHousingPreference == .lookingToFindTogether {
+                VStack(alignment: .leading) {
+                    Text("Budget Range").font(.headline)
+                    HStack {
+                        Text("Min: \(Int(viewModel.filterBudgetMin ?? 0))")
+                        Slider(
+                            value: Binding(
+                                get: { viewModel.filterBudgetMin ?? 0 },
+                                set: { viewModel.filterBudgetMin = $0; autoApplyAndSave() }
+                            ),
+                            in: 0...5000, step: 50
+                        )
+                    }
+                    HStack {
+                        Text("Max: \(Int(viewModel.filterBudgetMax ?? 5000))")
+                        Slider(
+                            value: Binding(
+                                get: { viewModel.filterBudgetMax ?? 5000 },
+                                set: { viewModel.filterBudgetMax = $0; autoApplyAndSave() }
+                            ),
+                            in: 0...5000, step: 50
+                        )
+                    }
+                }
+            }
+            if localFilterMode == .university {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("College")
                         .foregroundColor(.secondary)
@@ -272,17 +266,21 @@ private struct FilterCriteriaSection: View {
                         .background(AppTheme.cardBackground)
                         .cornerRadius(8)
                         .onChange(of: collegeSearchQuery) { newValue in
-                            filteredColleges = UniversityDataProvider.shared.searchUniversities(query: newValue)
+                            let q = newValue.trimmingCharacters(in: .whitespaces)
+                            filteredColleges = q.isEmpty
+                            ? []
+                            : UniversityDataProvider.shared.searchUniversities(query: q)
                         }
+                    
                     if !filteredColleges.isEmpty {
                         ScrollView(.vertical) {
                             VStack(alignment: .leading, spacing: 4) {
-                                ForEach(filteredColleges, id: \.self) { uni in
-                                    Text(uni)
+                                ForEach(filteredColleges, id: \.self) { college in
+                                    Text(college)
                                         .padding(8)
                                         .onTapGesture {
-                                            viewModel.filterCollegeName = uni
-                                            collegeSearchQuery = uni
+                                            collegeSearchQuery = college
+                                            viewModel.filterCollegeName = college
                                             filteredColleges = []
                                             autoApplyAndSave()
                                         }
@@ -294,23 +292,14 @@ private struct FilterCriteriaSection: View {
                         .cornerRadius(8)
                     }
                 }
-            } else {
-                VStack(alignment: .leading) {
-                    Text("Max Distance: \(Int(viewModel.maxDistance)) km")
-                    Slider(value: $viewModel.maxDistance, in: 1...50, step: 1)
-                        .onChange(of: viewModel.maxDistance) { _ in autoApplyAndSave() }
-                }
             }
         }
     }
     
-    // Group for Preferred Gender and Age Difference.
     private var genderAndAge: some View {
         VStack(spacing: 8) {
             Picker("Preferred Gender", selection: $viewModel.filterPreferredGender) {
-                ForEach(preferredGenders, id: \.self) { gender in
-                    Text(gender).tag(gender)
-                }
+                ForEach(preferredGenders, id: \.self) { Text($0).tag($0) }
             }
             .onChange(of: viewModel.filterPreferredGender) { _ in autoApplyAndSave() }
             VStack(alignment: .leading) {
@@ -322,17 +311,14 @@ private struct FilterCriteriaSection: View {
     }
     
     var body: some View {
-        Section {
+        Section(header: Text("Filter Criteria").font(AppTheme.subtitleFont)) {
             VStack(spacing: 16) {
                 gradeAndHousing
                 amenitiesAndToggles
                 cleanlinessAndSleep
-                rentOrCollege
+                housingSpecificFilters
                 genderAndAge
             }
-        } header: {
-            Text("Filter Criteria")
-                .font(AppTheme.subtitleFont)
         }
     }
 }
