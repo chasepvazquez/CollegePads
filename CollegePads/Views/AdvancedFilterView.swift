@@ -133,14 +133,23 @@ private struct FilterCriteriaSection: View {
     
     private var gradeAndHousing: some View {
         VStack(spacing: 8) {
-            Picker("Grade Group", selection: $selectedGradeLevel) {
+            Picker("Grade Group", selection:
+                Binding<MyProfileView.GradeLevel>(
+                  get: {
+                    // On each display, read the stored string and map back to the enum
+                    MyProfileView.GradeLevel(rawValue: viewModel.filterGradeGroup)
+                      ?? .freshman
+                  },
+                  set: { newLevel in
+                    // When the user picks, store and save immediately
+                    viewModel.filterGradeGroup = newLevel.rawValue
+                    autoApplyAndSave()
+                  }
+                )
+            ) {
                 ForEach(MyProfileView.GradeLevel.allCases) { level in
                     Text(level.rawValue).tag(level)
                 }
-            }
-            .onChange(of: selectedGradeLevel) {
-                viewModel.filterGradeGroup = $0.rawValue
-                autoApplyAndSave()
             }
             Picker("Housing Preference", selection: $viewModel.filterHousingPreference) {
                 Text("All").tag(Optional<PrimaryHousingPreference>(nil))
@@ -232,7 +241,8 @@ private struct FilterCriteriaSection: View {
                 }
             }
             // 2️⃣ Find Together → **Budget Range**
-            else if viewModel.filterHousingPreference == .lookingToFindTogether {
+            else if viewModel.filterHousingPreference == .lookingToFindTogether
+                 || viewModel.filterHousingPreference == .lookingForRoommate{
                 VStack(alignment: .leading) {
                     Text("Budget Range").font(.headline)
                     HStack {
@@ -261,17 +271,21 @@ private struct FilterCriteriaSection: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("College")
                         .foregroundColor(.secondary)
-                    TextField("Search College", text: $collegeSearchQuery)
+                    TextField("Search College", text: $viewModel.filterCollegeName)
                         .padding(8)
                         .background(AppTheme.cardBackground)
                         .cornerRadius(8)
-                        .onChange(of: collegeSearchQuery) { newValue in
+                        .onChange(of: viewModel.filterCollegeName) { newValue in
                             let q = newValue.trimmingCharacters(in: .whitespaces)
-                            filteredColleges = q.isEmpty
-                            ? []
-                            : UniversityDataProvider.shared.searchUniversities(query: q)
+                            if q.isEmpty {
+                                filteredColleges = []
+                            } else {
+                                filteredColleges = UniversityDataProvider
+                                                    .shared
+                                                    .searchUniversities(query: q)
+                            }
+                            autoApplyAndSave()
                         }
-                    
                     if !filteredColleges.isEmpty {
                         ScrollView(.vertical) {
                             VStack(alignment: .leading, spacing: 4) {
@@ -284,6 +298,11 @@ private struct FilterCriteriaSection: View {
                                             filteredColleges = []
                                             autoApplyAndSave()
                                         }
+                                    onTapGesture {
+                                        viewModel.filterCollegeName = college
+                                        filteredColleges = []
+                                        autoApplyAndSave()
+                                     }
                                 }
                             }
                         }

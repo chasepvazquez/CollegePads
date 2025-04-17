@@ -183,24 +183,41 @@ extension SwipeCardView {
     /// Returns a view showing candidate info.
     private func userInfoSection(for candidate: UserModel) -> some View {
         VStack(spacing: 4) {
-            if let firstName = candidate.firstName, let lastName = candidate.lastName,
-               !firstName.isEmpty, !lastName.isEmpty {
-                Text("\(firstName) \(lastName)")
+            // Name
+            if let first = candidate.firstName, let last = candidate.lastName,
+               !first.isEmpty, !last.isEmpty {
+                Text("\(first) \(last)")
                     .font(AppTheme.subtitleFont)
                     .foregroundColor(.primary)
             }
-            if let dorm = candidate.dormType, !dorm.isEmpty {
-                Text("Dorm: \(dorm)")
+
+            // Housing type
+            if let housing = candidate.desiredLeaseHousingType ?? candidate.dormType,
+               !housing.isEmpty {
+                Text("Housing: \(housing)")
                     .font(AppTheme.bodyFont)
             }
-            if let budget = candidate.budgetRange, !budget.isEmpty {
-                Text("Budget: \(budget)")
+
+            // Rent (roommate mode) vs. Budget (lease / find‑together)
+            if candidate.housingStatus == PrimaryHousingPreference.lookingForRoommate.rawValue {
+                let minRent = Int(candidate.monthlyRentMin ?? 0)
+                let maxRent = Int(candidate.monthlyRentMax ?? 0)
+                Text("Rent: \(minRent)–\(maxRent) USD")
+                    .font(AppTheme.bodyFont)
+            } else {
+                let minB = Int(candidate.budgetMin ?? 0)
+                let maxB = Int(candidate.budgetMax ?? 0)
+                Text("Budget: \(minB)–\(maxB) USD")
                     .font(AppTheme.bodyFont)
             }
+
+            // Sleep schedule
             if let schedule = candidate.sleepSchedule, !schedule.isEmpty {
                 Text("Sleep: \(schedule)")
                     .font(AppTheme.bodyFont)
             }
+
+            // Compatibility score
             if let score = compatibilityScore {
                 Text("Compatibility: \(Int(score))%")
                     .font(AppTheme.subtitleFont)
@@ -210,6 +227,7 @@ extension SwipeCardView {
         .padding(.horizontal)
         .padding(.bottom, AppTheme.defaultPadding)
     }
+
     
     /// Displays overlay text (e.g., "LIKE" or "NOPE").
     private func overlayText(_ text: String, color: Color, rotation: Double, xPos: CGFloat) -> some View {
@@ -304,14 +322,18 @@ extension SwipeCardView {
 
 struct SwipeCardView_Previews: PreviewProvider {
     static var previews: some View {
-        // Preview using the full user initializer.
         SwipeCardView(user: UserModel(
             email: "test@edu",
             isEmailVerified: true,
             firstName: "Taylor",
             lastName: "Johnson",
+            // old `dormType` stays
             dormType: "On-Campus",
-            budgetRange: "$500-$1000",
+            // supply numeric rent & budget sliders
+            monthlyRentMin: 600,
+            monthlyRentMax: 900,
+            budgetMin: 400,
+            budgetMax: 1100,
             cleanliness: 4,
             sleepSchedule: "Flexible",
             smoker: false,
@@ -319,8 +341,6 @@ struct SwipeCardView_Previews: PreviewProvider {
             isVerified: true
         )) { _, _ in }
         .padding()
-        
-        // Preview using the candidateID initializer.
         SwipeCardView(candidateID: "dummyCandidateID")
             .padding()
     }

@@ -95,8 +95,11 @@ struct ProfilePreviewView: View {
             // Slide 0: Display housing type selected (from secondaryHousingType), room type, and monthly rent.
             let housing = (user.desiredLeaseHousingType ?? "").isEmpty ? "N/A" : (user.desiredLeaseHousingType ?? "N/A")
             let room = (user.roomType ?? "").isEmpty ? "N/A" : (user.roomType ?? "N/A")
-            let rent = (user.monthlyRent != nil) ? "$\(user.monthlyRent!)" : "N/A"
-            return ["Housing: \(housing)", "Room Type: \(room)", "Monthly Rent: \(rent)"]
+            let minR = user.monthlyRentMin.map { Int($0) } ?? 0
+            let maxR = user.monthlyRentMax.map { Int($0) } ?? 0
+            let rentRange = (user.monthlyRentMin != nil && user.monthlyRentMax != nil)
+                ? "\(minR)–\(maxR) USD" : "N/A"
+            return ["Housing: \(housing)", "Room Type: \(room)", "Monthly Rent: \(rentRange)"]
         case 1:
             // Slide 1: No overlay.
             return []
@@ -515,10 +518,12 @@ struct ProfilePreviewView_Previews: PreviewProvider {
             roomType: "Single",
             leaseStartDate: Date(),
             leaseDuration: "12 months",
-            monthlyRent: 950.0,
+            monthlyRentMin: 950,
+            monthlyRentMax: 950,
             specialLeaseConditions: ["No pets", "No smoking"],
             amenities: ["Pool", "Gym", "Parking", "High-Speed Internet", "Furnished"],
-            budgetRange: "$500-$1000",
+            budgetMin: 500,
+            budgetMax: 1000,
             cleanliness: 5,
             sleepSchedule: "Flexible",
             smoker: false,

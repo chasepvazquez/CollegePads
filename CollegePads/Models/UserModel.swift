@@ -6,7 +6,8 @@ struct FilterSettings: Codable {
     var dormType: String?
     var housingStatus: String?
     var collegeName: String?
-    var budgetRange: String?
+    var budgetMin: Double?      // ← new
+    var budgetMax: Double?      // ← new
     var gradeGroup: String?
     var interests: String?
     var maxDistance: Double?
@@ -57,14 +58,16 @@ struct UserModel: Codable, Identifiable {
     // 7. Lease & Pricing Details (displayed only for Looking for Roommate view)
     var leaseStartDate: Date?
     var leaseDuration: String?     // reused for lease duration details
-    var monthlyRent: Double?
+    var monthlyRentMin: Double? // ← new
+    var monthlyRentMax: Double? // ← new
     var specialLeaseConditions: [String]?
     
     // 8. Amenities Multi-Select Field
     var amenities: [String]?
     
     // 9. Additional Housing Fields
-    var budgetRange: String?
+    var budgetMin: Double?      // ← new
+    var budgetMax: Double?
     var cleanliness: Int?
     var sleepSchedule: String?
     var smoker: Bool?
@@ -138,12 +141,14 @@ struct UserModel: Codable, Identifiable {
         // 7. Lease & Pricing Details
         leaseStartDate: Date? = nil,
         leaseDuration: String? = nil,
-        monthlyRent: Double? = nil,
+        monthlyRentMin: Double? = nil,
+        monthlyRentMax: Double? = nil,
         specialLeaseConditions: [String]? = nil,
         // 8. Amenities Multi-Select Field
         amenities: [String]? = nil,
         // 9. Additional Housing Fields
-        budgetRange: String? = nil,
+        budgetMin: Double? = nil,
+        budgetMax: Double? = nil,
         cleanliness: Int? = nil,
         sleepSchedule: String? = nil,
         smoker: Bool? = nil,
@@ -215,14 +220,16 @@ struct UserModel: Codable, Identifiable {
         // Lease & Pricing Details
         self.leaseStartDate = leaseStartDate
         self.leaseDuration = leaseDuration
-        self.monthlyRent = monthlyRent
+        self.monthlyRentMin =  monthlyRentMin
+        self.monthlyRentMax = monthlyRentMax
         self.specialLeaseConditions = specialLeaseConditions
         
         // Amenities Multi-Select Field
         self.amenities = amenities
         
         // Additional Housing Fields
-        self.budgetRange = budgetRange
+        self.budgetMin = budgetMin
+        self.budgetMax = budgetMax
         self.cleanliness = cleanliness
         self.sleepSchedule = sleepSchedule
         self.smoker = smoker

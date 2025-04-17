@@ -80,7 +80,8 @@ struct MyProfileView: View {
     @State private var collegeName = ""
     @State private var collegeSearchQuery: String = ""
     @State private var filteredColleges: [String] = []
-    @State private var budgetRange = ""
+    @State private var budgetMin: Double = 0
+    @State private var budgetMax: Double = 5000
     @State private var cleanliness = 3
     @State private var sleepSchedule = "Flexible"
     @State private var smoker = false
@@ -138,7 +139,8 @@ struct MyProfileView: View {
     // MARK: - Lease & Pricing Details State (for Lease/Sublease users)
     @State private var leaseStartDate: Date = Date()
     @State private var leaseDurationText: String = ""
-    @State private var monthlyRentText: String = ""
+    @State private var rentMin: Double = 0
+    @State private var rentMax: Double = 5000
     @State private var selectedSpecialLeaseConditions: [String] = []
     private let specialLeaseConditionsOptions: [String] = [
         "Start date negotiable",
@@ -505,6 +507,7 @@ struct MyProfileView: View {
             Text("HOUSING")
                 .font(.headline)
             
+            // Primary Preference Segmented Control
             Picker("Primary Preference", selection: $primaryHousingPreference) {
                 ForEach(PrimaryHousingPreference.allCases) { pref in
                     Text(pref.rawValue).tag(Optional(pref))
@@ -516,6 +519,7 @@ struct MyProfileView: View {
                 secondaryHousingType = ""
             }
             
+            // Secondary Housing Type Menu
             if let primary = primaryHousingPreference {
                 Picker("Housing Type", selection: $secondaryHousingType) {
                     Text("Select Type").tag("")
@@ -532,20 +536,22 @@ struct MyProfileView: View {
                 .pickerStyle(MenuPickerStyle())
                 .onChange(of: secondaryHousingType) { _ in scheduleAutoSave() }
             }
-            
-            // Show budget range for both lease and "find together" modes.
-            if primaryHousingPreference == .lookingForLease || primaryHousingPreference == .lookingToFindTogether {
-                LabeledField(label: "Budget Range", text: $budgetRange)
-            } else if primaryHousingPreference == .lookingForRoommate {
-                HStack {
-                    Text("Roommates Needed: \(roommateCountNeeded)")
-                    Stepper("", value: $roommateCountNeeded, in: 0...10)
-                        .onChange(of: roommateCountNeeded) { _ in scheduleAutoSave() }
-                }
-                HStack {
-                    Text("Roommates Already: \(roommateCountExisting)")
-                    Stepper("", value: $roommateCountExisting, in: 0...10)
-                        .onChange(of: roommateCountExisting) { _ in scheduleAutoSave() }
+            // Lease & Find‑Together → Budget slider
+            if primaryHousingPreference == .lookingForLease
+                 || primaryHousingPreference == .lookingToFindTogether {
+                VStack(alignment: .leading) {
+                    Text("Budget: \(Int(budgetMin))–\(Int(budgetMax)) USD")
+                        .font(.headline)
+                    HStack {
+                        Text("Min: \(Int(budgetMin))")
+                        Slider(value: $budgetMin, in: 0...5000, step: 50)
+                            .onChange(of: budgetMin) { _ in scheduleAutoSave() }
+                    }
+                    HStack {
+                        Text("Max: \(Int(budgetMax))")
+                        Slider(value: $budgetMax, in: 0...5000, step: 50)
+                            .onChange(of: budgetMax) { _ in scheduleAutoSave() }
+                    }
                 }
             }
         }
@@ -554,7 +560,6 @@ struct MyProfileView: View {
         .cornerRadius(15)
         .shadow(radius: 5)
     }
-    
     // MARK: - Updated Property Details Section (for Roommate mode)
     private var propertyDetailsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -652,7 +657,21 @@ struct MyProfileView: View {
             DatePicker("Lease Start Date", selection: $leaseStartDate, displayedComponents: .date)
                 .datePickerStyle(CompactDatePickerStyle())
             LabeledField(label: "Lease Duration", text: $leaseDurationText)
-            LabeledField(label: "Monthly Rent (USD)", text: $monthlyRentText)
+            // Roommate → Rent slider
+                VStack(alignment: .leading) {
+                    Text("Monthly Rent: \(Int(rentMin))–\(Int(rentMax)) USD")
+                        .font(.headline)
+                    HStack {
+                        Text("Min: \(Int(rentMin))")
+                        Slider(value: $rentMin, in: 0...5000, step: 50)
+                            .onChange(of: rentMin) { _ in scheduleAutoSave() }
+                    }
+                    HStack {
+                        Text("Max: \(Int(rentMax))")
+                        Slider(value: $rentMax, in: 0...5000, step: 50)
+                            .onChange(of: rentMax) { _ in scheduleAutoSave() }
+                    }
+                }
                 .keyboardType(.decimalPad)
             Text("Special Lease Conditions")
                 .font(.subheadline)
@@ -1070,7 +1089,8 @@ struct MyProfileView: View {
         secondaryHousingType = profile.desiredLeaseHousingType ?? ""
         roommateCountNeeded = profile.roommateCountNeeded ?? 0
         roommateCountExisting = profile.roommateCountExisting ?? 0
-        budgetRange = profile.budgetRange ?? ""
+        budgetMin = profile.budgetMin ?? 0
+        budgetMax = profile.budgetMax ?? 5000
         cleanliness = profile.cleanliness ?? 3
         sleepSchedule = profile.sleepSchedule ?? "Flexible"
         smoker = profile.smoker ?? false
@@ -1100,14 +1120,10 @@ struct MyProfileView: View {
             leaseStartDate = Date()
         }
         leaseDurationText = profile.leaseDuration ?? ""
-        if let rent = profile.monthlyRent {
-            monthlyRentText = String(rent)
-        } else {
-            monthlyRentText = ""
-        }
         selectedSpecialLeaseConditions = profile.specialLeaseConditions ?? []
         roomType = profile.roomType ?? ""
-        
+        rentMin = profile.monthlyRentMin ?? 0
+        rentMax = profile.monthlyRentMax ?? 5000
         selectedPets = profile.pets ?? []
         selectedDrinking = profile.drinking ?? ""
         selectedSmoking = profile.smoking ?? ""
@@ -1144,7 +1160,8 @@ struct MyProfileView: View {
         updatedProfile.gradeLevel = selectedGradeLevel.rawValue
         updatedProfile.major = major
         updatedProfile.collegeName = collegeName
-        updatedProfile.budgetRange = budgetRange
+        updatedProfile.budgetMin = budgetMin
+        updatedProfile.budgetMax = budgetMax
         updatedProfile.cleanliness = cleanliness
         updatedProfile.sleepSchedule = sleepSchedule
         updatedProfile.smoker = smoker
@@ -1167,11 +1184,8 @@ struct MyProfileView: View {
         // ALWAYS save lease & pricing details so data persists.
         updatedProfile.leaseStartDate = leaseStartDate
         updatedProfile.leaseDuration = leaseDurationText
-        if let rent = Double(monthlyRentText) {
-            updatedProfile.monthlyRent = rent
-        } else {
-            updatedProfile.monthlyRent = nil
-        }
+        updatedProfile.monthlyRentMin = rentMin
+        updatedProfile.monthlyRentMax = rentMax
         updatedProfile.specialLeaseConditions = selectedSpecialLeaseConditions
         updatedProfile.roomType = roomType
         
@@ -1227,10 +1241,12 @@ struct MyProfileView: View {
             roomType: nil,
             leaseStartDate: nil,
             leaseDuration: nil,
-            monthlyRent: nil,
+            monthlyRentMin: nil,
+            monthlyRentMax: nil,
             specialLeaseConditions: nil,
             amenities: nil,
-            budgetRange: nil,
+            budgetMin: nil,
+            budgetMax: nil,
             cleanliness: nil,
             sleepSchedule: nil,
             smoker: nil,

@@ -239,12 +239,14 @@ class ProfileViewModel: ObservableObject {
             // 7. Lease & Pricing Details
             leaseStartDate: nil,
             leaseDuration: nil,
-            monthlyRent: nil,
+            monthlyRentMin: nil,
+            monthlyRentMax: nil,
             specialLeaseConditions: nil,
             // 8. Amenities Multi-Select Field
             amenities: nil,
             // 9. Additional Housing Fields
-            budgetRange: nil,
+            budgetMin: nil,
+            budgetMax: nil,
             cleanliness: nil,
             sleepSchedule: nil,
             smoker: nil,
