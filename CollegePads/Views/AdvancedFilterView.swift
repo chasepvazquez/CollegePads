@@ -19,8 +19,12 @@ struct AdvancedFilterView: View {
     @State private var filteredColleges: [String] = []
     
     private var alertBinding: Binding<GenericAlertError?> {
-        Binding(get: { viewModel.errorMessage.map(GenericAlertError.init) }, set: { _ in })
+      Binding(
+        get: { viewModel.errorMessage.map(GenericAlertError.init) },
+        set: { _ in viewModel.errorMessage = nil }
+      )
     }
+
     
     var body: some View {
         ZStack {
@@ -56,37 +60,6 @@ struct AdvancedFilterView: View {
                     preferredGenders: preferredGenders,
                     autoApplyAndSave: autoApplyAndSave
                 )
-                
-                if !viewModel.filteredUsers.isEmpty {
-                    Section {
-                        ForEach(viewModel.filteredUsers) { user in
-                            VStack(alignment: .leading) {
-                                Text("\(user.firstName ?? "") \(user.lastName ?? "")")
-                                    .font(AppTheme.titleFont)
-                                if let grade = user.gradeLevel {
-                                    Text("Grade: \(grade)").font(AppTheme.bodyFont)
-                                }
-                                if let housing = user.housingStatus {
-                                    Text("Housing: \(housing)").font(AppTheme.bodyFont)
-                                }
-                                if let ints = user.interests {
-                                    Text("Interests: \(ints.joined(separator: ", "))")
-                                        .font(AppTheme.bodyFont)
-                                        .foregroundColor(AppTheme.secondaryColor)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    } header: {
-                        Text("Filtered Users").font(AppTheme.subtitleFont)
-                    }
-                } else {
-                    Section {
-                        Text("No users found with current filters.")
-                            .font(AppTheme.bodyFont)
-                            .foregroundColor(.gray)
-                    }
-                }
             }
             .scrollContentBackground(.hidden)
             .background(AppTheme.backgroundGradient)
@@ -213,107 +186,131 @@ private struct FilterCriteriaSection: View {
         }
     }
     
-    private var housingSpecificFilters: some View {
-        VStack(spacing: 8) {
-            if viewModel.filterHousingPreference == .lookingForLease {
-                VStack(alignment: .leading) {
-                    Text("Monthly Rent Range").font(.headline)
-                    HStack {
-                        Text("Min: \(Int(viewModel.filterMonthlyRentMin ?? 0))")
-                        Slider(
-                            value: Binding(
-                                get: { viewModel.filterMonthlyRentMin ?? 0 },
-                                set: { viewModel.filterMonthlyRentMin = $0; autoApplyAndSave() }
-                            ),
-                            in: 0...5000, step: 50
-                        )
-                    }
-                    HStack {
-                        Text("Max: \(Int(viewModel.filterMonthlyRentMax ?? 5000))")
-                        Slider(
-                            value: Binding(
-                                get: { viewModel.filterMonthlyRentMax ?? 5000 },
-                                set: { viewModel.filterMonthlyRentMax = $0; autoApplyAndSave() }
-                            ),
-                            in: 0...5000, step: 50
-                        )
-                    }
-                }
-            }
-            // 2️⃣ Find Together → **Budget Range**
-            else if viewModel.filterHousingPreference == .lookingToFindTogether
-                 || viewModel.filterHousingPreference == .lookingForRoommate{
-                VStack(alignment: .leading) {
-                    Text("Budget Range").font(.headline)
-                    HStack {
-                        Text("Min: \(Int(viewModel.filterBudgetMin ?? 0))")
-                        Slider(
-                            value: Binding(
-                                get: { viewModel.filterBudgetMin ?? 0 },
-                                set: { viewModel.filterBudgetMin = $0; autoApplyAndSave() }
-                            ),
-                            in: 0...5000, step: 50
-                        )
-                    }
-                    HStack {
-                        Text("Max: \(Int(viewModel.filterBudgetMax ?? 5000))")
-                        Slider(
-                            value: Binding(
-                                get: { viewModel.filterBudgetMax ?? 5000 },
-                                set: { viewModel.filterBudgetMax = $0; autoApplyAndSave() }
-                            ),
-                            in: 0...5000, step: 50
-                        )
-                    }
-                }
-            }
-            if localFilterMode == .university {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("College")
-                        .foregroundColor(.secondary)
-                    TextField("Search College", text: $viewModel.filterCollegeName)
-                        .padding(8)
-                        .background(AppTheme.cardBackground)
-                        .cornerRadius(8)
-                        .onChange(of: viewModel.filterCollegeName) { newValue in
-                            let q = newValue.trimmingCharacters(in: .whitespaces)
-                            if q.isEmpty {
-                                filteredColleges = []
-                            } else {
-                                filteredColleges = UniversityDataProvider
-                                                    .shared
-                                                    .searchUniversities(query: q)
-                            }
-                            autoApplyAndSave()
-                        }
-                    if !filteredColleges.isEmpty {
-                        ScrollView(.vertical) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                ForEach(filteredColleges, id: \.self) { college in
-                                    Text(college)
-                                        .padding(8)
-                                        .onTapGesture {
-                                            collegeSearchQuery = college
-                                            viewModel.filterCollegeName = college
-                                            filteredColleges = []
-                                            autoApplyAndSave()
-                                        }
-                                    onTapGesture {
-                                        viewModel.filterCollegeName = college
-                                        filteredColleges = []
+    // MARK: — Housing & College/Distance
+        private var housingSpecificFilters: some View {
+            VStack(spacing: 16) {
+                // 1️⃣ Lease sliders
+                if viewModel.filterHousingPreference == .lookingForLease {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Monthly Rent Range").font(.headline)
+                        HStack {
+                            Text("Min: \(Int(viewModel.filterMonthlyRentMin ?? 0))")
+                            Slider(
+                                value: Binding(
+                                    get: { viewModel.filterMonthlyRentMin ?? 0 },
+                                    set: {
+                                        viewModel.filterMonthlyRentMin = $0
                                         autoApplyAndSave()
-                                     }
+                                    }
+                                ),
+                                in: 0...5000, step: 50
+                            )
+                        }
+                        HStack {
+                            Text("Max: \(Int(viewModel.filterMonthlyRentMax ?? 5000))")
+                            Slider(
+                                value: Binding(
+                                    get: { viewModel.filterMonthlyRentMax ?? 5000 },
+                                    set: {
+                                        viewModel.filterMonthlyRentMax = $0
+                                        autoApplyAndSave()
+                                    }
+                                ),
+                                in: 0...5000, step: 50
+                            )
+                        }
+                    }
+                }
+                // 2️⃣ Find‑Together budget sliders
+                else if viewModel.filterHousingPreference == .lookingToFindTogether
+                     || viewModel.filterHousingPreference == .lookingForRoommate {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Budget Range").font(.headline)
+                        HStack {
+                            Text("Min: \(Int(viewModel.filterBudgetMin ?? 0))")
+                            Slider(
+                                value: Binding(
+                                    get: { viewModel.filterBudgetMin ?? 0 },
+                                    set: {
+                                        viewModel.filterBudgetMin = $0
+                                        autoApplyAndSave()
+                                    }
+                                ),
+                                in: 0...5000, step: 50
+                            )
+                        }
+                        HStack {
+                            Text("Max: \(Int(viewModel.filterBudgetMax ?? 5000))")
+                            Slider(
+                                value: Binding(
+                                    get: { viewModel.filterBudgetMax ?? 5000 },
+                                    set: {
+                                        viewModel.filterBudgetMax = $0
+                                        autoApplyAndSave()
+                                    }
+                                ),
+                                in: 0...5000, step: 50
+                            )
+                        }
+                    }
+                }
+                // 3️⃣ By College search
+                if localFilterMode == .university {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("College").font(.headline)
+                        TextField("Search College", text: $collegeSearchQuery)
+                            .disableAutocorrection(true)
+                            .textInputAutocapitalization(.never)
+                            .padding(8)
+                            .background(AppTheme.cardBackground)
+                            .cornerRadius(8)
+                            .onChange(of: collegeSearchQuery) { q in
+                                let trimmed = q.trimmingCharacters(in: .whitespaces)
+                                filteredColleges = trimmed.isEmpty
+                                    ? []
+                                    : UniversityDataProvider.shared.searchUniversities(query: trimmed)
+                            }
+                        if !filteredColleges.isEmpty {
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    ForEach(filteredColleges, id: \.self) { college in
+                                        Text(college)
+                                            .padding(8)
+                                            .onTapGesture {
+                                                collegeSearchQuery = college
+                                                viewModel.filterCollegeName = college
+                                                filteredColleges = []
+                                                autoApplyAndSave()
+                                            }
+                                    }
                                 }
                             }
+                            .frame(maxHeight: 150)
+                            .background(AppTheme.cardBackground.opacity(0.8))
+                            .cornerRadius(8)
                         }
-                        .frame(maxHeight: 150)
-                        .background(AppTheme.cardBackground.opacity(0.8))
-                        .cornerRadius(8)
+                    }
+                }
+                // 4️⃣ By Distance slider
+                if localFilterMode == .distance {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Max Distance: \(Int(viewModel.maxDistance)) km")
+                            .font(.headline)
+                        Slider(
+                            value: Binding(
+                                get: { viewModel.maxDistance },
+                                set: {
+                                    viewModel.maxDistance = $0
+                                    autoApplyAndSave()
+                                }
+                            ),
+                            in: 0...100,
+                            step: 1
+                        )
                     }
                 }
             }
         }
-    }
     
     private var genderAndAge: some View {
         VStack(spacing: 8) {

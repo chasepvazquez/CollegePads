@@ -62,19 +62,15 @@ class AdvancedFilterViewModel: ObservableObject {
     func applyFilters(currentLocation: CLLocation?) {
         db.collection("users")
             .snapshotPublisher()
-            .tryMap { snapshot in
-                // Decode each document, throwing on failure.
-                try snapshot.documents.map { doc in
-                    try doc.data(as: UserModel.self)
+            //  ⇩ here we silently skip any document that fails to decode
+            .map { snapshot in
+                snapshot.documents.compactMap { doc in
+                    try? doc.data(as: UserModel.self)
                 }
             }
             .map { [weak self] all in
                 guard let self = self else { return [] }
-                // If no filters active, return everyone:
-                if self.activeFilterCount == 0 {
-                    return all
-                }
-                // Otherwise, only those matching at least one:
+                if self.activeFilterCount == 0 { return all }
                 return all.filter { self.matchesAnyFilter(user: $0, location: currentLocation) }
             }
             .receive(on: DispatchQueue.main)
