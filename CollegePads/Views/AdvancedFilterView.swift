@@ -189,70 +189,69 @@ private struct FilterCriteriaSection: View {
     // MARK: — Housing & College/Distance
         private var housingSpecificFilters: some View {
             VStack(spacing: 16) {
-                // 1️⃣ Lease sliders
-                if viewModel.filterHousingPreference == .lookingForLease {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Monthly Rent Range").font(.headline)
-                        HStack {
-                            Text("Min: \(Int(viewModel.filterMonthlyRentMin ?? 0))")
-                            Slider(
-                                value: Binding(
-                                    get: { viewModel.filterMonthlyRentMin ?? 0 },
-                                    set: {
-                                        viewModel.filterMonthlyRentMin = $0
-                                        autoApplyAndSave()
-                                    }
-                                ),
-                                in: 0...5000, step: 50
-                            )
-                        }
-                        HStack {
-                            Text("Max: \(Int(viewModel.filterMonthlyRentMax ?? 5000))")
-                            Slider(
-                                value: Binding(
-                                    get: { viewModel.filterMonthlyRentMax ?? 5000 },
-                                    set: {
-                                        viewModel.filterMonthlyRentMax = $0
-                                        autoApplyAndSave()
-                                    }
-                                ),
-                                in: 0...5000, step: 50
-                            )
-                        }
+                if viewModel.filterHousingPreference == .lookingForRoommate {
+                  VStack(alignment: .leading, spacing: 8) {
+                    Text("Monthly Rent Range").font(.headline)
+                    HStack {
+                      Text("Min: \(Int(viewModel.filterMonthlyRentMin ?? 0))")
+                      Slider(
+                        value: Binding(
+                          get: { viewModel.filterMonthlyRentMin ?? 0 },
+                          set: {
+                            viewModel.filterMonthlyRentMin = $0
+                            autoApplyAndSave()
+                          }
+                        ),
+                        in: 0...5000, step: 50
+                      )
                     }
+                    HStack {
+                      Text("Max: \(Int(viewModel.filterMonthlyRentMax ?? 5000))")
+                      Slider(
+                        value: Binding(
+                          get: { viewModel.filterMonthlyRentMax ?? 5000 },
+                          set: {
+                            viewModel.filterMonthlyRentMax = $0
+                            autoApplyAndSave()
+                          }
+                        ),
+                        in: 0...5000, step: 50
+                      )
+                    }
+                  }
                 }
-                // 2️⃣ Find‑Together budget sliders
+                // 2️⃣ Lease & Find‑Together → Budget sliders
                 else if viewModel.filterHousingPreference == .lookingToFindTogether
-                     || viewModel.filterHousingPreference == .lookingForRoommate {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Budget Range").font(.headline)
-                        HStack {
-                            Text("Min: \(Int(viewModel.filterBudgetMin ?? 0))")
-                            Slider(
-                                value: Binding(
-                                    get: { viewModel.filterBudgetMin ?? 0 },
-                                    set: {
-                                        viewModel.filterBudgetMin = $0
-                                        autoApplyAndSave()
-                                    }
-                                ),
-                                in: 0...5000, step: 50
-                            )
-                        }
-                        HStack {
-                            Text("Max: \(Int(viewModel.filterBudgetMax ?? 5000))")
-                            Slider(
-                                value: Binding(
-                                    get: { viewModel.filterBudgetMax ?? 5000 },
-                                    set: {
-                                        viewModel.filterBudgetMax = $0
-                                        autoApplyAndSave()
-                                    }
-                                ),
-                                in: 0...5000, step: 50
-                            )
-                        }
+                     || viewModel.filterHousingPreference == .lookingForLease {
+                  VStack(alignment: .leading, spacing: 8) {
+                    Text("Budget Range").font(.headline)
+                    HStack {
+                      Text("Min: \(Int(viewModel.filterBudgetMin ?? 0))")
+                      Slider(
+                        value: Binding(
+                          get: { viewModel.filterBudgetMin ?? 0 },
+                          set: {
+                            viewModel.filterBudgetMin = $0
+                            autoApplyAndSave()
+                          }
+                        ),
+                        in: 0...5000, step: 50
+                      )
                     }
+                    HStack {
+                      Text("Max: \(Int(viewModel.filterBudgetMax ?? 5000))")
+                      Slider(
+                        value: Binding(
+                          get: { viewModel.filterBudgetMax ?? 5000 },
+                          set: {
+                            viewModel.filterBudgetMax = $0
+                            autoApplyAndSave()
+                          }
+                        ),
+                        in: 0...5000, step: 50
+                      )
+                    }
+                  }
                 }
                 // 3️⃣ By College search
                 if localFilterMode == .university {

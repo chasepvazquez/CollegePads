@@ -1,24 +1,75 @@
 import SwiftUI
 import CoreLocation
 
-/// A deck of swipeable user cards with rewind and super-like buttons.
 struct SwipeDeckView: View {
     @StateObject private var viewModel = MatchingViewModel()
     @State private var currentIndex: Int = 0
     @State private var showFilter: Bool = false
-    
+
+    // 🔹 Replace Bool with a three‑way enum
+    private enum DeckFilter: String, CaseIterable, Identifiable {
+        case personal  = "Personal"
+        case lease     = "Lease"
+        case together  = "Together"
+        var id: String { rawValue }
+    }
+    @State private var deckFilter: DeckFilter = .personal
+
+    // Only show the toggle if *you* are looking for Lease *or* Find‑Together
+    private let myStatus = ProfileViewModel.shared.userProfile?.housingStatus
+
     var body: some View {
         ZStack {
             AppTheme.backgroundGradient.ignoresSafeArea()
-            
-            if viewModel.potentialMatches.isEmpty {
+
+            // ● Three‑way toggle
+            if myStatus == PrimaryHousingPreference.lookingForLease.rawValue
+               || myStatus == PrimaryHousingPreference.lookingToFindTogether.rawValue
+            {
+                VStack {
+                    Picker("", selection: $deckFilter) {
+                        ForEach(DeckFilter.allCases) { f in
+                            Text(f.rawValue).tag(f)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    Spacer()
+                }
+            }
+
+            // ● Decide which subset to show
+            let matches: [UserModel] = {
+                switch deckFilter {
+                case .personal:
+                    // Everything your SmartMatchingEngine already returned
+                    return viewModel.potentialMatches
+
+                case .lease:
+                    // Only show people looking for roommates
+                    return viewModel.potentialMatches.filter {
+                        $0.housingStatus == PrimaryHousingPreference.lookingForRoommate.rawValue
+                    }
+
+                case .together:
+                    // Only show people in the “find together” pool
+                    return viewModel.potentialMatches.filter {
+                        let s = $0.housingStatus ?? ""
+                        return s == PrimaryHousingPreference.lookingToFindTogether.rawValue
+                            || s == PrimaryHousingPreference.lookingForLease.rawValue
+                    }
+                }
+            }()
+
+            if matches.isEmpty {
                 Text("No more potential matches")
                     .font(AppTheme.titleFont)
                     .foregroundColor(.secondary)
             } else {
-                ForEach(viewModel.potentialMatches.indices.reversed(), id: \.self) { index in
+                ForEach(matches.indices.reversed(), id: \.self) { index in
                     if index >= currentIndex {
-                        let candidate = viewModel.potentialMatches[index]
+                        let candidate = matches[index]
                         SwipeCardView(user: candidate) { swipedUser, direction in
                             handleSwipe(user: swipedUser, direction: direction)
                         }
@@ -33,16 +84,13 @@ struct SwipeDeckView: View {
                     }
                 }
             }
-            
+
             bottomControls
-            
-            // Filter Icon Button overlay
+
             VStack {
                 HStack {
                     Spacer()
-                    Button(action: {
-                        showFilter = true
-                    }) {
+                    Button(action: { showFilter = true }) {
                         Image(systemName: "line.horizontal.3.decrease.circle")
                             .font(.system(size: 24))
                             .padding()
@@ -51,9 +99,7 @@ struct SwipeDeckView: View {
                 Spacer()
             }
         }
-        .onAppear {
-            viewModel.fetchPotentialMatches()
-        }
+        .onAppear { viewModel.fetchPotentialMatches() }
         .sheet(isPresented: $showFilter) {
             AdvancedFilterView()
         }

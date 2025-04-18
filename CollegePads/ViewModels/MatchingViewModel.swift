@@ -40,22 +40,19 @@ class MatchingViewModel: ObservableObject {
             }
             if let documents = snapshot?.documents {
                 var users = documents.compactMap { try? $0.data(as: UserModel.self) }
-                // Remove the current user.
-                users.removeAll { $0.id == currentUID }
-                // Remove blocked users.
-                if let current = self.currentUser, let blocked = current.blockedUserIDs {
-                    users.removeAll { blocked.contains($0.id ?? "") }
+                // Remove current & blocked…
+                guard let me = self.currentUser else {
+                  DispatchQueue.main.async { self.potentialMatches = users }
+                  return
                 }
-                // Sort using SmartMatchingEngine (dummy average rating used here)
-                let sortedUsers = users.sorted { userA, userB in
-                    let scoreA = SmartMatchingEngine.calculateSmartMatchScore(between: self.currentUser ?? userA, and: userA, averageRating: 3.0)
-                    let scoreB = SmartMatchingEngine.calculateSmartMatchScore(between: self.currentUser ?? userB, and: userB, averageRating: 3.0)
-                    return scoreA > scoreB
-                }
+                // → NEW: use SmartMatchingEngine.generateSortedMatches
+                let sorted = SmartMatchingEngine.generateSortedMatches(
+                               from: users,
+                               currentUser: me)
                 DispatchQueue.main.async {
-                    self.potentialMatches = sortedUsers
+                  self.potentialMatches = sorted
                 }
-            }
+              }
         }
     }
     

@@ -3,18 +3,30 @@ import FirebaseFirestore
 import FirebaseFirestoreCombineSwift
 
 struct FilterSettings: Codable {
-    var dormType: String?
-    var housingStatus: String?
-    var collegeName: String?
-    var budgetMin: Double?      // ← new
-    var budgetMax: Double?      // ← new
-    var gradeGroup: String?
-    var interests: String?
-    var maxDistance: Double?
-    var preferredGender: String?
-    var maxAgeDifference: Double?
-    var mode: String?   // "university" or "distance"
+  var dormType: String?
+  var housingStatus: String?
+  var collegeName: String?
+  var budgetMin: Double?
+  var budgetMax: Double?
+  var rentMin: Double?
+  var rentMax: Double?
+  var gradeGroup: String?
+  var interests: String?
+  var maxDistance: Double?
+  var preferredGender: String?
+  var maxAgeDifference: Double?
+  var roomType: String?
+  var amenities: [String]?
+  var cleanliness: Int?
+  var sleepSchedule: String?
+  var petFriendly: Bool?
+  var smoker: Bool?
+  var drinker: Bool?
+  var marijuana: Bool?
+  var workout: Bool?
+  var mode: String?
 }
+
 
 struct UserModel: Codable, Identifiable {
     @DocumentID var id: String?

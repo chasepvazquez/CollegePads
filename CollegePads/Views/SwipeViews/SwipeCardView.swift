@@ -1,9 +1,6 @@
 import SwiftUI
 import FirebaseFirestore
 
-/// A unified swipeable card view that supports two initialization modes:
-/// 1. When full candidate data (UserModel) is available.
-/// 2. When only a candidateID is provided (the view then loads candidate data from Firestore).
 struct SwipeCardView: View {
     // Internal storage: either a fully provided candidate or loaded from candidateID.
     private let initialUser: UserModel?
@@ -18,6 +15,10 @@ struct SwipeCardView: View {
     @State private var showLikeOverlay: Bool = false
     @State private var showNopeOverlay: Bool = false
     @State private var isFavorite: Bool = false
+
+    // 🔹 singletons for Firestore & favorites
+    private let db = Firestore.firestore()
+    private let favoriteService = FavoriteService()
     
     // Pull the current user from a shared view model if needed.
     var currentUser: UserModel? {
@@ -31,10 +32,8 @@ struct SwipeCardView: View {
     
     // Example compatibility score.
     var compatibilityScore: Double? {
-        if let current = currentUser, let candidate = user {
-            return CompatibilityCalculator.calculateUserCompatibility(between: current, and: candidate)
-        }
-        return nil
+      guard let me = currentUser, let them = user else { return nil }
+      return SmartMatchingEngine.calculateSmartMatchScore(between: me, and: them)
     }
     
     // MARK: - Initializers
@@ -57,6 +56,7 @@ struct SwipeCardView: View {
             AppTheme.backgroundGradient
                 .cornerRadius(AppTheme.defaultCornerRadius)
                 .shadow(radius: 5)
+            
             if let candidate = user {
                 // Determine if the candidate’s preview should be forced into lease mode.
                 let currentUserStatus = ProfileViewModel.shared.userProfile?.housingStatus
@@ -78,43 +78,47 @@ struct SwipeCardView: View {
                 overlayText("NOPE", color: AppTheme.nopeColor, rotation: 15, xPos: 300)
             }
         }
-        .frame(height: 450)
+        // 🔹 make card fill the available space (Tinder‑style)
+        .aspectRatio(3/4, contentMode: .fit)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .offset(x: offset.width, y: offset.height)
         .rotationEffect(Angle(degrees: rotation))
         .gesture(dragGesture)
-        .onAppear {
-            if initialUser == nil, let candidateID = candidateID {
-                loadCandidate(candidateID: candidateID)
-            } else if let candidate = user {
-                FavoriteService().isFavorite(candidate: candidate) { fav in
-                    self.isFavorite = fav
-                }
-            }
-        }
+        // 🔹 consolidated appearance logic
+        .onAppear(perform: loadData)
         .animation(.easeInOut, value: offset)
     }
 }
 
 // MARK: - Subviews & Helpers
 extension SwipeCardView {
+    /// 1) Entry point for either “check favorite” or “load from Firestore”
+    private func loadData() {
+        if let candidate = user {
+            favoriteService.isFavorite(candidate: candidate) { fav in
+                isFavorite = fav
+            }
+        }
+        else if let id = candidateID {
+            loadCandidate(id)
+        }
+    }
     
-    /// Loads candidate details from Firestore using the candidateID.
-    private func loadCandidate(candidateID: String) {
-        let db = Firestore.firestore()
-        db.collection("users").document(candidateID).getDocument { snapshot, error in
-            if let error = error {
-                print("SwipeCardView: Error loading candidate: \(error.localizedDescription)")
-            } else if let snapshot = snapshot, snapshot.exists {
-                do {
-                    let candidate = try snapshot.data(as: UserModel.self)
-                    DispatchQueue.main.async {
-                        self.loadedUser = candidate
-                        FavoriteService().isFavorite(candidate: candidate) { fav in
-                            self.isFavorite = fav
-                        }
-                    }
-                } catch {
-                    print("SwipeCardView: Decoding error: \(error.localizedDescription)")
+    /// 2) Loads candidate details from Firestore using the candidateID.
+    private func loadCandidate(_ id: String) {
+        db.collection("users").document(id).getDocument { snap, err in
+            if let err = err {
+                print("SwipeCardView load error:", err.localizedDescription)
+                return
+            }
+            guard let doc = snap, doc.exists,
+                  let candidate = try? doc.data(as: UserModel.self)
+            else { return }
+
+            DispatchQueue.main.async {
+                self.loadedUser = candidate
+                self.favoriteService.isFavorite(candidate: candidate) { fav in
+                    self.isFavorite = fav
                 }
             }
         }
@@ -141,6 +145,7 @@ extension SwipeCardView {
             }
         }
     }
+    
     
     /// Returns a circular placeholder view showing candidate initials.
     private func placeholderImage(for candidate: UserModel) -> some View {
@@ -219,9 +224,11 @@ extension SwipeCardView {
 
             // Compatibility score
             if let score = compatibilityScore {
-                Text("Compatibility: \(Int(score))%")
-                    .font(AppTheme.subtitleFont)
-                    .foregroundColor(score > 70 ? AppTheme.likeColor : AppTheme.accentColor)
+              Text("Compatibility: \(Int(score))%")
+                .font(AppTheme.subtitleFont)
+                .foregroundColor(score > 70
+                   ? AppTheme.likeColor
+                   : AppTheme.accentColor)
             }
         }
         .padding(.horizontal)

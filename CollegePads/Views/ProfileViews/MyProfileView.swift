@@ -4,6 +4,23 @@ import FirebaseAuth
 import MapKit
 import FirebaseFirestore
 
+// MARK: — Section styling modifier
+struct SectionContainer: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding()
+            .background(AppTheme.cardBackground.opacity(0.8))
+            .cornerRadius(15)
+            .shadow(radius: 5)
+    }
+}
+extension View {
+    /// Apply the standard “card” look
+    func sectionStyle() -> some View {
+        modifier(SectionContainer())
+    }
+}
+
 // MARK: - Missing Enum Definitions
 enum PrimaryHousingPreference: String, CaseIterable, Identifiable {
     case lookingToFindTogether = "Looking to Find Together"
@@ -87,7 +104,6 @@ struct MyProfileView: View {
     @State private var smoker = false
     @State private var petFriendly = false
     @State private var interestsText = ""
-    // (Old housing multi-select removed)
 
     // New state variables for roommate count inputs
     @State private var roommateCountNeeded: Int = 0
@@ -105,35 +121,13 @@ struct MyProfileView: View {
     // MARK: - Amenities State (New Multi-Select)
     @State private var selectedAmenities: [String] = []
     private let propertyAmenitiesOptions = [
-        "In-Unit Laundry",
-        "On-Site Laundry",
-        "Air Conditioning",
-        "Heating",
-        "Furnished",
-        "Unfurnished",
-        "High-Speed Internet",
-        "Utilities Included",
-        "Pet Friendly",
-        "Parking Available",
-        "Garage Parking",
-        "Balcony / Patio",
-        "Private Bathroom",
-        "Shared Bathroom",
-        "Gym / Fitness Center",
-        "Common Area / Lounge",
-        "Pool Access",
-        "Rooftop Access",
-        "Bike Storage",
-        "Dishwasher",
-        "Microwave",
-        "Elevator Access",
-        "Wheelchair Accessible",
-        "24/7 Security",
-        "Gated Community",
-        "Study Rooms",
-        "Game Room",
-        "Smoke-Free",
-        "Quiet Hours Enforced"
+        "In-Unit Laundry", "On-Site Laundry", "Air Conditioning", "Heating",
+        "Furnished", "Unfurnished", "High-Speed Internet", "Utilities Included",
+        "Pet Friendly", "Parking Available", "Garage Parking", "Balcony / Patio",
+        "Private Bathroom", "Shared Bathroom", "Gym / Fitness Center", "Common Area / Lounge",
+        "Pool Access", "Rooftop Access", "Bike Storage", "Dishwasher", "Microwave",
+        "Elevator Access", "Wheelchair Accessible", "24/7 Security", "Gated Community",
+        "Study Rooms", "Game Room", "Smoke-Free", "Quiet Hours Enforced"
     ]
     
     // MARK: - Lease & Pricing Details State (for Lease/Sublease users)
@@ -143,38 +137,20 @@ struct MyProfileView: View {
     @State private var rentMax: Double = 5000
     @State private var selectedSpecialLeaseConditions: [String] = []
     private let specialLeaseConditionsOptions: [String] = [
-        "Start date negotiable",
-        "Early move-in available",
-        "Late move-out allowed",
-        "Rent negotiable",
-        "First month free",
-        "Utilities included",
-        "Partial months prorated",
-        "Furnished room",
-        "Unfurnished but furniture available for purchase",
-        "Room includes mattress/desk/chair",
-        "Must be approved by landlord",
-        "Temporary sublease only",
-        "Must sign roommate agreement",
-        "Deposit required",
-        "No deposit required",
-        "Split rent with roommate",
-        "Venmo/Zelle accepted",
-        "Pet allowed (with conditions)",
-        "No smoking",
-        "Must be okay with overnight guests",
-        "Cleanliness expectations",
-        "Quiet hours after 10 PM",
-        "No parties",
-        "Gated entry",
-        "Keycard access only",
-        "Limited guest parking"
+        "Start date negotiable", "Early move-in available", "Late move-out allowed",
+        "Rent negotiable", "First month free", "Utilities included", "Partial months prorated",
+        "Furnished room", "Unfurnished but furniture available for purchase", "Room includes mattress/desk/chair",
+        "Must be approved by landlord", "Temporary sublease only", "Must sign roommate agreement",
+        "Deposit required", "No deposit required", "Split rent with roommate", "Venmo/Zelle accepted",
+        "Pet allowed (with conditions)", "No smoking", "Must be okay with overnight guests",
+        "Cleanliness expectations", "Quiet hours after 10 PM", "No parties", "Gated entry",
+        "Keycard access only", "Limited guest parking"
     ]
     
     // MARK: - Room Type State
     @State private var roomType: String = ""
     
-    // MARK: - Lifestyle State (Added Cleanliness header here)
+    // MARK: - Lifestyle State
     @State private var selectedPets: [String] = []
     @State private var selectedDrinking: String = ""
     @State private var selectedSmoking: String = ""
@@ -191,38 +167,18 @@ struct MyProfileView: View {
     
 
     // MARK: - Options
-    private let petOptions = [
-        "Dog", "Cat", "Reptile", "Amphibian", "Bird", "Fish",
-        "Don't have but love others", "Turtle", "Hamster", "Rabbit",
-        "Pet-free", "Want a pet", "Allergic to pets"
-    ]
-    private let drinkingOptions = [
-        "Not for me", "Sober", "Sober curious",
-        "On special occasions", "Socially on weekends", "Most nights"
-    ]
-    private let smokingOptions = [
-        "Non-smoker", "Smoker", "Smoker when drinking", "Trying to quit"
-    ]
-    private let cannabisOptions = [
-        "Yes", "Occasionally", "Socially", "Never"
-    ]
-    private let workoutOptions = [
-        "Everyday", "Often", "Sometimes", "Never"
-    ]
-    private let dietaryOptions = [
-        "Vegan", "Vegetarian", "Pescatarian", "Kosher", "Halal",
-        "Carnivore", "Omnivore", "Other"
-    ]
-    private let socialMediaOptions = [
-        "Influencer status", "Socially active", "Off the grid", "Passive scroller"
-    ]
-    private let sleepingHabitsOptions = [
-        "Early bird", "Night owl", "In a spectrum"
-    ]
-    
+    private let petOptions = ["Dog","Cat","Reptile","Amphibian","Bird","Fish","Don't have but love others","Turtle","Hamster","Rabbit","Pet-free","Want a pet","Allergic to pets"]
+    private let drinkingOptions = ["Not for me","Sober","Sober curious","On special occasions","Socially on weekends","Most nights"]
+    private let smokingOptions = ["Non-smoker","Smoker","Smoker when drinking","Trying to quit"]
+    private let cannabisOptions = ["Yes","Occasionally","Socially","Never"]
+    private let workoutOptions = ["Everyday","Often","Sometimes","Never"]
+    private let dietaryOptions = ["Vegan","Vegetarian","Pescatarian","Kosher","Halal","Carnivore","Omnivore","Other"]
+    private let socialMediaOptions = ["Influencer status","Socially active","Off the grid","Passive scroller"]
+    private let sleepingHabitsOptions = ["Early bird","Night owl","In a spectrum"]
+
     // New desired lease housing type options
-    private let leaseTypeForLease = ["Dorm", "Apartment", "House"]
-    private let leaseTypeForRoommate = ["Dorm", "Apartment", "House", "Subleasing"]
+    private let leaseTypeForLease = ["Dorm","Apartment","House"]
+    private let leaseTypeForRoommate = ["Dorm","Apartment","House","Subleasing"]
     
     // MARK: - Height Options
     private let heightOptions: [String] = {
@@ -238,153 +194,126 @@ struct MyProfileView: View {
     
     // MARK: - College Search
     @State private var validColleges: [String] = []
-    let sleepScheduleOptions = ["Early Bird", "Night Owl", "Flexible"]
+    let sleepScheduleOptions = ["Early Bird","Night Owl","Flexible"]
     
     // MARK: - Cleanliness Descriptions
-    private let cleanlinessDescriptions: [Int: String] = [
-        1: "Very Messy",
-        2: "Messy",
-        3: "Average",
-        4: "Tidy",
-        5: "Very Tidy"
+    private let cleanlinessDescriptions: [Int:String] = [
+        1:"Very Messy",2:"Messy",3:"Average",4:"Tidy",5:"Very Tidy"
     ]
     
     // MARK: - Auto-Save Debouncer
     @State private var autoSaveWorkItem: DispatchWorkItem?
-    
+
     // MARK: - Enumerations
     enum GradeLevel: String, CaseIterable, Identifiable {
-        case freshman = "Freshman"
-        case sophomore = "Sophomore"
-        case junior = "Junior"
-        case senior = "Senior"
-        case graduate = "Graduate"
-        case phd = "PhD"
-        case other = "Other"
+        case freshman="Freshman", sophomore="Sophomore", junior="Junior",
+             senior="Senior", graduate="Graduate", phd="PhD", other="Other"
         var id: String { self.rawValue }
     }
     enum LeaseDuration: String, CaseIterable, Identifiable {
-        case current = "Current Lease"
-        case shortTerm = "Short Term (<6 months)"
-        case mediumTerm = "6-12 months"
-        case longTerm = "1 year+"
-        case futureNextYear = "Future: Next Year"
-        case futureTwoPlus = "Future: 2+ Years"
-        case notApplicable = "Not Applicable"
+        case current="Current Lease", shortTerm="Short Term (<6 months)",
+             mediumTerm="6-12 months", longTerm="1 year+", futureNextYear="Future: Next Year",
+             futureTwoPlus="Future: 2+ Years", notApplicable="Not Applicable"
         var id: String { self.rawValue }
     }
     
-    // Updated: Lease & Pricing Details are now always saved (persistent) regardless of preview mode.
+    // Updated: Lease & Pricing Details are always saved
     private var isLeaseOrSublease: Bool {
-        return primaryHousingPreference == .lookingForRoommate
+        primaryHousingPreference == .lookingForRoommate
     }
     
     // MARK: - Body
     var body: some View {
-         ZStack {
-             AppTheme.backgroundGradient.ignoresSafeArea()
-             VStack(spacing: 0) {
-                 headerSection
-                 if isPreviewMode {
-                     if let profile = viewModel.userProfile {
-                         ProfilePreviewView(user: profile)
-                             .transition(.opacity)
-                     } else {
-                         Text("Loading preview...")
-                             .font(AppTheme.bodyFont)
-                             .foregroundColor(.primary)
-                             .padding()
-                     }
-                 } else {
-                     ScrollView(showsIndicators: false) {
-                         VStack(spacing: 24) {
-                             if let profile = viewModel.userProfile {
-                                 ProfileCompletionView(completion: ProfileCompletionCalculator.calculateCompletion(for: profile))
-                             }
-                             MediaGridView(
-                                 imageUrls: viewModel.userProfile?.profileImageUrls ?? [],
-                                 onTapAddOrEdit: { index in
-                                     tappedImageIndex = index
-                                     newProfileImage = nil
-                                     isPickerActive = true
-                                     showingPhotoPicker = true
-                                 },
-                                 onRemoveImage: { index in
-                                     removeImage(at: index)
-                                 }
-                             )
-                             aboutMeSection
-                             basicsSection
-                             academicsSection
-                             // Moved Property Details Section so that it is placed below Housing.
-                             // Layout the editable sections based on the selected housing preference.
-                             if let pref = primaryHousingPreference {
-                                 if pref == .lookingForLease {
-                                     housingSection
-                                     roomTypeSection
-                                     amenitiesSection
-                                 } else if pref == .lookingForRoommate {
-                                     housingSection
-                                     propertyDetailsSection
-                                     roomTypeSection
-                                     leasePricingSection
-                                     amenitiesSection
-                                 } else if pref == .lookingToFindTogether {
-                                     housingSection
-                                     // Do not show roomTypeSection and amenitiesSection in "Looking to Find Together" mode.
-                                 }
-                             } else {
-                                 housingSection
-                             }
-                             lifestyleSection
-                             CombinedQuizzesSection(
-                                 goingOutQuizAnswers: $goingOutQuizAnswers,
-                                 weekendQuizAnswers: $weekendQuizAnswers,
-                                 phoneQuizAnswers: $phoneQuizAnswers,
-                                 onQuizComplete: { scheduleAutoSave() }
-                             )
-                             interestsSection
-                         }
-                         .padding(.horizontal)
-                         .padding(.bottom, 30)
-                     }
-                 }
-             }
-         }
-         .onAppear {
-             viewModel.loadUserProfile { profile in
-                 if let profile = profile {
-                     populateLocalFields(from: profile)
-                 } else {
-                     // Add a log message to help diagnose why no profile is loaded.
-                     print("[MyProfileView] Warning: No user profile loaded; check if the document exists in Firestore.")
-                     // Optionally trigger your onboarding flow here if desired.
-                 }
-             }
-             UniversityDataProvider.shared.loadUniversities { colleges in
-                 self.validColleges = colleges
-                 print("[MyProfileView] Loaded \(colleges.count) colleges from UniversityDataProvider.")
-             }
-         }
-         .sheet(isPresented: $showingPhotoPicker) {
-             CustomImagePicker(image: $newProfileImage)
-         }
-         .sheet(isPresented: $showingPropertyMediaPicker) {
-             CustomImagePicker(image: $newPropertyMediaImage)
-         }
-         .onChange(of: newProfileImage) { image in
-             if image != nil {
-                 handlePhotoSelected()
-             }
-         }
-         .onChange(of: newPropertyMediaImage) { image in
-             if image != nil {
-                 handlePropertyMediaSelected()
-             }
-         }
-     }
-    
+        ZStack {
+            AppTheme.backgroundGradient.ignoresSafeArea()
+            VStack(spacing: 0) {
+                headerSection
+                if isPreviewMode {
+                    if let profile = viewModel.userProfile {
+                        ProfilePreviewView(user: profile)
+                            .transition(.opacity)
+                    } else {
+                        Text("Loading preview...")
+                            .font(AppTheme.bodyFont)
+                            .foregroundColor(.primary)
+                            .padding()
+                    }
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 24) {
+                            if let profile = viewModel.userProfile {
+                                ProfileCompletionView(completion:
+                                    ProfileCompletionCalculator.calculateCompletion(for: profile))
+                            }
+                            MediaGridView(
+                                imageUrls: viewModel.userProfile?.profileImageUrls ?? [],
+                                onTapAddOrEdit: { index in
+                                    tappedImageIndex = index
+                                    newProfileImage = nil
+                                    isPickerActive = true
+                                    showingPhotoPicker = true
+                                },
+                                onRemoveImage: { index in removeImage(at: index) }
+                            )
+                            aboutMeSection
+                            basicsSection
+                            academicsSection
+                            if let pref = primaryHousingPreference {
+                                if pref == .lookingForLease {
+                                    housingSection
+                                    roomTypeSection
+                                    amenitiesSection
+                                } else if pref == .lookingForRoommate {
+                                    housingSection
+                                    propertyDetailsSection
+                                    roomTypeSection
+                                    leasePricingSection
+                                    amenitiesSection
+                                } else if pref == .lookingToFindTogether {
+                                    housingSection
+                                }
+                            } else {
+                                housingSection
+                            }
+                            lifestyleSection
+                            CombinedQuizzesSection(
+                                goingOutQuizAnswers: $goingOutQuizAnswers,
+                                weekendQuizAnswers: $weekendQuizAnswers,
+                                phoneQuizAnswers: $phoneQuizAnswers,
+                                onQuizComplete: { scheduleAutoSave() }
+                            )
+                            interestsSection
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 30)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            viewModel.loadUserProfile { profile in
+                if let p = profile { populateLocalFields(from: p) }
+                else {
+                    print("[MyProfileView] Warning: No user profile loaded.")
+                }
+            }
+            UniversityDataProvider.shared.loadUniversities { colleges in
+                validColleges = colleges
+                print("[MyProfileView] Loaded \(colleges.count) colleges.")
+            }
+        }
+        .sheet(isPresented: $showingPhotoPicker) {
+            CustomImagePicker(image: $newProfileImage)
+        }
+        .sheet(isPresented: $showingPropertyMediaPicker) {
+            CustomImagePicker(image: $newPropertyMediaImage)
+        }
+        .onChange(of: newProfileImage) { image in if image != nil { handlePhotoSelected() } }
+        .onChange(of: newPropertyMediaImage) { image in if image != nil { handlePropertyMediaSelected() } }
+    }
+
     // MARK: - Subviews
+
     private var headerSection: some View {
         VStack(spacing: 8) {
             HStack {
@@ -399,16 +328,15 @@ struct MyProfileView: View {
                 Text("Edit").tag(false)
                 Text("Preview").tag(true)
             }
-            .pickerStyle(SegmentedPickerStyle())
+            .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.bottom, 8)
         }
     }
-    
+
     private var aboutMeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("ABOUT ME")
-                .font(.headline)
+            Text("ABOUT ME").font(.headline)
             TextEditor(text: $aboutMe)
                 .scrollContentBackground(.hidden)
                 .background(AppTheme.cardBackground)
@@ -417,16 +345,12 @@ struct MyProfileView: View {
                 .padding(6)
                 .onChange(of: aboutMe) { _ in scheduleAutoSave() }
         }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .sectionStyle()
     }
-    
+
     private var basicsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("BASICS")
-                .font(.headline)
+            Text("BASICS").font(.headline)
             Group {
                 LabeledField(label: "First Name", text: $firstName)
                 LabeledField(label: "Last Name", text: $lastName)
@@ -436,38 +360,29 @@ struct MyProfileView: View {
                     Text("Female").tag("Female")
                     Text("Other").tag("Other")
                 }
-                .pickerStyle(SegmentedPickerStyle())
+                .pickerStyle(.segmented)
                 .onChange(of: gender) { _ in scheduleAutoSave() }
                 Picker("Height", selection: $selectedHeight) {
                     Text("Select Height").tag("")
-                    ForEach(heightOptions, id: \.self) { h in
-                        Text(h).tag(h)
-                    }
+                    ForEach(heightOptions, id: \.self) { h in Text(h).tag(h) }
                 }
                 .pickerStyle(.menu)
                 .onChange(of: selectedHeight) { _ in scheduleAutoSave() }
             }
         }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .sectionStyle()
     }
-    
+
     private var academicsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("ACADEMICS")
-                .font(.headline)
+            Text("ACADEMICS").font(.headline)
             Picker("Grade Level", selection: $selectedGradeLevel) {
-                ForEach(GradeLevel.allCases) { level in
-                    Text(level.rawValue).tag(level)
-                }
+                ForEach(GradeLevel.allCases) { level in Text(level.rawValue).tag(level) }
             }
             .onChange(of: selectedGradeLevel) { _ in scheduleAutoSave() }
             LabeledField(label: "Major", text: $major)
             VStack(alignment: .leading, spacing: 4) {
-                Text("College")
-                    .foregroundColor(.secondary)
+                Text("College").foregroundColor(.secondary)
                 TextField("Search College", text: $collegeSearchQuery)
                     .padding(8)
                     .background(AppTheme.cardBackground)
@@ -496,51 +411,40 @@ struct MyProfileView: View {
                 }
             }
         }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .sectionStyle()
     }
-    
+
     private var housingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("HOUSING")
-                .font(.headline)
-            
-            // Primary Preference Segmented Control
+            Text("HOUSING").font(.headline)
             Picker("Primary Preference", selection: $primaryHousingPreference) {
                 ForEach(PrimaryHousingPreference.allCases) { pref in
                     Text(pref.rawValue).tag(Optional(pref))
                 }
             }
-            .pickerStyle(SegmentedPickerStyle())
+            .pickerStyle(.segmented)
             .onChange(of: primaryHousingPreference) { _ in
                 scheduleAutoSave()
                 secondaryHousingType = ""
             }
-            
-            // Secondary Housing Type Menu
+
             if let primary = primaryHousingPreference {
                 Picker("Housing Type", selection: $secondaryHousingType) {
                     Text("Select Type").tag("")
                     if primary == .lookingForLease || primary == .lookingToFindTogether {
-                        ForEach(leaseTypeForLease, id: \.self) { type in
-                            Text(type).tag(type)
-                        }
+                        ForEach(leaseTypeForLease, id: \.self) { type in Text(type).tag(type) }
                     } else {
-                        ForEach(leaseTypeForRoommate, id: \.self) { type in
-                            Text(type).tag(type)
-                        }
+                        ForEach(leaseTypeForRoommate, id: \.self) { type in Text(type).tag(type) }
                     }
                 }
-                .pickerStyle(MenuPickerStyle())
+                .pickerStyle(.menu)
                 .onChange(of: secondaryHousingType) { _ in scheduleAutoSave() }
             }
-            // Lease & Find‑Together → Budget slider
+
             if primaryHousingPreference == .lookingForLease
-                 || primaryHousingPreference == .lookingToFindTogether {
+                || primaryHousingPreference == .lookingToFindTogether {
                 VStack(alignment: .leading) {
-                    Text("Budget: \(Int(budgetMin))–\(Int(budgetMax)) USD")
+                    Text("Budget: \(Int(budgetMin))–\(Int(budgetMax)) USD")
                         .font(.headline)
                     HStack {
                         Text("Min: \(Int(budgetMin))")
@@ -555,16 +459,12 @@ struct MyProfileView: View {
                 }
             }
         }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .sectionStyle()
     }
-    // MARK: - Updated Property Details Section (for Roommate mode)
+
     private var propertyDetailsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("PROPERTY DETAILS")
-                .font(.headline)
+            Text("PROPERTY DETAILS").font(.headline)
             TextEditor(text: $propertyDetails)
                 .scrollContentBackground(.hidden)
                 .background(AppTheme.cardBackground)
@@ -572,10 +472,9 @@ struct MyProfileView: View {
                 .frame(minHeight: 100)
                 .padding(6)
                 .onChange(of: propertyDetails) { _ in scheduleAutoSave() }
-            // NEW: Property Address Entry with autofill suggestions (inside property details)
+
             VStack(alignment: .leading, spacing: 4) {
-                Text("Property Address")
-                    .foregroundColor(.secondary)
+                Text("Property Address").foregroundColor(.secondary)
                 TextField("Enter property address", text: $propertyAddress)
                     .padding(8)
                     .background(AppTheme.cardBackground)
@@ -592,10 +491,9 @@ struct MyProfileView: View {
                                     let fullAddress = suggestion.title + " " + suggestion.subtitle
                                     propertyAddress = fullAddress
                                     addressLocationService.suggestions = []
-                                    // Geocode the selected address and update the coordinate state.
                                     addressLocationService.getCoordinate(for: fullAddress) { coordinate in
                                         DispatchQueue.main.async {
-                                            self.propertyCoordinate = coordinate
+                                            propertyCoordinate = coordinate
                                             scheduleAutoSave()
                                         }
                                     }
@@ -612,8 +510,8 @@ struct MyProfileView: View {
                     .cornerRadius(8)
                 }
             }
-            Text("Property & Floorplan Images")
-                .font(.subheadline)
+
+            Text("Property & Floorplan Images").font(.subheadline)
             SinglePropertyMediaGridView(
                 imageUrls: $propertyImageUrls,
                 onAddMedia: {
@@ -621,192 +519,145 @@ struct MyProfileView: View {
                     newPropertyMediaImage = nil
                     showingPropertyMediaPicker = true
                 },
-                onRemoveMedia: { index in
-                    removePropertyMedia(at: index)
-                }
+                onRemoveMedia: { index in removePropertyMedia(at: index) }
             )
         }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .sectionStyle()
     }
-    
+
     private var roomTypeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("ROOM TYPE")
-                .font(.headline)
+            Text("ROOM TYPE").font(.headline)
             Picker("Room Type", selection: $roomType) {
                 Text("Private Room").tag("Private Room")
                 Text("Shared Room").tag("Shared Room")
                 Text("Studio").tag("Studio")
             }
-            .pickerStyle(SegmentedPickerStyle())
+            .pickerStyle(.segmented)
             .onChange(of: roomType) { _ in scheduleAutoSave() }
         }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .sectionStyle()
     }
-    
+
     private var leasePricingSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("LEASE & PRICING DETAILS")
-                .font(.headline)
+            Text("LEASE & PRICING DETAILS").font(.headline)
             DatePicker("Lease Start Date", selection: $leaseStartDate, displayedComponents: .date)
-                .datePickerStyle(CompactDatePickerStyle())
+                .datePickerStyle(.compact)
             LabeledField(label: "Lease Duration", text: $leaseDurationText)
-            // Roommate → Rent slider
-                VStack(alignment: .leading) {
-                    Text("Monthly Rent: \(Int(rentMin))–\(Int(rentMax)) USD")
-                        .font(.headline)
-                    HStack {
-                        Text("Min: \(Int(rentMin))")
-                        Slider(value: $rentMin, in: 0...5000, step: 50)
-                            .onChange(of: rentMin) { _ in scheduleAutoSave() }
-                    }
-                    HStack {
-                        Text("Max: \(Int(rentMax))")
-                        Slider(value: $rentMax, in: 0...5000, step: 50)
-                            .onChange(of: rentMax) { _ in scheduleAutoSave() }
-                    }
+            VStack(alignment: .leading) {
+                Text("Monthly Rent: \(Int(rentMin))–\(Int(rentMax)) USD")
+                    .font(.headline)
+                HStack {
+                    Text("Min: \(Int(rentMin))")
+                    Slider(value: $rentMin, in: 0...5000, step: 50)
+                        .onChange(of: rentMin) { _ in scheduleAutoSave() }
                 }
-                .keyboardType(.decimalPad)
-            Text("Special Lease Conditions")
-                .font(.subheadline)
+                HStack {
+                    Text("Max: \(Int(rentMax))")
+                    Slider(value: $rentMax, in: 0...5000, step: 50)
+                        .onChange(of: rentMax) { _ in scheduleAutoSave() }
+                }
+            }
+            .keyboardType(.decimalPad)
+            Text("Special Lease Conditions").font(.subheadline)
             MultiSelectChipView(
                 options: specialLeaseConditionsOptions,
                 selectedItems: $selectedSpecialLeaseConditions,
                 onSelectionChanged: { scheduleAutoSave() }
             )
         }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .sectionStyle()
     }
-    
+
     private var amenitiesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("AMENITIES")
-                .font(.headline)
+            Text("AMENITIES").font(.headline)
             MultiSelectChipView(
                 options: propertyAmenitiesOptions,
                 selectedItems: $selectedAmenities,
                 onSelectionChanged: { scheduleAutoSave() }
             )
         }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .sectionStyle()
     }
-    
+
     private var lifestyleSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("LIFESTYLE")
-                .font(.headline)
-                .padding(.bottom, 4)
+            Text("LIFESTYLE").font(.headline).padding(.bottom, 4)
             VStack(alignment: .leading, spacing: 4) {
-                Text("Cleanliness")
-                    .font(AppTheme.bodyFont)
+                Text("Cleanliness").font(AppTheme.bodyFont)
                 Picker("Cleanliness", selection: $cleanliness) {
                     ForEach(1..<6) { number in
-                        let desc = cleanlinessDescriptions[number] ?? ""
-                        Text("\(number) - \(desc)").tag(number)
+                        Text("\(number) - \(cleanlinessDescriptions[number] ?? "")").tag(number)
                     }
                 }
                 .pickerStyle(.menu)
                 .onChange(of: cleanliness) { _ in scheduleAutoSave() }
             }
-            Text("Do you have any pets?")
-                .font(AppTheme.bodyFont)
+            Text("Do you have any pets?").font(AppTheme.bodyFont)
             MultiSelectChipView(
                 options: petOptions,
                 selectedItems: $selectedPets,
                 onSelectionChanged: { scheduleAutoSave() }
             )
             .padding(.bottom, 8)
-            Text("How often do you drink?")
-                .font(AppTheme.bodyFont)
+            Text("How often do you drink?").font(AppTheme.bodyFont)
             Picker("Drinking", selection: $selectedDrinking) {
-                ForEach(drinkingOptions, id: \.self) { option in
-                    Text(option).tag(option)
-                }
+                ForEach(drinkingOptions, id: \.self) { Text($0).tag($0) }
             }
             .pickerStyle(.menu)
             .onChange(of: selectedDrinking) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
-            Text("How often do you smoke?")
-                .font(AppTheme.bodyFont)
+            Text("How often do you smoke?").font(AppTheme.bodyFont)
             Picker("Smoking", selection: $selectedSmoking) {
-                ForEach(smokingOptions, id: \.self) { option in
-                    Text(option).tag(option)
-                }
+                ForEach(smokingOptions, id: \.self) { Text($0).tag($0) }
             }
             .pickerStyle(.menu)
             .onChange(of: selectedSmoking) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
-            Text("Are you 420 friendly?")
-                .font(AppTheme.bodyFont)
+            Text("Are you 420 friendly?").font(AppTheme.bodyFont)
             Picker("Cannabis", selection: $selectedCannabis) {
-                ForEach(cannabisOptions, id: \.self) { option in
-                    Text(option).tag(option)
-                }
+                ForEach(cannabisOptions, id: \.self) { Text($0).tag($0) }
             }
             .pickerStyle(.menu)
             .onChange(of: selectedCannabis) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
-            Text("Do you workout?")
-                .font(AppTheme.bodyFont)
+            Text("Do you workout?").font(AppTheme.bodyFont)
             Picker("Workout", selection: $selectedWorkout) {
-                ForEach(workoutOptions, id: \.self) { option in
-                    Text(option).tag(option)
-                }
+                ForEach(workoutOptions, id: \.self) { Text($0).tag($0) }
             }
             .pickerStyle(.menu)
             .onChange(of: selectedWorkout) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
-            Text("What are your dietary preferences?")
-                .font(AppTheme.bodyFont)
+            Text("What are your dietary preferences?").font(AppTheme.bodyFont)
             MultiSelectChipView(
                 options: dietaryOptions,
                 selectedItems: $selectedDietaryPreferences,
                 onSelectionChanged: { scheduleAutoSave() }
             )
             .padding(.bottom, 8)
-            Text("How active are you on social media?")
-                .font(AppTheme.bodyFont)
+            Text("How active are you on social media?").font(AppTheme.bodyFont)
             Picker("Social Media", selection: $selectedSocialMedia) {
-                ForEach(socialMediaOptions, id: \.self) { option in
-                    Text(option).tag(option)
-                }
+                ForEach(socialMediaOptions, id: \.self) { Text($0).tag($0) }
             }
             .pickerStyle(.menu)
             .onChange(of: selectedSocialMedia) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
-            Text("What are your sleeping habits?")
-                .font(AppTheme.bodyFont)
+            Text("What are your sleeping habits?").font(AppTheme.bodyFont)
             Picker("Sleeping Habits", selection: $selectedSleepingHabits) {
-                ForEach(sleepingHabitsOptions, id: \.self) { option in
-                    Text(option).tag(option)
-                }
+                ForEach(sleepingHabitsOptions, id: \.self) { Text($0).tag($0) }
             }
             .pickerStyle(.menu)
             .onChange(of: selectedSleepingHabits) { _ in scheduleAutoSave() }
             .padding(.bottom, 8)
         }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .sectionStyle()
     }
-    
+
     private var interestsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("INTERESTS")
-                .font(.headline)
+            Text("INTERESTS").font(.headline)
             TextField("Interests (comma-separated)", text: $interestsText)
                 .autocapitalization(.none)
                 .padding(AppTheme.defaultPadding)
@@ -814,18 +665,13 @@ struct MyProfileView: View {
                 .cornerRadius(AppTheme.defaultCornerRadius)
                 .onChange(of: interestsText) { _ in scheduleAutoSave() }
         }
-        .padding()
-        .background(AppTheme.cardBackground.opacity(0.8))
-        .cornerRadius(15)
-        .shadow(radius: 5)
+        .sectionStyle()
     }
-    
+
     @ViewBuilder
     func LabeledField(label: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            Text(label).font(.subheadline).foregroundColor(.secondary)
             TextField(label, text: text)
                 .padding(AppTheme.defaultPadding)
                 .background(AppTheme.cardBackground)
@@ -833,7 +679,7 @@ struct MyProfileView: View {
                 .onChange(of: text.wrappedValue) { _ in scheduleAutoSave() }
         }
     }
-    
+
     struct ProfileCompletionView: View {
         let completion: Double
         var body: some View {
@@ -850,7 +696,7 @@ struct MyProfileView: View {
             .shadow(radius: 5)
         }
     }
-    
+
     struct MediaGridView: View {
         let imageUrls: [String]
         let onTapAddOrEdit: (Int) -> Void
@@ -866,8 +712,7 @@ struct MyProfileView: View {
                             AsyncImage(url: url) { phase in
                                 switch phase {
                                 case .empty:
-                                    ProgressView()
-                                        .frame(width: 100, height: 100)
+                                    ProgressView().frame(width: 100, height: 100)
                                 case .success(let image):
                                     image.resizable()
                                         .scaledToFill()
@@ -885,7 +730,6 @@ struct MyProfileView: View {
                                 }
                             }
                             .onTapGesture { onTapAddOrEdit(index) }
-                            
                             Button(action: { onRemoveImage(index) }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.white)
@@ -912,8 +756,7 @@ struct MyProfileView: View {
             .padding(.horizontal, 8)
         }
     }
-    
-    // New Unified SinglePropertyMediaGridView
+
     struct SinglePropertyMediaGridView: View {
         @Binding var imageUrls: [String]
         let onAddMedia: () -> Void
@@ -929,8 +772,7 @@ struct MyProfileView: View {
                             AsyncImage(url: url) { phase in
                                 switch phase {
                                 case .empty:
-                                    ProgressView()
-                                        .frame(width: 100, height: 100)
+                                    ProgressView().frame(width: 100, height: 100)
                                 case .success(let image):
                                     image.resizable()
                                         .scaledToFill()
@@ -962,7 +804,6 @@ struct MyProfileView: View {
                                 }
                             )
                             .onTapGesture { onAddMedia() }
-                            
                             Button(action: { onRemoveMedia(index) }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.white)
@@ -1000,10 +841,10 @@ struct MyProfileView: View {
             .padding(.horizontal, 8)
         }
     }
-    
+
     private func handlePhotoSelected() {
         guard let newImg = newProfileImage,
-              var updatedProfile = viewModel.userProfile, // do not fallback to defaultUserProfile()
+              var updatedProfile = viewModel.userProfile,
               let index = tappedImageIndex else {
             print("[MyProfileView] Error: userProfile is nil while handling photo selection.")
             return
@@ -1012,11 +853,8 @@ struct MyProfileView: View {
             switch result {
             case .success(let downloadURL):
                 var urls = updatedProfile.profileImageUrls ?? []
-                if index < urls.count {
-                    urls[index] = downloadURL
-                } else {
-                    urls.append(downloadURL)
-                }
+                if index < urls.count { urls[index] = downloadURL }
+                else { urls.append(downloadURL) }
                 updatedProfile.profileImageUrls = Array(urls.prefix(9))
                 updatedProfile.profileImageUrl = updatedProfile.profileImageUrls?.first
                 viewModel.updateUserProfile(updatedProfile: updatedProfile) { _ in }
@@ -1030,7 +868,7 @@ struct MyProfileView: View {
             }
         }
     }
-    
+
     private func handlePropertyMediaSelected() {
         guard let newImg = newPropertyMediaImage,
               var updatedProfile = viewModel.userProfile else {
@@ -1044,9 +882,7 @@ struct MyProfileView: View {
                 var arr = updatedProfile.propertyImageUrls ?? []
                 arr.append(downloadURL)
                 updatedProfile.propertyImageUrls = arr
-                DispatchQueue.main.async {
-                    propertyImageUrls = arr
-                }
+                DispatchQueue.main.async { propertyImageUrls = arr }
                 viewModel.updateUserProfile(updatedProfile: updatedProfile) { _ in }
             case .failure(let error):
                 print("[MyProfileView] Error uploading property media: \(error.localizedDescription)")
@@ -1058,7 +894,6 @@ struct MyProfileView: View {
         }
     }
 
-    
     private func removeImage(at index: Int) {
         guard var profile = viewModel.userProfile,
               var urls = profile.profileImageUrls, index < urls.count else { return }
@@ -1067,7 +902,7 @@ struct MyProfileView: View {
         profile.profileImageUrl = urls.first
         viewModel.updateUserProfile(updatedProfile: profile) { _ in }
     }
-    
+
     private func removePropertyMedia(at index: Int) {
         guard var profile = viewModel.userProfile,
               var urls = profile.propertyImageUrls, index < urls.count else { return }
@@ -1075,7 +910,7 @@ struct MyProfileView: View {
         profile.propertyImageUrls = urls
         viewModel.updateUserProfile(updatedProfile: profile) { _ in }
     }
-    
+
     private func populateLocalFields(from profile: UserModel) {
         aboutMe = profile.aboutMe ?? ""
         firstName = profile.firstName ?? ""
@@ -1098,7 +933,8 @@ struct MyProfileView: View {
         interestsText = (profile.interests ?? []).joined(separator: ", ")
         selectedGradeLevel = GradeLevel(rawValue: profile.gradeLevel ?? "") ?? .freshman
         
-        if let primary = profile.housingStatus, let pref = PrimaryHousingPreference(rawValue: primary) {
+        if let primary = profile.housingStatus,
+           let pref = PrimaryHousingPreference(rawValue: primary) {
             primaryHousingPreference = pref
         } else {
             primaryHousingPreference = nil
@@ -1107,18 +943,14 @@ struct MyProfileView: View {
         propertyDetails = profile.propertyDetails ?? ""
         propertyImageUrls = profile.propertyImageUrls ?? []
         propertyAddress = profile.propertyAddress ?? ""
-            if let loc = profile.location {
-                propertyCoordinate = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
-            } else {
-                propertyCoordinate = nil
-            }
+        if let loc = profile.location {
+            propertyCoordinate = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
+        } else {
+            propertyCoordinate = nil
+        }
         selectedAmenities = profile.amenities ?? []
         
-        if let startDate = profile.leaseStartDate {
-            leaseStartDate = startDate
-        } else {
-            leaseStartDate = Date()
-        }
+        leaseStartDate = profile.leaseStartDate ?? Date()
         leaseDurationText = profile.leaseDuration ?? ""
         selectedSpecialLeaseConditions = profile.specialLeaseConditions ?? []
         roomType = profile.roomType ?? ""
@@ -1137,16 +969,15 @@ struct MyProfileView: View {
         weekendQuizAnswers = profile.weekendQuizAnswers ?? []
         phoneQuizAnswers = profile.phoneQuizAnswers ?? []
     }
-    
+
     private func scheduleAutoSave() {
         autoSaveWorkItem?.cancel()
         autoSaveWorkItem = DispatchWorkItem { autoSaveProfile() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: autoSaveWorkItem!)
     }
-    
+
     private func autoSaveProfile() {
         guard !isPickerActive, var updatedProfile = viewModel.userProfile else { return }
-        
         let interestsArray = interestsText
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -1177,11 +1008,12 @@ struct MyProfileView: View {
         updatedProfile.propertyDetails = propertyDetails
         updatedProfile.propertyImageUrls = propertyImageUrls
         updatedProfile.propertyAddress = propertyAddress
-        updatedProfile.location = propertyCoordinate != nil ? GeoPoint(latitude: propertyCoordinate!.latitude, longitude: propertyCoordinate!.longitude) : nil
+        updatedProfile.location = propertyCoordinate != nil
+            ? GeoPoint(latitude: propertyCoordinate!.latitude, longitude: propertyCoordinate!.longitude)
+            : nil
         
         updatedProfile.amenities = selectedAmenities
         
-        // ALWAYS save lease & pricing details so data persists.
         updatedProfile.leaseStartDate = leaseStartDate
         updatedProfile.leaseDuration = leaseDurationText
         updatedProfile.monthlyRentMin = rentMin
@@ -1204,75 +1036,10 @@ struct MyProfileView: View {
         
         let originalCreatedAt = updatedProfile.createdAt
         viewModel.updateUserProfile(updatedProfile: updatedProfile) { result in
-            switch result {
-            case .success:
+            if case .success = result {
                 updatedProfile.createdAt = originalCreatedAt
-            case .failure:
-                break
             }
         }
-    }
-    
-    private func defaultUserProfile() -> UserModel {
-        UserModel(
-            email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
-            isEmailVerified: false,
-            createdAt: nil,
-            aboutMe: nil,
-            firstName: nil,
-            lastName: nil,
-            dateOfBirth: nil,
-            gender: nil,
-            height: nil,
-            gradeLevel: nil,
-            major: nil,
-            collegeName: nil,
-            housingStatus: nil,
-            dormType: nil,
-            preferredDorm: nil,
-            desiredLeaseHousingType: nil,
-            roommateCountNeeded: 0,
-            roommateCountExisting: 0,
-            propertyDetails: nil,
-            propertyAddress: nil, // NEW: default property address is nil
-            propertyImageUrls: nil,
-            floorplanUrls: nil,
-            documentUrls: nil,
-            roomType: nil,
-            leaseStartDate: nil,
-            leaseDuration: nil,
-            monthlyRentMin: nil,
-            monthlyRentMax: nil,
-            specialLeaseConditions: nil,
-            amenities: nil,
-            budgetMin: nil,
-            budgetMax: nil,
-            cleanliness: nil,
-            sleepSchedule: nil,
-            smoker: nil,
-            petFriendly: nil,
-            livingStyle: nil,
-            socialLevel: nil,
-            studyHabits: nil,
-            interests: nil,
-            profileImageUrl: nil,
-            profileImageUrls: nil,
-            location: nil,
-            isVerified: false,
-            blockedUserIDs: nil,
-            filterSettings: nil,
-            pets: nil,
-            drinking: nil,
-            smoking: nil,
-            cannabis: nil,
-            workout: nil,
-            dietaryPreferences: nil,
-            socialMedia: nil,
-            sleepingHabits: nil,
-            goingOutQuizAnswers: nil,
-            weekendQuizAnswers: nil,
-            phoneQuizAnswers: nil
-        )
     }
 }
 
@@ -1284,7 +1051,10 @@ struct MultiSelectChipView: View {
     var maxSelection: Int? = nil
 
     var body: some View {
-        FlowLayout(options, selectedItems: $selectedItems, onSelectionChanged: onSelectionChanged, maxSelection: maxSelection)
+        FlowLayout(options,
+                   selectedItems: $selectedItems,
+                   onSelectionChanged: onSelectionChanged,
+                   maxSelection: maxSelection)
             .padding(6)
             .background(Color.clear)
     }
@@ -1310,9 +1080,7 @@ struct FlowLayout: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
-            self.content(in: geo)
-        }
+        GeometryReader { geo in content(in: geo) }
         .frame(minHeight: totalHeight)
     }
 
@@ -1331,18 +1099,13 @@ struct FlowLayout: View {
             currentRow.items.append(text)
             widthAccumulator += chipSize.width
         }
-        if !currentRow.items.isEmpty {
-            rows.append(currentRow)
-        }
-        DispatchQueue.main.async {
-            self.totalHeight = CGFloat(rows.count) * 40
-        }
+        if !currentRow.items.isEmpty { rows.append(currentRow) }
+        DispatchQueue.main.async { totalHeight = CGFloat(rows.count) * 40 }
+
         return VStack(alignment: .leading, spacing: 8) {
             ForEach(rows.indices, id: \.self) { rowIndex in
                 HStack(spacing: 8) {
-                    ForEach(rows[rowIndex].items, id: \.self) { item in
-                        chipView(item)
-                    }
+                    ForEach(rows[rowIndex].items, id: \.self) { item in chipView(item) }
                 }
             }
         }
@@ -1504,7 +1267,7 @@ struct CombinedQuizzesSection: View {
                 quizTitle: "Going Out Quiz",
                 quizQuestions: goingOutQuizQuestions,
                 onComplete: { answers in
-                    self.goingOutQuizAnswers = answers
+                    goingOutQuizAnswers = answers
                     showingGoingOutQuiz = false
                     onQuizComplete()
                 }
@@ -1515,7 +1278,7 @@ struct CombinedQuizzesSection: View {
                 quizTitle: "Weekends Quiz",
                 quizQuestions: weekendsQuizQuestions,
                 onComplete: { answers in
-                    self.weekendQuizAnswers = answers
+                    weekendQuizAnswers = answers
                     showingWeekendsQuiz = false
                     onQuizComplete()
                 }
@@ -1526,7 +1289,7 @@ struct CombinedQuizzesSection: View {
                 quizTitle: "+ My Phone Quiz",
                 quizQuestions: myPhoneQuizQuestions,
                 onComplete: { answers in
-                    self.phoneQuizAnswers = answers
+                    phoneQuizAnswers = answers
                     showingMyPhoneQuiz = false
                     onQuizComplete()
                 }
@@ -1561,9 +1324,7 @@ struct QuizView: View {
                         Button(action: {
                             selectedAnswers.append(option)
                             if currentQuestionIndex < quizQuestions.count - 1 {
-                                withAnimation {
-                                    currentQuestionIndex += 1
-                                }
+                                withAnimation { currentQuestionIndex += 1 }
                             } else {
                                 onComplete(selectedAnswers)
                             }

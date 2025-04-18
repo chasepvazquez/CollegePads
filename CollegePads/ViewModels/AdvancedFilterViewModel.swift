@@ -33,11 +33,11 @@ class AdvancedFilterViewModel: ObservableObject {
     @Published var filterPreferredGender: String = ""
     @Published var maxAgeDifference: Double = 0.0
     @Published var filterMode: FilterMode = .university
-
+    
     // MARK: — Published Results & Errors
     @Published var filteredUsers: [UserModel] = []
     @Published var errorMessage: String?
-
+    
     // MARK: — Static Options (used by AdvancedFilterView)
     let propertyAmenitiesOptions = [
         "In-Unit Laundry", "On-Site Laundry", "Air Conditioning", "Heating",
@@ -51,42 +51,87 @@ class AdvancedFilterViewModel: ObservableObject {
     let cleanlinessDescriptions = [
         1: "Very Messy", 2: "Messy", 3: "Average", 4: "Tidy", 5: "Very Tidy"
     ]
-
+    
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
-
+    
     // MARK: — Public API
-
     /// Fetches *all* users, applies the active filters locally,
-    /// and publishes the result (or sets `errorMessage` on failure).
-    func applyFilters(currentLocation: CLLocation?) {
-        db.collection("users")
-            .snapshotPublisher()
-            //  ⇩ here we silently skip any document that fails to decode
-            .map { snapshot in
-                snapshot.documents.compactMap { doc in
-                    try? doc.data(as: UserModel.self)
-                }
+        /// and publishes the result (or sets `errorMessage` on failure).
+        func applyFilters(currentLocation: CLLocation?) {
+            // 1) grab the current user
+            guard let me = ProfileViewModel.shared.userProfile else {
+                self.errorMessage = "No current profile"
+                return
             }
-            .map { [weak self] all in
-                guard let self = self else { return [] }
-                if self.activeFilterCount == 0 { return all }
-                return all.filter { self.matchesAnyFilter(user: $0, location: currentLocation) }
-            }
-            .receive(on: DispatchQueue.main)
-            .sink(
-                receiveCompletion: { [weak self] completion in
-                    if case let .failure(err) = completion {
-                        self?.errorMessage = err.localizedDescription
-                    }
-                },
-                receiveValue: { [weak self] users in
-                    self?.filteredUsers = users
-                }
+            
+            // 2) assemble FilterSettings from all your @Published props
+            let fs = FilterSettings(
+                dormType:          nil,
+                housingStatus:     filterHousingPreference?.rawValue,
+                collegeName:       filterCollegeName.isEmpty ? nil : filterCollegeName,
+                budgetMin:         (filterHousingPreference == .lookingToFindTogether ||
+                                    filterHousingPreference == .lookingForLease)
+                                        ? filterBudgetMin
+                                        : nil,
+                budgetMax:         (filterHousingPreference == .lookingToFindTogether ||
+                                    filterHousingPreference == .lookingForLease)
+                                        ? filterBudgetMax
+                                        : nil,
+                rentMin:           filterHousingPreference == .lookingForRoommate
+                                        ? filterMonthlyRentMin
+                                        : nil,
+                rentMax:           filterHousingPreference == .lookingForRoommate
+                                        ? filterMonthlyRentMax
+                                        : nil,
+                gradeGroup:        filterGradeGroup.isEmpty ? nil : filterGradeGroup,
+                interests:         filterInterests.isEmpty   ? nil : filterInterests,
+                maxDistance:       filterMode == .distance   ? maxDistance : nil,
+                preferredGender:   filterPreferredGender.isEmpty
+                                        ? nil : filterPreferredGender,
+                maxAgeDifference:  maxAgeDifference,
+                roomType:          filterRoomType.isEmpty ? nil : filterRoomType,
+                amenities:         filterAmenities.isEmpty ? nil : filterAmenities,
+                cleanliness:       filterCleanliness,
+                sleepSchedule:     filterSleepSchedule.isEmpty
+                                        ? nil : filterSleepSchedule,
+                petFriendly:       filterPetFriendly,
+                smoker:            filterSmoker,
+                drinker:           filterDrinker,
+                marijuana:         filterMarijuana,
+                workout:           filterWorkout,
+                mode:              filterMode.rawValue
             )
-            .store(in: &cancellables)
-    }
-
+            
+            // 3) fetch & score
+            db.collection("users")
+                .snapshotPublisher()
+                .map { snapshot in
+                    snapshot.documents.compactMap { try? $0.data(as: UserModel.self) }
+                }
+                .map { allUsers in
+                    SmartMatchingEngine.generateSortedMatches(
+                        from: allUsers,
+                        currentUser: me,
+                        using: fs
+                    )
+                }
+                .receive(on: DispatchQueue.main)
+                .sink(
+                    receiveCompletion: { [weak self] completion in
+                        if case let .failure(err) = completion {
+                            self?.errorMessage = err.localizedDescription
+                        }
+                    },
+                    receiveValue: { [weak self] users in
+                        self?.filteredUsers = users
+                    }
+                )
+                .store(in: &cancellables)
+        }
+        
+    
+    
     /// Loads saved filters from Firestore into this view model.
     /// Calls the optional completion on the main thread when done (or on error).
     func loadFiltersFromUserDoc(completion: @escaping () -> Void = {}) {
@@ -108,184 +153,92 @@ class AdvancedFilterViewModel: ObservableObject {
                 }
             }
     }
-
+    
     /// Persists the current filters back to Firestore under the user's document.
     func saveFiltersToUserDoc() {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            self.errorMessage = "Not signed in"
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        // Build a single FilterSettings struct, applying your mode‑specific logic
+        let fs = FilterSettings(
+            dormType:       nil,
+            housingStatus:  filterHousingPreference?.rawValue,
+            collegeName:    filterCollegeName.isEmpty ? nil : filterCollegeName,
+            
+            // only supply budgetMin/budgetMax if in FTogether or Lease modes
+            budgetMin:      (filterHousingPreference == .lookingToFindTogether ||
+                             filterHousingPreference == .lookingForLease)
+            ? filterBudgetMin : nil,
+            budgetMax:      (filterHousingPreference == .lookingToFindTogether ||
+                             filterHousingPreference == .lookingForLease)
+            ? filterBudgetMax : nil,
+            
+            // only supply rentMin/rentMax if in Roommate mode
+            rentMin:        filterHousingPreference == .lookingForRoommate
+            ? filterMonthlyRentMin : nil,
+            rentMax:        filterHousingPreference == .lookingForRoommate
+            ? filterMonthlyRentMax : nil,
+            
+            gradeGroup:     filterGradeGroup.isEmpty ? nil : filterGradeGroup,
+            interests:      filterInterests.isEmpty   ? nil : filterInterests,
+            maxDistance:    filterMode == .distance   ? maxDistance : nil,
+            preferredGender: filterPreferredGender.isEmpty ? nil : filterPreferredGender,
+            maxAgeDifference: maxAgeDifference,
+            
+            // the rest of your flags
+            roomType:       filterRoomType.isEmpty ? nil : filterRoomType,
+            amenities:      filterAmenities.isEmpty ? nil : filterAmenities,
+            cleanliness:    filterCleanliness,
+            sleepSchedule:  filterSleepSchedule.isEmpty ? nil : filterSleepSchedule,
+            petFriendly:    filterPetFriendly,
+            smoker:         filterSmoker,
+            drinker:        filterDrinker,
+            marijuana:      filterMarijuana,
+            workout:        filterWorkout,
+            
+            mode:           filterMode.rawValue
+        )
+        
+        // Encode & write just that one field
+        do {
+            let fsData = try Firestore.Encoder().encode(fs)
+            // updateData always merges and is non‑throwing
+            db.collection("users").document(uid)
+              .updateData(["filterSettings": fsData]) { err in
+                if let err = err {
+                  self.errorMessage = "Save filters failed: \(err)"
+                }
+              }
+        } catch {
+            self.errorMessage = "Save filters failed: \(error)"
+        }
+    }
+    
+    /// Restore filter values from Firestore data dictionary.
+    private func restoreFilters(from data: [String:Any]) {
+        if let fsDict = data["filterSettings"] as? [String:Any],
+           let fs = try? Firestore.Decoder().decode(FilterSettings.self, from: fsDict) {
+            filterHousingPreference = fs.housingStatus.flatMap(PrimaryHousingPreference.init)
+            filterCollegeName       = fs.collegeName ?? ""
+            filterBudgetMin         = fs.budgetMin
+            filterBudgetMax         = fs.budgetMax
+            filterMonthlyRentMin    = fs.rentMin
+            filterMonthlyRentMax    = fs.rentMax
+            filterGradeGroup        = fs.gradeGroup ?? ""
+            filterInterests         = fs.interests ?? ""
+            filterMode              = fs.mode.flatMap(FilterMode.init) ?? .university
+            maxDistance             = fs.maxDistance ?? maxDistance
+            filterPreferredGender   = fs.preferredGender ?? ""
+            maxAgeDifference        = fs.maxAgeDifference ?? 0.0
+            filterRoomType          = fs.roomType ?? ""
+            filterAmenities         = fs.amenities ?? []
+            filterCleanliness       = fs.cleanliness
+            filterSleepSchedule     = fs.sleepSchedule ?? ""
+            filterPetFriendly       = fs.petFriendly
+            filterSmoker            = fs.smoker
+            filterDrinker           = fs.drinker
+            filterMarijuana         = fs.marijuana
+            filterWorkout           = fs.workout
             return
         }
-        var data: [String: Any] = [
-            "filterHousingPreference": filterHousingPreference?.rawValue ?? "",
-            "filterCollegeName":       filterCollegeName,
-            "filterGradeGroup":        filterGradeGroup,
-            "filterInterests":         filterInterests,
-            "filterPreferredGender":   filterPreferredGender,
-            "maxAgeDifference":        maxAgeDifference,
-            "filterMode":              filterMode.rawValue,
-            "filterRoomType":          filterRoomType,
-            "filterAmenities":         filterAmenities,
-            "filterPetFriendly":       filterPetFriendly as Any,
-            "filterSmoker":            filterSmoker as Any,
-            "filterDrinker":           filterDrinker as Any,
-            "filterMarijuana":         filterMarijuana as Any,
-            "filterWorkout":           filterWorkout as Any,
-            "filterCleanliness":       filterCleanliness as Any,
-            "filterSleepSchedule":     filterSleepSchedule
-        ]
-        if filterHousingPreference == .lookingToFindTogether {
-            data["filterBudgetMin"]     = filterBudgetMin as Any
-            data["filterBudgetMax"]     = filterBudgetMax as Any
-        }
-        if filterHousingPreference == .lookingForLease {
-            data["filterMonthlyRentMin"] = filterMonthlyRentMin as Any
-            data["filterMonthlyRentMax"] = filterMonthlyRentMax as Any
-        }
-        if filterMode == .distance {
-            data["filterMaxDistance"] = maxDistance
-        }
-        db.collection("users").document(uid)
-            .setData(data, merge: true) { [weak self] err in
-                if let err = err {
-                    DispatchQueue.main.async {
-                        self?.errorMessage = "Save failed: \(err.localizedDescription)"
-                    }
-                }
-            }
-    }
-
-    // MARK: — Internals
-
-    /// How many filters are currently active?
-    private var activeFilterCount: Int {
-        [
-            filterHousingPreference != nil,
-            filterMode == .university && !filterCollegeName.isEmpty,
-            filterHousingPreference == .lookingToFindTogether
-              && filterBudgetMin != nil && filterBudgetMax != nil,
-            !filterGradeGroup.isEmpty,
-            !filterInterests.isEmpty,
-            !filterRoomType.isEmpty,
-            !filterAmenities.isEmpty,
-            filterPetFriendly != nil,
-            filterSmoker != nil,
-            filterDrinker != nil,
-            filterMarijuana != nil,
-            filterWorkout != nil,
-            filterCleanliness != nil,
-            !filterSleepSchedule.isEmpty,
-            filterHousingPreference == .lookingForLease
-              && filterMonthlyRentMin != nil && filterMonthlyRentMax != nil,
-            filterMode == .distance
-        ].filter { $0 }.count
-    }
-
-    /// Returns `true` if the given `user` matches **any** of the active filters.
-    private func matchesAnyFilter(user: UserModel, location: CLLocation?) -> Bool {
-        // Housing
-        if let pref = filterHousingPreference,
-           user.housingStatus == pref.rawValue {
-            return true
-        }
-        // By College
-        if filterMode == .university,
-           !filterCollegeName.isEmpty,
-           user.collegeName == filterCollegeName {
-            return true
-        }
-        // Find‑Together Budget
-        if filterHousingPreference == .lookingToFindTogether,
-           let minB = filterBudgetMin, let maxB = filterBudgetMax,
-           let uMin = user.budgetMin, let uMax = user.budgetMax,
-           uMin >= minB && uMax <= maxB {
-            return true
-        }
-        // Lease Rent
-        if filterHousingPreference == .lookingForLease,
-           let minR = filterMonthlyRentMin, let maxR = filterMonthlyRentMax,
-           let uMin = user.monthlyRentMin, let uMax = user.monthlyRentMax,
-           uMin >= minR && uMax <= maxR {
-            return true
-        }
-        // Grade
-        if !filterGradeGroup.isEmpty,
-           let grade = user.gradeLevel?.lowercased() {
-            let sel = filterGradeGroup.lowercased()
-            switch sel {
-            case "freshman"      where grade == "freshman": return true
-            case "underclassmen" where ["freshman","sophomore"].contains(grade): return true
-            case "upperclassmen" where ["junior","senior"].contains(grade): return true
-            case "graduate"      where grade == "graduate": return true
-            default: break
-            }
-        }
-        // Room type & amenities & toggles
-        if !filterRoomType.isEmpty, user.roomType == filterRoomType { return true }
-        if !filterAmenities.isEmpty,
-           let ua = user.amenities,
-           Set(filterAmenities).isSubset(of: Set(ua)) { return true }
-        if let pet = filterPetFriendly, user.petFriendly == pet { return true }
-        if let smoke = filterSmoker,       user.smoker == smoke { return true }
-        if let drink = filterDrinker,
-           let d = user.drinking?.lowercased() {
-            if drink ? (d != "not for me") : (d == "not for me") {
-                return true
-            }
-        }
-        if let mj = filterMarijuana,
-           let c = user.cannabis?.lowercased() {
-            if mj ? (c != "never") : (c == "never") {
-                return true
-            }
-        }
-        if let w = filterWorkout,
-           let wv = user.workout?.lowercased() {
-            if w ? (wv != "never") : (wv == "never") {
-                return true
-            }
-        }
-        if let cl = filterCleanliness, user.cleanliness == cl { return true }
-        if !filterSleepSchedule.isEmpty,
-           user.sleepSchedule?.lowercased() == filterSleepSchedule.lowercased() {
-            return true
-        }
-        // Distance
-        if filterMode == .distance,
-           let loc = location,
-           let uGeo = user.location {
-            let distanceKm = CLLocation(latitude: uGeo.latitude, longitude: uGeo.longitude)
-                .distance(from: loc) / 1000.0
-            if distanceKm <= maxDistance {
-                return true
-            }
-        }
-        return false
-    }
-
-    /// Restore filter values from Firestore data dictionary.
-    private func restoreFilters(from data: [String: Any]) {
-        filterHousingPreference = PrimaryHousingPreference(rawValue: data["filterHousingPreference"] as? String ?? "")
-        filterCollegeName       = data["filterCollegeName"]       as? String ?? ""
-        filterBudgetMin         = data["filterBudgetMin"]         as? Double
-        filterBudgetMax         = data["filterBudgetMax"]         as? Double
-        filterGradeGroup        = data["filterGradeGroup"]        as? String ?? ""
-        filterInterests         = data["filterInterests"]         as? String ?? ""
-        filterPreferredGender   = data["filterPreferredGender"]   as? String ?? ""
-        maxAgeDifference        = data["maxAgeDifference"]        as? Double ?? 0
-        if let mode = data["filterMode"] as? String {
-            filterMode = FilterMode(rawValue: mode) ?? .university
-        }
-        filterRoomType          = data["filterRoomType"]          as? String ?? ""
-        filterAmenities         = data["filterAmenities"]         as? [String] ?? []
-        filterPetFriendly       = data["filterPetFriendly"]       as? Bool
-        filterSmoker            = data["filterSmoker"]            as? Bool
-        filterDrinker           = data["filterDrinker"]           as? Bool
-        filterMarijuana         = data["filterMarijuana"]         as? Bool
-        filterWorkout           = data["filterWorkout"]           as? Bool
-        filterCleanliness       = data["filterCleanliness"]       as? Int
-        filterSleepSchedule     = data["filterSleepSchedule"]     as? String ?? ""
-        filterMonthlyRentMin    = data["filterMonthlyRentMin"]    as? Double
-        filterMonthlyRentMax    = data["filterMonthlyRentMax"]    as? Double
-        maxDistance             = data["filterMaxDistance"]       as? Double ?? 10.0
     }
 }
