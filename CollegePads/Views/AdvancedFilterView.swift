@@ -9,7 +9,6 @@ struct AdvancedFilterView: View {
     
     let preferredGenders = ["Any", "Male", "Female", "Other"]
     @State private var selectedGradeLevel: MyProfileView.GradeLevel = .freshman
-    @State private var localFilterMode: FilterMode = .university
     
     /// allColleges holds the full list, loaded once on appear
     @State private var allColleges: [String] = []
@@ -19,26 +18,26 @@ struct AdvancedFilterView: View {
     @State private var filteredColleges: [String] = []
     
     private var alertBinding: Binding<GenericAlertError?> {
-      Binding(
-        get: { viewModel.errorMessage.map(GenericAlertError.init) },
-        set: { _ in viewModel.errorMessage = nil }
-      )
+        Binding(
+            get: { viewModel.errorMessage.map(GenericAlertError.init) },
+            set: { _ in viewModel.errorMessage = nil }
+        )
     }
-
+    
     
     var body: some View {
         ZStack {
             AppTheme.backgroundGradient.ignoresSafeArea()
             List {
                 Section {
-                    Picker("Filter Mode", selection: $localFilterMode) {
+                    Picker("Filter Mode", selection: $viewModel.filterMode) {
                         ForEach(FilterMode.allCases) { mode in
                             Text(mode == .university ? "By College" : "By Distance")
                                 .tag(mode)
                         }
                     }
                     .pickerStyle(SegmentedPickerStyle())
-                    .onChange(of: localFilterMode) { new in
+                    .onChange(of: viewModel.filterMode) { new in
                         viewModel.filterMode = new
                         if new == .university {
                             viewModel.maxDistance = 50.0
@@ -56,7 +55,7 @@ struct AdvancedFilterView: View {
                     collegeSearchQuery: $collegeSearchQuery,
                     filteredColleges: $filteredColleges,
                     viewModel: viewModel,
-                    localFilterMode: localFilterMode,
+                    filterMode: viewModel.filterMode,
                     preferredGenders: preferredGenders,
                     autoApplyAndSave: autoApplyAndSave
                 )
@@ -75,12 +74,18 @@ struct AdvancedFilterView: View {
             }
         }
         .onAppear {
+            
             // 1️⃣ Load saved filters & sync UI state
             viewModel.loadFiltersFromUserDoc {
-                localFilterMode       = viewModel.filterMode
-                selectedGradeLevel    = MyProfileView.GradeLevel(rawValue: viewModel.filterGradeGroup) ?? .freshman
-                collegeSearchQuery    = viewModel.filterCollegeName
-                viewModel.applyFilters(currentLocation: locationManager.currentLocation)
+                selectedGradeLevel = MyProfileView.GradeLevel(
+                    rawValue: viewModel.filterGradeGroup
+                ) ?? .freshman
+                
+                collegeSearchQuery = viewModel.filterCollegeName
+                
+                viewModel.applyFilters(
+                    currentLocation: locationManager.currentLocation
+                )
             }
             // 2️⃣ Then load the college list
             UniversityDataProvider.shared.loadUniversities { colleges in
@@ -100,7 +105,7 @@ private struct FilterCriteriaSection: View {
     @Binding var collegeSearchQuery: String
     @Binding var filteredColleges: [String]
     @ObservedObject var viewModel: AdvancedFilterViewModel
-    let localFilterMode: FilterMode
+    let filterMode: FilterMode
     let preferredGenders: [String]
     let autoApplyAndSave: () -> Void
     
@@ -254,7 +259,7 @@ private struct FilterCriteriaSection: View {
                   }
                 }
                 // 3️⃣ By College search
-                if localFilterMode == .university {
+                if filterMode == .university {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("College").font(.headline)
                         TextField("Search College", text: $collegeSearchQuery)
@@ -291,7 +296,7 @@ private struct FilterCriteriaSection: View {
                     }
                 }
                 // 4️⃣ By Distance slider
-                if localFilterMode == .distance {
+                if filterMode == .distance {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Max Distance: \(Int(viewModel.maxDistance)) km")
                             .font(.headline)

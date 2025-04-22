@@ -46,17 +46,15 @@ struct ProfilePreviewView: View {
         if let forced = forcePreviewMode {
             _previewModeRaw.wrappedValue = forced.rawValue
         } else {
-            // For roommate mode, allow toggling; for lease and for our new 'Looking to Find Together' mode, force lease preview.
+            // Only roommate-mode gets a toggle.
+            // Everyone else – lease *or* find‑together – always personal preview.
             if user.housingStatus == PrimaryHousingPreference.lookingForRoommate.rawValue {
                 // leave the segmented picker as is
-            } else if user.housingStatus == PrimaryHousingPreference.lookingToFindTogether.rawValue {
-                _previewModeRaw.wrappedValue = PreviewMode.lease.rawValue
             } else {
                 _previewModeRaw.wrappedValue = PreviewMode.personal.rawValue
             }
         }
     }
-    
     // MARK: - Overlay Lists for Personal Previews (unchanged)
     private var personalOverlays: [[String]] {
         return [

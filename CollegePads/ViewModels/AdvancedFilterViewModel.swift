@@ -200,18 +200,18 @@ class AdvancedFilterViewModel: ObservableObject {
         
         // Encode & write just that one field
         do {
-            let fsData = try Firestore.Encoder().encode(fs)
-            // updateData always merges and is non‑throwing
-            db.collection("users").document(uid)
-              .updateData(["filterSettings": fsData]) { err in
-                if let err = err {
-                  self.errorMessage = "Save filters failed: \(err)"
+                    let fsData = try Firestore.Encoder().encode(fs)
+                    // ✅ merge ensures your filterSettings is replaced, not partially updated
+                    db.collection("users").document(uid)
+                      .setData(["filterSettings": fsData], merge: true) { err in
+                        if let err = err {
+                          self.errorMessage = "Save filters failed: \(err)"
+                        }
+                      }
+                } catch {
+                    self.errorMessage = "Save filters failed: \(error)"
                 }
-              }
-        } catch {
-            self.errorMessage = "Save filters failed: \(error)"
-        }
-    }
+            }
     
     /// Restore filter values from Firestore data dictionary.
     private func restoreFilters(from data: [String:Any]) {
