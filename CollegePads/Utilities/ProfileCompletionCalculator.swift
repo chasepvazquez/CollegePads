@@ -51,7 +51,7 @@ struct ProfileCompletionCalculator {
         let hasLifestyle =
             (user.pets?.isEmpty == false) ||
             (user.drinking?.isEmpty == false) ||
-            (user.smoking != nil) ||
+            (user.smoking?.isEmpty == false) ||
             (user.cannabis?.isEmpty == false) ||
             (user.workout?.isEmpty == false) ||
             (user.dietaryPreferences?.isEmpty == false) ||

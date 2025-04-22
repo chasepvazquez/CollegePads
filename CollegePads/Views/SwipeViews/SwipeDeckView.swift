@@ -84,28 +84,31 @@ struct SwipeDeckView: View {
                     }
                 }
             }
-
-            bottomControls
-
             VStack {
-                HStack {
-                    Spacer()
-                    Button(action: { showFilter = true }) {
-                        Image(systemName: "line.horizontal.3.decrease.circle")
-                            .font(.system(size: 24))
-                            .padding()
-                    }
-                }
+              HStack(spacing: 8) {
                 Spacer()
+                Button(action: refresh) {
+                  Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 24))
+                }
+                .padding(.horizontal, 8)
+
+                Button(action: { showFilter = true }) {
+                  Image(systemName: "line.horizontal.3.decrease.circle")
+                    .font(.system(size: 24))
+                }
+                .padding(.horizontal, 8)
+              }
+              Spacer()
             }
-        }
+                   // Only one bottomControls now
+                   bottomControls
+               }
+        .navigationBarTitle("", displayMode: .inline)
+        .navigationBarHidden(true)
         .onAppear { viewModel.fetchPotentialMatches() }
-        .sheet(isPresented: $showFilter) {
-            AdvancedFilterView()
-        }
-    }
-    
-    // MARK: - Bottom Controls
+        .sheet(isPresented: $showFilter) { AdvancedFilterView() }
+           }
     private var bottomControls: some View {
         VStack {
             Spacer()
@@ -117,13 +120,14 @@ struct SwipeDeckView: View {
                         .foregroundColor(currentIndex > 0 ? .blue : .gray)
                 }
                 .disabled(currentIndex == 0)
-                
-                // Super Like Button
+
+                // Super Like Button (new icon, color, and disabled state)
                 Button(action: superLike) {
-                    Image(systemName: "star.fill")
+                    Image(systemName: "heart.fill")
                         .font(.system(size: 32))
-                        .foregroundColor(.yellow)
+                        .foregroundColor(.pink)
                 }
+                .disabled(currentIndex >= viewModel.potentialMatches.count)
             }
             .padding(.bottom, 30)
         }
@@ -156,6 +160,11 @@ struct SwipeDeckView: View {
                 currentIndex += 1
             }
         }
+    }
+    /// Resets the deck and re‑fetches matches.
+    private func refresh() {
+        withAnimation { currentIndex = 0 }
+        viewModel.fetchPotentialMatches()
     }
     
     // MARK: - Visual Helpers

@@ -29,32 +29,56 @@ struct SmartMatchingEngine {
         guard let mine = s.housingStatus else { return 0 }
         let theirsFS = u.filterSettings
         switch mine {
-        case PrimaryHousingPreference.lookingForRoommate.rawValue:
-            guard theirsFS?.housingStatus == PrimaryHousingPreference.lookingForLease.rawValue else { return 0 }
-            if let rMin = theirsFS?.rentMin, let rMax = theirsFS?.rentMax,
-               let wantMin = s.budgetMin, let wantMax = s.budgetMax,
-               rMin >= wantMin && rMax <= wantMax { score += 1 }
+                case PrimaryHousingPreference.lookingForRoommate.rawValue:
+                    // I’m looking for a roommate → candidate must be leasing
+                    guard theirsFS?.housingStatus == PrimaryHousingPreference.lookingForLease.rawValue else { return 0 }
+                    // ✅ compare candidate’s budget‐range against my rent‐range
+                    if let candidateBudgetMin = theirsFS?.budgetMin,
+                       let candidateBudgetMax = theirsFS?.budgetMax,
+                       let myRentMin           = s.rentMin,
+                       let myRentMax           = s.rentMax,
+                       // they must overlap:
+                       max(candidateBudgetMin, myRentMin) <= min(candidateBudgetMax, myRentMax) {
+                        score += 1
+                    }
+                case PrimaryHousingPreference.lookingForLease.rawValue:
+                    // I’m leasing → candidate must be looking for roommates
+                    guard theirsFS?.housingStatus == PrimaryHousingPreference.lookingForRoommate.rawValue else { return 0 }
+                    // ✅ compare candidate’s rent‐range against my budget‐range
+                    if let candidateRentMin  = theirsFS?.rentMin,
+                       let candidateRentMax  = theirsFS?.rentMax,
+                       let myBudgetMin       = s.budgetMin,
+                       let myBudgetMax       = s.budgetMax,
+                       max(candidateRentMin, myBudgetMin) <= min(candidateRentMax, myBudgetMax) {
+                        score += 1
+                    }
             
-        case PrimaryHousingPreference.lookingForLease.rawValue:
-            guard theirsFS?.housingStatus == PrimaryHousingPreference.lookingForRoommate.rawValue else { return 0 }
-            if let bMin = theirsFS?.budgetMin, let bMax = theirsFS?.budgetMax,
-               let wantMin = s.rentMin, let wantMax = s.rentMax,
-               bMin >= wantMin && bMax <= wantMax { score += 1 }
-            
-        case PrimaryHousingPreference.lookingToFindTogether.rawValue:
-            let ok = [ PrimaryHousingPreference.lookingToFindTogether.rawValue,
-                       PrimaryHousingPreference.lookingForLease.rawValue ]
-            guard ok.contains(theirsFS?.housingStatus ?? "") else { return 0 }
-            score += 1
-            if let bMin = theirsFS?.budgetMin, let bMax = theirsFS?.budgetMax,
-               let wantMin = s.budgetMin, let wantMax = s.budgetMax,
-               bMin >= wantMin && bMax <= wantMax { score += 1 }
+                case PrimaryHousingPreference.lookingToFindTogether.rawValue:
+                    // I want to find together → candidate can also be leasing
+                    let ok = [
+                        PrimaryHousingPreference.lookingToFindTogether.rawValue,
+                        PrimaryHousingPreference.lookingForLease.rawValue
+                    ]
+                    guard ok.contains(theirsFS?.housingStatus ?? "") else { return 0 }
+                    score += 1
+                    // ✅ bonus if our budgets overlap
+                    if let candidateBudgetMin = theirsFS?.budgetMin,
+                       let candidateBudgetMax = theirsFS?.budgetMax,
+                       let myBudgetMin        = s.budgetMin,
+                       let myBudgetMax        = s.budgetMax,
+                      max(candidateBudgetMin, myBudgetMin) <= min(candidateBudgetMax, myBudgetMax) {
+                       score += 1
+                  }
             
         default: return 0
         }
         
         // 2‑b) college
-        if s.collegeName == u.collegeName { score += 1 }
+        if let mine = s.collegeName?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+           let theirs = u.collegeName?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+           mine == theirs {
+          score += 1
+        }
         
         // 2‑c) distance
         if s.mode == FilterMode.distance.rawValue,
@@ -163,9 +187,42 @@ struct SmartMatchingEngine {
       from all: [UserModel],
       currentUser me: UserModel
     ) -> [UserModel] {
-      // delegate to the overload
-      guard let fs = me.filterSettings else { return [] }
-      return generateSortedMatches(from: all, currentUser: me, using: fs)
+      let blocked = Set(me.blockedUserIDs ?? [])
+      // 1) remove self & blocked
+      let candidates = all
+        .filter { $0.id != me.id && !blocked.contains($0.id ?? "") }
+
+      // 2) if user has explicit FilterSettings, use them…
+      if let fs = me.filterSettings {
+        return candidates
+          .map { user in
+            (user, calculateFilterMatchScore(
+                       filterSettings: fs,
+                       otherUser:    user,
+                       currentUser:  me))
+          }
+          // after
+          .filter { $0.1 > 0 }
+          .sorted { lhs, rhs in
+            if lhs.1 != rhs.1 {
+              return lhs.1 > rhs.1                    // primary: filter score
+            } else {
+              // secondary: overall compatibility
+              let scoreL = calculateSmartMatchScore(between: me, and: lhs.0)
+              let scoreR = calculateSmartMatchScore(between: me, and: rhs.0)
+              return scoreL > scoreR
+            }
+          }
+          .map { $0.0 }
+      }
+
+      // 3) …otherwise, fall back to pure compatibility sorting
+      return candidates
+        .sorted {
+          calculateSmartMatchScore(between: me, and: $0)
+          >
+          calculateSmartMatchScore(between: me, and: $1)
+        }
     }
 }
 // New overload that takes a pre‑built FilterSettings

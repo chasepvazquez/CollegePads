@@ -14,11 +14,10 @@ struct SwipeCardView: View {
     @State private var rotation: Double = 0
     @State private var showLikeOverlay: Bool = false
     @State private var showNopeOverlay: Bool = false
-    @State private var isFavorite: Bool = false
+    @State private var showSuperLikeOverlay: Bool = false
 
     // 🔹 singletons for Firestore & favorites
     private let db = Firestore.firestore()
-    private let favoriteService = FavoriteService()
     
     // Pull the current user from a shared view model if needed.
     var currentUser: UserModel? {
@@ -77,6 +76,9 @@ struct SwipeCardView: View {
             if showNopeOverlay {
                 overlayText("NOPE", color: AppTheme.nopeColor, rotation: 15, xPos: 300)
             }
+            if showSuperLikeOverlay {
+                overlayText("SUPER LIKE", color: AppTheme.accentColor, rotation: 0, xPos: UIScreen.main.bounds.width / 2)
+            }
         }
         // 🔹 make card fill the available space (Tinder‑style)
         .aspectRatio(3/4, contentMode: .fit)
@@ -94,12 +96,7 @@ struct SwipeCardView: View {
 extension SwipeCardView {
     /// 1) Entry point for either “check favorite” or “load from Firestore”
     private func loadData() {
-        if let candidate = user {
-            favoriteService.isFavorite(candidate: candidate) { fav in
-                isFavorite = fav
-            }
-        }
-        else if let id = candidateID {
+        if let id = candidateID {
             loadCandidate(id)
         }
     }
@@ -117,9 +114,6 @@ extension SwipeCardView {
 
             DispatchQueue.main.async {
                 self.loadedUser = candidate
-                self.favoriteService.isFavorite(candidate: candidate) { fav in
-                    self.isFavorite = fav
-                }
             }
         }
     }
@@ -170,18 +164,6 @@ extension SwipeCardView {
                     .clipShape(Capsule())
                     .offset(x: -10, y: 10)
             }
-        }
-    }
-    
-    /// Returns a toggleable favorite button view.
-    private func favoriteButton(for candidate: UserModel) -> some View {
-        Button(action: {
-            toggleFavorite(for: candidate)
-        }) {
-            Image(systemName: isFavorite ? "heart.fill" : "heart")
-                .font(.system(size: 24))
-                .foregroundColor(isFavorite ? AppTheme.nopeColor : AppTheme.cardBackground)
-                .padding(8)
         }
     }
     
@@ -257,7 +239,7 @@ extension SwipeCardView {
             .onChanged { gesture in
                 offset = gesture.translation
                 rotation = Double(gesture.translation.width / 20)
-                updateOverlays(for: offset.width)
+                updateOverlays()
             }
             .onEnded { _ in
                 finalizeSwipe()
@@ -265,24 +247,36 @@ extension SwipeCardView {
     }
     
     /// Updates overlays based on horizontal offset.
-    private func updateOverlays(for horizontalOffset: CGFloat) {
+    private func updateOverlays() {
         withAnimation {
-            if horizontalOffset > 50 {
+            if offset.height < -50 && abs(offset.width) < 50 {
+                showSuperLikeOverlay = true
+                showLikeOverlay = false
+                showNopeOverlay = false
+            } else if offset.width > 50 {
                 showLikeOverlay = true
                 showNopeOverlay = false
-            } else if horizontalOffset < -50 {
+                showSuperLikeOverlay = false
+            } else if offset.width < -50 {
                 showNopeOverlay = true
                 showLikeOverlay = false
+                showSuperLikeOverlay = false
             } else {
                 showLikeOverlay = false
                 showNopeOverlay = false
+                showSuperLikeOverlay = false
             }
         }
     }
     
     /// Finalizes the swipe if threshold is reached.
     private func finalizeSwipe() {
-        if offset.width > 100 {
+        if offset.height < -100 {
+            HapticFeedbackManager.shared.generateImpact(style: .heavy)
+            if let candidate = user {
+                onSwipe(candidate, .up)
+            }
+        } else if offset.width > 100 {
             HapticFeedbackManager.shared.generateImpact(style: .heavy)
             if let candidate = user {
                 onSwipe(candidate, .right)
@@ -298,31 +292,7 @@ extension SwipeCardView {
             rotation = 0
             showLikeOverlay = false
             showNopeOverlay = false
-        }
-    }
-    
-    /// Toggles the favorite status for the candidate.
-    private func toggleFavorite(for candidate: UserModel) {
-        if isFavorite {
-            FavoriteService().removeFavorite(candidate: candidate) { result in
-                switch result {
-                case .success:
-                    HapticFeedbackManager.shared.generateNotification(.warning)
-                    isFavorite = false
-                case .failure(let error):
-                    print("Error removing favorite: \(error.localizedDescription)")
-                }
-            }
-        } else {
-            FavoriteService().addFavorite(candidate: candidate) { result in
-                switch result {
-                case .success:
-                    HapticFeedbackManager.shared.generateNotification(.success)
-                    isFavorite = true
-                case .failure(let error):
-                    print("Error adding favorite: \(error.localizedDescription)")
-                }
-            }
+            showSuperLikeOverlay = false
         }
     }
 }
