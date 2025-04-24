@@ -7,6 +7,7 @@ class AuthViewModel: ObservableObject {
     @Published var email: String = ""
     @Published var password: String = ""
     @Published var errorMessage: String?
+    @Published var passwordResetMessage: String?
     @Published var isLoading: Bool = false
     @Published var userSession: FirebaseAuth.User? = nil
     
@@ -72,6 +73,21 @@ class AuthViewModel: ObservableObject {
             }
         }
     }
+    func sendPasswordReset() {
+            errorMessage = nil
+            passwordResetMessage = nil
+            isLoading = true
+            Auth.auth().sendPasswordReset(withEmail: email) { [weak self] error in
+                DispatchQueue.main.async {
+                    self?.isLoading = false
+                    if let e = error {
+                        self?.errorMessage = e.localizedDescription
+                    } else {
+                        self?.passwordResetMessage = "Password reset email sent to \(self?.email ?? "your inbox")."
+                    }
+                }
+            }
+        }
     
     func signOut() {
         do {
@@ -82,6 +98,7 @@ class AuthViewModel: ObservableObject {
         }
     }
 }
+
 
 // MARK: - Account Management Extension
 

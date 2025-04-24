@@ -18,9 +18,9 @@ struct AuthenticationView: View {
                     .padding()
                     
                     if showSignIn {
-                        SignInView()
+                        SignInView(showSignIn: $showSignIn)
                     } else {
-                        SignUpView()
+                        SignUpView(showSignIn: $showSignIn)
                     }
                     
                     Spacer()

@@ -2,10 +2,8 @@ import SwiftUI
 
 struct SignUpView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
-    
-    // Local state for confirm password.
+    @Binding var showSignIn: Bool
     @State private var confirmPassword: String = ""
-    // Local state to track if user tapped "Sign Up."
     @State private var hasAttemptedSignUp: Bool = false
     
     // Computed property for form validity.
@@ -92,15 +90,16 @@ struct SignUpView: View {
                 .animation(.easeInOut(duration: 0.2), value: isFormValid)
                 .accessibilityLabel("Sign Up Button")
                 
-                Text("Already have an account? Sign In")
-                    .font(AppTheme.bodyFont)
-                    .foregroundColor(AppTheme.accentColor)
-                    .onTapGesture {
-                        // Clear error & fields on switch
-                        authViewModel.errorMessage = nil
-                        authViewModel.email = ""
-                        authViewModel.password = ""
-                    }
+                Button("Already have an account? Sign In") {
+                    // Clear any old errors
+                    authViewModel.errorMessage = nil
+                    authViewModel.email = ""
+                    authViewModel.password = ""
+                    // Switch back to Sign In
+                    showSignIn = true
+                }
+                .font(AppTheme.bodyFont)
+                .foregroundColor(AppTheme.accentColor)
                 
                 Spacer(minLength: 20)
             }
@@ -120,7 +119,8 @@ struct SignUpView: View {
 struct SignUpView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            SignUpView().environmentObject(AuthViewModel())
+            SignUpView(showSignIn: .constant(true))
+                .environmentObject(AuthViewModel())
         }
     }
 }
