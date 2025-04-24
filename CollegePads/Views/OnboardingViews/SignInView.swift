@@ -4,7 +4,7 @@ struct SignInView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @Binding var showSignIn: Bool
     @State private var hasAttemptedSignIn: Bool = false
-    @State private var showResetAlert: Bool = false
+    @State private var showingPasswordReset = false
     
     // Computed property for form validity.
     private var isFormValid: Bool {
@@ -63,15 +63,19 @@ struct SignInView: View {
                     .animation(.easeInOut, value: isFormValid)
                     // — Password Reset Link —
                     Button("Forgot password?") {
-                        // clear previous messages
                         authViewModel.errorMessage = nil
-                        authViewModel.passwordResetMessage = nil
-                        authViewModel.sendPasswordReset()
-                        showResetAlert = true
+                        showingPasswordReset = true
                     }
                     .font(AppTheme.bodyFont)
                     .foregroundColor(.accentColor)
-                    
+
+                    // Present the new view as a sheet:
+                    .sheet(isPresented: $showingPasswordReset) {
+                        PasswordResetView(
+                          onDismiss: { showingPasswordReset = false }
+                        )
+                        .environmentObject(authViewModel)
+                    }
                     Button("Don't have an account? Sign Up") {
                         // clear state and toggle
                         authViewModel.errorMessage = nil
@@ -92,12 +96,6 @@ struct SignInView: View {
                     }
                 }
             }
-            .alert("Password Reset",
-                   isPresented: $showResetAlert,
-                   actions: { Button("OK", role: .cancel) {} },
-                   message: {
-                Text(authViewModel.passwordResetMessage ?? "Check your email inbox.")
-            })
         }
     }
     
