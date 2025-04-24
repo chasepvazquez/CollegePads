@@ -7,7 +7,7 @@ struct RootView: View {
     @StateObject private var profileViewModel = ProfileViewModel.shared
     @State private var showOnboarding: Bool = false
     @AppStorage("isDarkMode") private var isDarkMode: Bool = false
-
+    
     var body: some View {
         NavigationView {
             Group {
@@ -60,27 +60,21 @@ struct RootView: View {
     /// Checks the current user's profile.
     /// If firstName, lastName, or dateOfBirth are missing, sets showOnboarding = true.
     private func checkUserProfile() {
-        if profileViewModel.userProfile == nil {
-            profileViewModel.loadUserProfile { userProfile in
-                if let profile = userProfile {
-                    let missingName = (profile.firstName?.isEmpty ?? true) || (profile.lastName?.isEmpty ?? true)
-                    let missingDOB = (profile.dateOfBirth?.isEmpty ?? true)
-                    showOnboarding = missingName || missingDOB
-                } else {
-                    showOnboarding = true
-                }
-            }
-        } else {
-            let profile = profileViewModel.userProfile!
-            let missingName = (profile.firstName?.isEmpty ?? true) || (profile.lastName?.isEmpty ?? true)
-            let missingDOB = (profile.dateOfBirth?.isEmpty ?? true)
-            showOnboarding = missingName || missingDOB
+        guard let profile = profileViewModel.userProfile else {
+            // never loaded → show onboarding
+            showOnboarding = true
+            return
         }
+        let missingName = (profile.firstName?.isEmpty ?? true)
+        || (profile.lastName?.isEmpty ?? true)
+        let missingDOB  = (profile.dateOfBirth?.isEmpty ?? true)
+        showOnboarding = missingName || missingDOB
     }
-}
-
-struct RootView_Previews: PreviewProvider {
-    static var previews: some View {
-        RootView()
+    
+    
+    struct RootView_Previews: PreviewProvider {
+        static var previews: some View {
+            RootView()
+        }
     }
 }

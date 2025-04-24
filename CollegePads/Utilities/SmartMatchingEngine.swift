@@ -25,52 +25,59 @@ struct SmartMatchingEngine {
     ) -> Int {
         var score = 0
         
-        // 2‑a) housing pairing rules
+        // 2-a) housing pairing rules — compare YOUR filter choice to THEIR profile fields
         guard let mine = s.housingStatus else { return 0 }
-        let theirsFS = u.filterSettings
+        guard let theirsProfile = u.housingStatus else { return 0 } // ← their profile, not their filters
         switch mine {
-                case PrimaryHousingPreference.lookingForRoommate.rawValue:
-                    // I’m looking for a roommate → candidate must be leasing
-                    guard theirsFS?.housingStatus == PrimaryHousingPreference.lookingForLease.rawValue else { return 0 }
-                    // ✅ compare candidate’s budget‐range against my rent‐range
-                    if let candidateBudgetMin = theirsFS?.budgetMin,
-                       let candidateBudgetMax = theirsFS?.budgetMax,
-                       let myRentMin           = s.rentMin,
-                       let myRentMax           = s.rentMax,
-                       // they must overlap:
-                       max(candidateBudgetMin, myRentMin) <= min(candidateBudgetMax, myRentMax) {
-                        score += 1
-                    }
-                case PrimaryHousingPreference.lookingForLease.rawValue:
-                    // I’m leasing → candidate must be looking for roommates
-                    guard theirsFS?.housingStatus == PrimaryHousingPreference.lookingForRoommate.rawValue else { return 0 }
-                    // ✅ compare candidate’s rent‐range against my budget‐range
-                    if let candidateRentMin  = theirsFS?.rentMin,
-                       let candidateRentMax  = theirsFS?.rentMax,
-                       let myBudgetMin       = s.budgetMin,
-                       let myBudgetMax       = s.budgetMax,
-                       max(candidateRentMin, myBudgetMin) <= min(candidateRentMax, myBudgetMax) {
-                        score += 1
-                    }
-            
-                case PrimaryHousingPreference.lookingToFindTogether.rawValue:
-                    // I want to find together → candidate can also be leasing
-                    let ok = [
-                        PrimaryHousingPreference.lookingToFindTogether.rawValue,
-                        PrimaryHousingPreference.lookingForLease.rawValue
-                    ]
-                    guard ok.contains(theirsFS?.housingStatus ?? "") else { return 0 }
-                    score += 1
-                    // ✅ bonus if our budgets overlap
-                    if let candidateBudgetMin = theirsFS?.budgetMin,
-                       let candidateBudgetMax = theirsFS?.budgetMax,
-                       let myBudgetMin        = s.budgetMin,
-                       let myBudgetMax        = s.budgetMax,
-                      max(candidateBudgetMin, myBudgetMin) <= min(candidateBudgetMax, myBudgetMax) {
-                       score += 1
-                  }
-            
-        default: return 0
+
+        case PrimaryHousingPreference.lookingForRoommate.rawValue:
+            // I’m looking for a roommate → candidate must be leasing
+            guard theirsProfile == PrimaryHousingPreference.lookingForLease.rawValue else { return 0 }
+            // overlap THEIR profile‐budget (budgetMin/Max) with MY rent range (s.rentMin/Max)
+            if let theirBudgetMin = u.budgetMin,
+               let theirBudgetMax = u.budgetMax,
+               let myRentMin      = s.rentMin,
+               let myRentMax      = s.rentMax,
+               max(theirBudgetMin, myRentMin) <= min(theirBudgetMax, myRentMax) {
+                score += 1
+            }
+
+        case PrimaryHousingPreference.lookingForLease.rawValue:
+            // I’m leasing → candidate must be looking for roommates
+            guard theirsProfile == PrimaryHousingPreference.lookingForRoommate.rawValue else { return 0 }
+            // overlap THEIR profile‐rent (monthlyRentMin/Max) with MY budget (s.budgetMin/Max)
+            if let theirRentMin  = u.monthlyRentMin,
+               let theirRentMax  = u.monthlyRentMax,
+               let myBudgetMin   = s.budgetMin,
+               let myBudgetMax   = s.budgetMax,
+               max(theirRentMin, myBudgetMin) <= min(theirRentMax, myBudgetMax) {
+                score += 1
+            }
+
+        case PrimaryHousingPreference.lookingToFindTogether.rawValue:
+            // must have a non-nil profile setting
+            guard let theirsProfile = u.housingStatus else { return 0 }
+            // they must be either “Together” or “Lease”
+            let okStatuses = [
+              PrimaryHousingPreference.lookingToFindTogether.rawValue,
+              PrimaryHousingPreference.lookingForLease.rawValue
+            ]
+            guard okStatuses.contains(theirsProfile) else { return 0 }
+
+            // ✅ base “together” match
+            score += 1
+
+            // ✅ bonus if their profile-budget overlaps yours
+            if let theirBudgetMin = u.budgetMin,
+               let theirBudgetMax = u.budgetMax,
+               let myBudgetMin    = s.budgetMin,
+               let myBudgetMax    = s.budgetMax,
+               max(theirBudgetMin, myBudgetMin) <= min(theirBudgetMax, myBudgetMax) {
+                score += 1
+            }
+
+        default:
+            return 0
         }
         
         // 2‑b) college

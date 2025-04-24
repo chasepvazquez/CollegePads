@@ -27,18 +27,21 @@ class MatchingViewModel: ObservableObject {
 
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
+    private var fetchSubscription: AnyCancellable?      // ← only one live fetch at a time
 
     init() {
         // reload matches after profile changes
         ProfileViewModel.shared.$userProfile
-          .compactMap { $0 }
-          .sink { [weak self] _ in
-            self?.fetchPotentialMatches()
-          }
-          .store(in: &cancellables)
-
+            .compactMap { $0 }
+            .sink { [weak self] _ in self?.fetchPotentialMatches() }
+            .store(in: &cancellables)
+        // 2) if profile was already present at init, fetch immediately
+        if ProfileViewModel.shared.userProfile != nil {
+            fetchPotentialMatches()
+        }
+        
         loadSuperLikes()
-      }
+    }
     
     private func loadSuperLikes() {
         guard let currentUserID = self.currentUID else { return }
@@ -63,68 +66,58 @@ class MatchingViewModel: ObservableObject {
         self.errorMessage = "User not authenticated"
         return
       }
-
-      // Ensure "me" is loaded
-      if ProfileViewModel.shared.userProfile?.id == nil {
-        ProfileViewModel.shared.loadUserProfile { [weak self] _ in
-          self?.fetchPotentialMatches()
+        // we depend on `ProfileViewModel.shared.userProfile` being non-nil
+        guard let me = ProfileViewModel.shared.userProfile else {
+            // profile listener above will retry once profile arrives
+            return
         }
-        return
-      }
+        
+        // cancel any prior live‐fetch
+        fetchSubscription?.cancel()
+        isLoading = true
 
-      isLoading = true   // <-- show spinner
-
-      // 1) Publisher for all swipes from me
-        let swipesPub = db
+        // 1) my swipes
+        let swipedIDsPub = db
           .collection("swipes")
           .whereField("from", isEqualTo: uid)
           .snapshotPublisher()
-          .map { snap in
-            Set(snap.documents.compactMap { $0.data()["to"] as? String })
-          }
-          .replaceError(with: [])          // ← on error, assume no swipes
+          .map { snap in Set(snap.documents.compactMap { $0.data()["to"] as? String }) }
+          .replaceError(with: [])
 
+        // 2) all users
         let usersPub = db
           .collection("users")
           .snapshotPublisher()
-          .map { snap in
-            snap.documents.compactMap { try? $0.data(as: UserModel.self) }
-          }
-          .replaceError(with: [])          // ← on error, assume no users
+          .map { snap in snap.documents.compactMap { try? $0.data(as: UserModel.self) } }
+          .replaceError(with: [])
 
-      // 3) Zip them, filter & sort
-      Publishers
-        .Zip(swipesPub, usersPub)
-        .receive(on: DispatchQueue.global(qos: .userInitiated))
-        .map { swipedIDs, allUsers -> [UserModel] in
-          let blocked = Set(ProfileViewModel.shared.userProfile?.blockedUserIDs ?? [])
-          let candidates = allUsers.filter {
-            guard let id = $0.id else { return false }
-            return id != uid
-                && !swipedIDs.contains(id)
-                && !blocked.contains(id)
-          }
-
-          guard let me = self.currentUser else { return candidates }
-          return SmartMatchingEngine.generateSortedMatches(
-            from: candidates,
-            currentUser: me
-          )
-        }
-        .receive(on: DispatchQueue.main)
-        .sink(
-          receiveCompletion: { [weak self] compl in
-            self?.isLoading = false
-            if case let .failure(err) = compl {
-              self?.errorMessage = err.localizedDescription
+        // 3) zip, filter, score
+        fetchSubscription = Publishers
+          .Zip(swipedIDsPub, usersPub)
+          .subscribe(on: DispatchQueue.global(qos: .userInitiated))
+          .map { swipedIDs, allUsers in
+            let blocked = Set(me.blockedUserIDs ?? [])
+            let candidates = allUsers.filter {
+              guard let id = $0.id else { return false }
+              return id != uid && !swipedIDs.contains(id) && !blocked.contains(id)
             }
-          },
-          receiveValue: { [weak self] sorted in
-            self?.potentialMatches = sorted
+            return SmartMatchingEngine.generateSortedMatches(
+              from: candidates, currentUser: me
+            )
           }
-        )
-        .store(in: &cancellables)
-    }
+          .receive(on: DispatchQueue.main)
+          .sink(
+            receiveCompletion: { [weak self] compl in
+              self?.isLoading = false
+              if case let .failure(err) = compl {
+                self?.errorMessage = err.localizedDescription
+              }
+            },
+            receiveValue: { [weak self] sorted in
+              self?.potentialMatches = sorted
+            }
+          )
+      }
 
     
     /// Consolidated Firestore write + local state update for any swipe type.

@@ -15,6 +15,7 @@ struct ProfileSetupOnboardingView: View {
     @State private var lastName: String = ""
     @State private var birthDate: Date = Date()
     @State private var selectedGender: Gender = .other
+    @State private var showAgeAlert: Bool = false
     
     // MARK: - Gender Enum
     enum Gender: String, CaseIterable, Identifiable {
@@ -23,234 +24,250 @@ struct ProfileSetupOnboardingView: View {
         case other = "Other"
         var id: String { self.rawValue }
     }
-    
-    // Alert for age check.
-    @State private var showAgeAlert: Bool = false
+
     
     var body: some View {
-        ZStack {
-            AppTheme.backgroundGradient.ignoresSafeArea()
-            VStack(spacing: 30) {
-                if currentPage == 3 {
-                    OnboardingNameView(
-                        firstName: $firstName,
-                        lastName: $lastName,
-                        onContinue: { withAnimation { currentPage += 1 } },
-                        onCancel: {
-                            // Simply dismiss since user is already signed in.
-                            presentationMode.wrappedValue.dismiss()
-                        }
-                    )
-                } else if currentPage == 4 {
-                    OnboardingBirthdayView(
-                        birthDate: $birthDate,
-                        onContinue: {
-                            if calculateAge(from: birthDate) < 16 {
-                                showAgeAlert = true
-                            } else {
-                                withAnimation { currentPage += 1 }
-                            }
-                        },
-                        onCancel: { withAnimation { currentPage -= 1 } }
-                    )
-                } else {
-                    OnboardingCreateProfileView(
-                        firstName: $firstName,
-                        lastName: $lastName,
-                        birthDate: $birthDate,
-                        selectedGender: $selectedGender,
-                        onContinue: {
-                            saveProfileFields()
-                            UserDefaults.standard.set(true, forKey: "onboardingCompleted")
-                            presentationMode.wrappedValue.dismiss()
-                        }
-                    )
-                }
-                Spacer()
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .padding()
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Profile Setup")
-                        .font(AppTheme.titleFont)
-                        .foregroundColor(.primary)
-                }
-            }
-        }
-        .onAppear {
-            prefillFromExistingProfile()
-        }
-        .alert(isPresented: $showAgeAlert) {
-            Alert(title: Text("Age Restriction"),
-                  message: Text("You must be at least 16 years old to create an account."),
-                  dismissButton: .default(Text("OK")))
-        }
-    }
-    
-    // MARK: - Helper Functions
-    
-    /// Pre-fills fields from the existing profile if available.
-    private func prefillFromExistingProfile() {
-        if let profile = viewModel.userProfile {
-            firstName = profile.firstName ?? ""
-            lastName = profile.lastName ?? ""
-            if let dobString = profile.dateOfBirth, !dobString.isEmpty,
-               let dob = dateFromString(dobString) {
-                birthDate = dob
-            }
-            if let gender = profile.gender, let g = Gender(rawValue: gender) {
-                selectedGender = g
-            }
-        }
-    }
-    
-    private func dateFromString(_ str: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: str)
-    }
-    
-    private func stringFromDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
-    }
-    
-    private func calculateAge(from birthDate: Date) -> Int {
-        let now = Date()
-        let calendar = Calendar.current
-        let ageComponents = calendar.dateComponents([.year], from: birthDate, to: now)
-        return ageComponents.year ?? 0
-    }
-    
-    private func saveProfileFields() {
-        if var profile = viewModel.userProfile {
-            profile.firstName = firstName
-            profile.lastName = lastName
-            profile.dateOfBirth = stringFromDate(birthDate)
-            profile.gender = selectedGender.rawValue
-            viewModel.updateUserProfile(updatedProfile: profile) { result in
-                switch result {
-                case .success:
-                    print("Profile updated successfully.")
-                case .failure(let error):
-                    print("Error updating profile: \(error.localizedDescription)")
-                }
-            }
-        } else {
-            let newProfile = UserModel(
-                email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
-                isEmailVerified: false,
-                firstName: firstName,
-                lastName: lastName,
-                dateOfBirth: stringFromDate(birthDate),
-                gender: selectedGender.rawValue
-            )
-            viewModel.updateUserProfile(updatedProfile: newProfile) { result in
-                switch result {
-                case .success:
-                    print("Profile created successfully.")
-                case .failure(let error):
-                    print("Error creating profile: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-}
-
-struct ProfileSetupOnboardingView_Previews: PreviewProvider {
-    static var previews: some View {
-        ProfileSetupOnboardingView()
-    }
-}
-
-/// MARK: - OnboardingNameView
-struct OnboardingNameView: View {
-    @Binding var firstName: String
-    @Binding var lastName: String
-    let onContinue: () -> Void
-    let onCancel: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("What’s your Name?")
-                .font(AppTheme.titleFont)
-                .padding(.top, 40)
-            
-            Text("Please enter your name. This is how you'll be greeted in the app.")
-                .font(AppTheme.bodyFont)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            
-            VStack(spacing: 12) {
-                TextField("First Name", text: $firstName)
-                    .padding()
-                    .background(AppTheme.cardBackground)
-                    .cornerRadius(AppTheme.defaultCornerRadius)
+        Group {
+            // 1) Still loading the profile? Show a spinner.
+            if viewModel.userProfile == nil {
+                ProgressView("Loading…")
+                    .onAppear { /* let your snapshotPublisher fill in userProfile */ }
                 
-                TextField("Last Name", text: $lastName)
+                // 2) Profile loaded *and* skip-check passes?  Bail out immediately.
+            } else if shouldSkipOnboarding() {
+                Color.clear
+                    .onAppear {
+                        // mark as done so RootView’s .fullScreenCover goes away
+                        UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                
+                // 3) Otherwise—render your existing onboarding UI.
+            } else {
+                ZStack {
+                    AppTheme.backgroundGradient.ignoresSafeArea()
+                    VStack(spacing: 30) {
+                        if currentPage == 3 {
+                            OnboardingNameView(
+                                firstName: $firstName,
+                                lastName: $lastName,
+                                onContinue: { withAnimation { currentPage += 1 } },
+                                onCancel:  { presentationMode.wrappedValue.dismiss() }
+                            )
+                        } else if currentPage == 4 {
+                            OnboardingBirthdayView(
+                                birthDate: $birthDate,
+                                onContinue: {
+                                    if calculateAge(from: birthDate) < 16 {
+                                        showAgeAlert = true
+                                    } else {
+                                        withAnimation { currentPage += 1 }
+                                    }
+                                },
+                                onCancel:  { withAnimation { currentPage -= 1 } }
+                            )
+                        } else {
+                            OnboardingCreateProfileView(
+                                firstName: $firstName,
+                                lastName: $lastName,
+                                birthDate: $birthDate,
+                                selectedGender: $selectedGender,
+                                onContinue: {
+                                    saveProfileFields()
+                                    UserDefaults.standard.set(true, forKey: "onboardingCompleted")
+                                    presentationMode.wrappedValue.dismiss()
+                                }
+                            )
+                        }
+                        Spacer()
+                    }
                     .padding()
-                    .background(AppTheme.cardBackground)
-                    .cornerRadius(AppTheme.defaultCornerRadius)
-            }
-            .padding(.horizontal)
-            
-            Button(action: onContinue) {
-                Text("Continue")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(PrimaryButtonStyle())
-            .padding()
-        }
-    }
-}
-
-/// MARK: - OnboardingBirthdayView
-struct OnboardingBirthdayView: View {
-    @Binding var birthDate: Date
-    let onContinue: () -> Void
-    let onCancel: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            HStack {
-                Spacer()
-                Button("Cancel") {
-                    onCancel()
+                    .toolbar {
+                        ToolbarItem(placement: .principal) {
+                            Text("Profile Setup")
+                                .font(AppTheme.titleFont)
+                                .foregroundColor(.primary)
+                        }
+                    }
                 }
-                .foregroundColor(.red)
+                .alert("Age Restriction",
+                       isPresented: $showAgeAlert,
+                       actions: { Button("OK", role: .cancel) { } },
+                       message: { Text("You must be at least 16 years old to create an account.") }
+                )
             }
-            .padding()
-            
-            Text("Enter your birthday")
-                .font(AppTheme.titleFont)
-                .padding(.top, 40)
-            
-            DatePicker("", selection: $birthDate, displayedComponents: .date)
-                .datePickerStyle(WheelDatePickerStyle())
-                .labelsHidden()
-                .padding()
-            
-            Spacer()
-            
-            Text("By proceeding, you agree to our Terms of Service and Privacy Policy.")
-                .font(.footnote)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.gray)
-                .padding(.horizontal, 40)
-            
-            Button(action: onContinue) {
-                Text("Continue")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(PrimaryButtonStyle())
-            .padding()
         }
     }
-}
-
-/// MARK: - OnboardingCreateProfileView
+        
+        // MARK: - Helper Functions
+        
+        /// Pre-fills fields from the existing profile if available.
+        private func prefillFromExistingProfile() {
+            guard let profile = viewModel.userProfile else { return }
+            firstName = profile.firstName ?? ""
+            lastName  = profile.lastName  ?? ""
+            if let dob = dateFromString(profile.dateOfBirth ?? "") {
+              birthDate = dob
+            }
+            if let g = Gender(rawValue: profile.gender ?? "") {
+              selectedGender = g
+            }
+          }
+        /// Returns true only if firstName, lastName, and dateOfBirth are non‐empty.
+        private func shouldSkipOnboarding() -> Bool {
+            guard let profile = viewModel.userProfile else { return false }
+            let fnOK  = !(profile.firstName?.trimmingCharacters(in: .whitespaces).isEmpty ?? true)
+            let lnOK  = !(profile.lastName?.trimmingCharacters(in: .whitespaces).isEmpty ?? true)
+            let dobOK = !(profile.dateOfBirth?.trimmingCharacters(in: .whitespaces).isEmpty ?? true)
+            return fnOK && lnOK && dobOK
+        }
+        
+        private func dateFromString(_ str: String) -> Date? {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            return formatter.date(from: str)
+        }
+        
+        private func stringFromDate(_ date: Date) -> String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            return formatter.string(from: date)
+        }
+        
+        private func calculateAge(from birthDate: Date) -> Int {
+            let now = Date()
+            let calendar = Calendar.current
+            let ageComponents = calendar.dateComponents([.year], from: birthDate, to: now)
+            return ageComponents.year ?? 0
+        }
+        
+        private func saveProfileFields() {
+            if var profile = viewModel.userProfile {
+                profile.firstName = firstName
+                profile.lastName = lastName
+                profile.dateOfBirth = stringFromDate(birthDate)
+                profile.gender = selectedGender.rawValue
+                viewModel.updateUserProfile(updatedProfile: profile) { result in
+                    switch result {
+                    case .success:
+                        print("Profile updated successfully.")
+                    case .failure(let error):
+                        print("Error updating profile: \(error.localizedDescription)")
+                    }
+                }
+            } else {
+                let newProfile = UserModel(
+                    email: Auth.auth().currentUser?.email ?? "unknown@unknown.com",
+                    isEmailVerified: false,
+                    firstName: firstName,
+                    lastName: lastName,
+                    dateOfBirth: stringFromDate(birthDate),
+                    gender: selectedGender.rawValue
+                )
+                viewModel.updateUserProfile(updatedProfile: newProfile) { result in
+                    switch result {
+                    case .success:
+                        print("Profile created successfully.")
+                    case .failure(let error):
+                        print("Error creating profile: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    
+    struct ProfileSetupOnboardingView_Previews: PreviewProvider {
+        static var previews: some View {
+            ProfileSetupOnboardingView()
+        }
+    }
+    
+    /// MARK: - OnboardingNameView
+    struct OnboardingNameView: View {
+        @Binding var firstName: String
+        @Binding var lastName: String
+        let onContinue: () -> Void
+        let onCancel: () -> Void
+        
+        var body: some View {
+            VStack(spacing: 20) {
+                Text("What’s your Name?")
+                    .font(AppTheme.titleFont)
+                    .padding(.top, 40)
+                
+                Text("Please enter your name. This is how you'll be greeted in the app.")
+                    .font(AppTheme.bodyFont)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                
+                VStack(spacing: 12) {
+                    TextField("First Name", text: $firstName)
+                        .padding()
+                        .background(AppTheme.cardBackground)
+                        .cornerRadius(AppTheme.defaultCornerRadius)
+                    
+                    TextField("Last Name", text: $lastName)
+                        .padding()
+                        .background(AppTheme.cardBackground)
+                        .cornerRadius(AppTheme.defaultCornerRadius)
+                }
+                .padding(.horizontal)
+                
+                Button(action: onContinue) {
+                    Text("Continue")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .padding()
+            }
+        }
+    }
+    
+    /// MARK: - OnboardingBirthdayView
+    struct OnboardingBirthdayView: View {
+        @Binding var birthDate: Date
+        let onContinue: () -> Void
+        let onCancel: () -> Void
+        
+        var body: some View {
+            VStack(spacing: 20) {
+                HStack {
+                    Spacer()
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                    .foregroundColor(.red)
+                }
+                .padding()
+                
+                Text("Enter your birthday")
+                    .font(AppTheme.titleFont)
+                    .padding(.top, 40)
+                
+                DatePicker("", selection: $birthDate, displayedComponents: .date)
+                    .datePickerStyle(WheelDatePickerStyle())
+                    .labelsHidden()
+                    .padding()
+                
+                Spacer()
+                
+                Text("By proceeding, you agree to our Terms of Service and Privacy Policy.")
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.gray)
+                    .padding(.horizontal, 40)
+                
+                Button(action: onContinue) {
+                    Text("Continue")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .padding()
+            }
+        }
+    }
+    
+    /// MARK: - OnboardingCreateProfileView
 struct OnboardingCreateProfileView: View {
     @Binding var firstName: String
     @Binding var lastName: String
@@ -317,3 +334,4 @@ struct OnboardingCreateProfileView: View {
         return formatter.string(from: date)
     }
 }
+    

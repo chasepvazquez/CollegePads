@@ -3,6 +3,7 @@ import PhotosUI
 import FirebaseAuth
 import MapKit
 import FirebaseFirestore
+import Combine
 
 // MARK: — Section styling modifier
 struct SectionContainer: ViewModifier {
@@ -290,18 +291,16 @@ struct MyProfileView: View {
                 }
             }
         }
-        .onAppear {
-            viewModel.loadUserProfile { profile in
-                if let p = profile { populateLocalFields(from: p) }
-                else {
-                    print("[MyProfileView] Warning: No user profile loaded.")
+           // As soon as `userProfile` becomes non-nil, fill all your local @State fields:
+           .onReceive(viewModel.$userProfile.compactMap { $0 }) { profile in
+               populateLocalFields(from: profile)
+           }
+            .onAppear {
+                UniversityDataProvider.shared.loadUniversities { colleges in
+                    validColleges = colleges
+                    print("[MyProfileView] Loaded \(colleges.count) colleges.")
                 }
             }
-            UniversityDataProvider.shared.loadUniversities { colleges in
-                validColleges = colleges
-                print("[MyProfileView] Loaded \(colleges.count) colleges.")
-            }
-        }
         .sheet(isPresented: $showingPhotoPicker) {
             CustomImagePicker(image: $newProfileImage)
         }

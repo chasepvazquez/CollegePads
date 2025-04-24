@@ -105,9 +105,8 @@ struct HomeView: View {
             // Themed background
             .background(AppTheme.backgroundGradient.ignoresSafeArea())
             .onAppear {
-                if profileVM.userProfile == nil {
-                    profileVM.loadUserProfile()
-                }
+                // ProfileViewModel.shared now auto-loads for us, so we only need to
+                // kick off our matching pass here:
                 matchingVM.fetchPotentialMatches()
             }
             .toolbar {

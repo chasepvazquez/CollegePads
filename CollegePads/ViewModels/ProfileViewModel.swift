@@ -10,7 +10,8 @@ class ProfileViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let db = Firestore.firestore()
-    private var cancellables = Set<AnyCancellable>()
+    private var authListener: AuthStateDidChangeListenerHandle?
+    private var profileListenerCancellables = Set<AnyCancellable>()
 
     static let shared = ProfileViewModel()
 
@@ -18,86 +19,48 @@ class ProfileViewModel: ObservableObject {
         Auth.auth().currentUser?.uid
     }
 
-    /// Loads the currently authenticated user's profile from Firestore.
-    func loadUserProfile(completion: ((UserModel?) -> Void)? = nil) {
-        // Always fetch fresh data for the profile instead of skipping based on didLoadProfile.
-        guard let uid = userID else {
-            DispatchQueue.main.async {
-                self.errorMessage = "User not authenticated"
-                print("[ProfileViewModel] loadUserProfile: User not authenticated")
-            }
-            completion?(nil)
-            return
-        }
-        print("[ProfileViewModel] loadUserProfile: Fetching profile for uid: \(uid)")
-        db.collection("users").document(uid).getDocument { snapshot, error in
-            if let error = error {
+    private init() {
+        authListener = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            guard let self = self else { return }
+            
+            guard let uid = user?.uid else {
                 DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
-                    print("[ProfileViewModel] loadUserProfile error: \(error.localizedDescription)")
+                    self.userProfile = nil
+                    self.errorMessage = nil
                 }
-                completion?(nil)
                 return
             }
-            guard let snapshot = snapshot, snapshot.exists else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "User profile does not exist"
-                    print("[ProfileViewModel] loadUserProfile: Profile does not exist")
+            
+            // live-update our profile as it changes in Firestore
+            // cancel *only* the profile snapshot listener:
+            self.profileListenerCancellables
+                .forEach { $0.cancel() }
+            self.profileListenerCancellables.removeAll()
+            // live-update profile
+            self.db
+                .collection("users")
+                .document(uid)
+                .snapshotPublisher()
+                .tryMap { snapshot in
+                    try snapshot.data(as: UserModel.self)
                 }
-                completion?(nil)
-                return
-            }
-            do {
-                let profile = try snapshot.data(as: UserModel.self)
-                DispatchQueue.main.async {
-                    self.userProfile = profile
-                    // Removed didLoadProfile setting to always allow fresh fetches.
-                    print("[ProfileViewModel] loadUserProfile: Successfully loaded profile: \(profile)")
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] completion in
+                    if case let .failure(err) = completion {
+                        self?.errorMessage = err.localizedDescription
+                    }
+                } receiveValue: { [weak self] profile in
+                    self?.userProfile = profile
                 }
-                completion?(profile)
-            } catch {
-                DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
-                    print("[ProfileViewModel] loadUserProfile: Decoding error: \(error.localizedDescription)")
-                }
-                completion?(nil)
-            }
+                .store(in: &self.profileListenerCancellables)
         }
     }
-
-
-    /// Loads any user's profile by candidateID from Firestore.
-    func loadUserProfile(with candidateID: String) {
-        print("[ProfileViewModel] loadUserProfile(with:) for candidateID: \(candidateID)")
-        db.collection("users").document(candidateID).getDocument { snapshot, error in
-            if let error = error {
-                DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
-                    print("[ProfileViewModel] loadUserProfile(with:) error: \(error.localizedDescription)")
-                }
-                return
-            }
-            guard let snapshot = snapshot, snapshot.exists else {
-                DispatchQueue.main.async {
-                    self.errorMessage = "User profile not found"
-                    print("[ProfileViewModel] loadUserProfile(with:): Profile not found")
-                }
-                return
-            }
-            do {
-                let profile = try snapshot.data(as: UserModel.self)
-                DispatchQueue.main.async {
-                    self.userProfile = profile
-                    print("[ProfileViewModel] loadUserProfile(with:): Successfully loaded profile: \(profile)")
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.errorMessage = error.localizedDescription
-                    print("[ProfileViewModel] loadUserProfile(with:): Decoding error: \(error.localizedDescription)")
-                }
+        deinit {
+            if let handle = authListener {
+                Auth.auth().removeStateDidChangeListener(handle)
             }
         }
-    }
+
 
     /// Updates the current user's profile in Firestore.
     func updateUserProfile(updatedProfile: UserModel, completion: @escaping (Result<Void, Error>) -> Void) {
